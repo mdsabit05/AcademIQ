@@ -1,0 +1,10 @@
+{
+  "name": "note2test",
+  "private": true,
+  "scripts": {
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "migrate": "pnpm --filter backend migrate",
+    "test": "pnpm --filter backend test"
+  }
+}
