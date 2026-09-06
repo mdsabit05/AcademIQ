@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
-import { Search, BookOpen } from 'lucide-react'
+import { Search, BookOpen, RotateCcw } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
 import type { Document } from 'shared'
 
@@ -12,6 +12,8 @@ export default function Learn() {
   const [documents, setDocuments] = useState<Document[]>([])
   const [topic, setTopic] = useState('')
   const [selectedDoc, setSelectedDoc] = useState('')
+  const lastSession = sessionStorage.getItem('lastLearnSession')
+  const lastTopic = sessionStorage.getItem('lastLearnTopic')
 
   useEffect(() => {
     async function load() {
@@ -40,6 +42,21 @@ export default function Learn() {
         <h1 className="text-2xl font-bold text-white">Learn a Topic</h1>
         <p className="mt-1 text-muted">What do you want to understand?</p>
       </div>
+
+      {lastSession && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
+          <RotateCcw size={15} className="shrink-0 text-primary" />
+          <span className="text-sm text-white">
+            Last session: <span className="font-medium text-primary">{lastTopic}</span>
+          </span>
+          <button
+            onClick={() => navigate(lastSession)}
+            className="ml-auto rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-hover"
+          >
+            Resume →
+          </button>
+        </div>
+      )}
 
       <div className="max-w-2xl space-y-4">
         {/* Document selector */}

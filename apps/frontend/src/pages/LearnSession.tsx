@@ -14,12 +14,14 @@ const COLORS = [
   { id: 'pink',   dot: 'bg-pink-400', mark: 'rounded bg-pink-400/35 text-pink-100 px-0.5' },
 ]
 
-function applyHighlights(
+// Text-search highlight: used for saved highlights (from API) re-applied after remount.
+// Only manages marks with the given data-attribute, leaving the other type intact.
+function applyHighlightsByText(
   container: HTMLElement,
   highlights: { text: string; color: string }[],
+  attr: 'data-save-highlight' | 'data-pending-highlight',
 ) {
-  // Remove existing marks
-  container.querySelectorAll('mark[data-save-highlight]').forEach((m) => {
+  container.querySelectorAll(`mark[${attr}]`).forEach((m) => {
     const parent = m.parentNode
     if (parent) {
       parent.replaceChild(document.createTextNode(m.textContent ?? ''), m)
@@ -35,7 +37,16 @@ function applyHighlights(
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
   const textNodes: Text[] = []
   let node: Node | null
-  while ((node = walker.nextNode())) textNodes.push(node as Text)
+  while ((node = walker.nextNode())) {
+    // Skip text nodes that are already inside a mark (the other type)
+    let p = node.parentElement
+    let insideMark = false
+    while (p && p !== container) {
+      if (p.tagName === 'MARK') { insideMark = true; break }
+      p = p.parentElement
+    }
+    if (!insideMark) textNodes.push(node as Text)
+  }
 
   for (const textNode of textNodes) {
     const text = textNode.textContent ?? ''
@@ -52,7 +63,7 @@ function applyHighlights(
         const colorId = colorMap.get(part)!
         const cls = COLORS.find((c) => c.id === colorId)?.mark ?? COLORS[0].mark
         const mark = document.createElement('mark')
-        mark.setAttribute('data-save-highlight', '')
+        mark.setAttribute(attr, '')
         mark.className = cls
         mark.textContent = part
         fragment.appendChild(mark)
@@ -61,6 +72,23 @@ function applyHighlights(
       }
     }
     textNode.parentNode!.replaceChild(fragment, textNode)
+  }
+}
+
+// Range-based highlight: used for new selections. Works across code spans and
+// any DOM structure because it operates on the live Range object.
+function applyRangeHighlight(range: Range, colorId: string) {
+  const cls = COLORS.find((c) => c.id === colorId)?.mark ?? COLORS[0].mark
+  const mark = document.createElement('mark')
+  mark.setAttribute('data-pending-highlight', '')
+  mark.className = cls
+  try {
+    range.surroundContents(mark)
+  } catch {
+    // Selection spans element boundaries — extract and re-insert wrapped
+    const fragment = range.extractContents()
+    mark.appendChild(fragment)
+    range.insertNode(mark)
   }
 }
 
@@ -86,15 +114,28 @@ export default function LearnSession() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cacheKey])
 
-  // Highlights
-  const pendingKey = documentId && topic ? `pending:${documentId}:${topic}` : null
+  // Remember last session so Learn.tsx can offer "Resume"
+  useEffect(() => {
+    if (documentId && topic) {
+      sessionStorage.setItem('lastLearnSession', `/learn/${documentId}?topic=${encodeURIComponent(topic)}`)
+      sessionStorage.setItem('lastLearnTopic', topic)
+    }
+  }, [documentId, topic])
+
+  // Highlights — color picker
   const [activeColor, setActiveColor] = useState('yellow')
   const activeColorRef = useRef(activeColor)
   activeColorRef.current = activeColor
 
+  // Pending highlights (unsaved, persisted in sessionStorage)
+  const pendingKey = documentId && topic ? `pending:${documentId}:${topic}` : null
   const [pendingHighlights, setPendingHighlights] = useState<{ text: string; color: string }[]>(() =>
     pendingKey ? JSON.parse(sessionStorage.getItem(pendingKey) ?? '[]') : [],
   )
+  const pendingHighlightsRef = useRef(pendingHighlights)
+  useEffect(() => { pendingHighlightsRef.current = pendingHighlights }, [pendingHighlights])
+
+  // Saved highlights (from API)
   const [savedHighlights, setSavedHighlights] = useState<{ text: string; color: string }[]>([])
   const [savedToast, setSavedToast] = useState(false)
 
@@ -121,13 +162,26 @@ export default function LearnSession() {
 
   const explanationRef = useRef<HTMLDivElement>(null)
 
-  // Re-apply highlight marks after explanation renders or highlights change
+  // Re-apply SAVED highlights via text search after explanation renders or saved list changes
   useEffect(() => {
     if (!explanationRef.current || loadingExplanation || !displayExplanation) return
-    applyHighlights(explanationRef.current, [...savedHighlights, ...pendingHighlights])
-  }, [displayExplanation, loadingExplanation, savedHighlights, pendingHighlights])
+    applyHighlightsByText(explanationRef.current, savedHighlights, 'data-save-highlight')
+  }, [displayExplanation, loadingExplanation, savedHighlights])
 
-  // Document-level mouseup: highlight selected text immediately
+  // On first render (including remount from sessionStorage), apply pending highlights
+  // via text search (best-effort; works for normal text, may miss code-spanning selections)
+  const pendingInitApplied = useRef(false)
+  useEffect(() => {
+    if (!explanationRef.current || loadingExplanation || !displayExplanation) return
+    if (pendingInitApplied.current) return
+    pendingInitApplied.current = true
+    if (pendingHighlightsRef.current.length) {
+      applyHighlightsByText(explanationRef.current, pendingHighlightsRef.current, 'data-pending-highlight')
+    }
+  }, [displayExplanation, loadingExplanation])
+
+  // Document-level mouseup: highlight selected text immediately via Range API.
+  // This handles code spans and any cross-element selections.
   useEffect(() => {
     function onMouseUp(e: MouseEvent) {
       if ((e.target as HTMLElement).closest('[data-highlight-toolbar]')) return
@@ -137,10 +191,14 @@ export default function LearnSession() {
         if (!text || !sel?.rangeCount || !explanationRef.current) return
         const range = sel.getRangeAt(0)
         if (!explanationRef.current.contains(range.commonAncestorContainer)) return
-        setPendingHighlights((prev) =>
-          prev.some((h) => h.text === text) ? prev : [...prev, { text, color: activeColorRef.current }],
-        )
+        if (pendingHighlightsRef.current.some((h) => h.text === text)) {
+          sel.removeAllRanges()
+          return
+        }
+        // Apply immediately via Range (works for code blocks, mixed elements)
+        applyRangeHighlight(range, activeColorRef.current)
         sel.removeAllRanges()
+        setPendingHighlights((prev) => [...prev, { text, color: activeColorRef.current }])
       }, 10)
     }
     document.addEventListener('mouseup', onMouseUp)
