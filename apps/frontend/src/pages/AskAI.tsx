@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { useLocation } from 'react-router-dom'
-import { Send, Mic, MicOff } from 'lucide-react'
+import { Send, Mic } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
 import { useSSE } from '../lib/sse.ts'
 import { useVoiceInput } from '../lib/voice.ts'
@@ -141,14 +141,17 @@ export default function AskAI() {
           {supported && (
             <button
               onClick={toggleMic}
-              className={`rounded-xl px-4 py-3 transition-colors ${
+              title={listening ? 'Click to stop recording' : 'Click to start recording'}
+              className={`relative rounded-xl px-4 py-3 transition-colors ${
                 listening
-                  ? 'bg-danger text-white animate-pulse'
-                  : 'border border-border text-muted hover:text-white'
+                  ? 'bg-danger/10 border border-danger text-danger'
+                  : 'border border-border text-muted hover:border-primary/40 hover:text-primary'
               }`}
-              title={listening ? 'Stop recording' : 'Start voice input'}
             >
-              {listening ? <MicOff size={16} /> : <Mic size={16} />}
+              <Mic size={16} />
+              {listening && (
+                <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-danger animate-pulse" />
+              )}
             </button>
           )}
           <button

@@ -17,7 +17,7 @@ app.post('/', async (c) => {
 
   const apiKey = settings.openrouterKey ?? process.env.OPENROUTER_API_KEY!
   const ollamaUrl = settings.ollamaUrl ?? process.env.OLLAMA_URL ?? 'http://localhost:11434'
-  const model = settings.defaultModel ?? 'google/gemini-flash-1.5'
+  const model = settings.defaultModel ?? 'google/gemini-3.5-flash'
 
   if (!apiKey) return c.json({ error: 'OpenRouter API key not configured' }, 400)
 

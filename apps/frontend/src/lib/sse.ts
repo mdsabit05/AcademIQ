@@ -61,10 +61,12 @@ export function useSSE(options: UseSSEOptions = {}) {
         }
 
         options.onDone?.(accumulated)
+        return accumulated
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
           options.onError?.(err as Error)
         }
+        return accumulated
       } finally {
         setStreaming(false)
       }

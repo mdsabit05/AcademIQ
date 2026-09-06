@@ -8,7 +8,7 @@ export default function Settings() {
   const [form, setForm] = useState({
     openrouterKey: '',
     ollamaUrl: 'http://localhost:11434',
-    defaultModel: 'google/gemini-flash-1.5',
+    defaultModel: 'google/gemini-3.5-flash',
   })
   const [showKey, setShowKey] = useState(false)
   const [saving, setSaving] = useState(false)

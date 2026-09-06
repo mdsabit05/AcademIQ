@@ -3,4 +3,5 @@ packages:
   - 'packages/*'
 allowBuilds:
   '@clerk/shared': true
+  core-js: set this to true or false
   esbuild: true

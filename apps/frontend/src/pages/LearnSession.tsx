@@ -55,7 +55,7 @@ export default function LearnSession() {
     if (!token) return
 
     const history = chatHistory.map((m) => ({ role: m.role, content: m.content }))
-    await streamChat('/api/ask', { documentId, message, history }, token)
+    const finalText = await streamChat('/api/ask', { documentId, message, history }, token)
 
     setChatHistory((prev) => [
       ...prev,
@@ -64,7 +64,7 @@ export default function LearnSession() {
         user_id: '',
         document_id: documentId,
         role: 'assistant' as MessageRole,
-        content: chatResponse,
+        content: finalText ?? '',
         mode: 'learn',
         created_at: new Date().toISOString(),
       },
@@ -130,9 +130,18 @@ export default function LearnSession() {
                 </div>
               </div>
             ))}
-            {streamingChat && chatResponse && (
+            {streamingChat && (
               <div className="inline-block max-w-[85%] rounded-xl border border-border bg-surface px-3 py-2">
-                <StreamingText text={chatResponse} streaming={streamingChat} className="text-sm" />
+                {chatResponse ? (
+                  <StreamingText text={chatResponse} streaming={streamingChat} className="text-sm" />
+                ) : (
+                  <div className="flex items-center gap-1.5 text-xs text-muted">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:0ms]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:150ms]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:300ms]" />
+                    <span className="ml-1">Thinking...</span>
+                  </div>
+                )}
               </div>
             )}
             <div ref={chatEndRef} />

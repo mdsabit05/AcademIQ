@@ -11,12 +11,17 @@ export default function Materials() {
   const [loading, setLoading] = useState(true)
 
   const loadDocuments = useCallback(async () => {
-    const token = await getToken()
-    if (!token) return
-    const api = makeApi(token)
-    const res = await api.documents.list()
-    setDocuments(res.documents)
-    setLoading(false)
+    try {
+      const token = await getToken()
+      if (!token) return
+      const api = makeApi(token)
+      const res = await api.documents.list()
+      setDocuments(res.documents)
+    } catch (e) {
+      console.error('Failed to load documents:', e)
+    } finally {
+      setLoading(false)
+    }
   }, [getToken])
 
   useEffect(() => { loadDocuments() }, [loadDocuments])
@@ -34,6 +39,7 @@ export default function Materials() {
     if (!token) throw new Error('Not authenticated')
     const api = makeApi(token)
     const res = await api.documents.upload(file, title)
+    if (!res.document) throw new Error((res as unknown as { error: string }).error ?? 'Upload failed')
     setDocuments((prev) => [res.document, ...prev])
     return { documentId: res.document.id }
   }

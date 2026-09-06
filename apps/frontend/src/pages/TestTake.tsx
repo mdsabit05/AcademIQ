@@ -156,7 +156,7 @@ export default function TestTake() {
             {/* MCQ options */}
             {q.options ? (
               <div className="space-y-3">
-                {q.options.map((opt) => (
+                {(typeof q.options === 'string' ? JSON.parse(q.options) : q.options).map((opt: string) => (
                   <button
                     key={opt}
                     onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt[0] }))}

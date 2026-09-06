@@ -21,7 +21,7 @@ function headers(apiKey: string) {
 export async function streamCompletion(
   messages: LLMMessage[],
   apiKey: string,
-  model = 'google/gemini-flash-1.5',
+  model = 'google/gemini-3.5-flash',
 ): Promise<ReadableStream<Uint8Array>> {
   const res = await fetch(OPENROUTER_URL, {
     method: 'POST',
@@ -43,7 +43,7 @@ export async function streamCompletion(
 export async function completeJson<T>(
   messages: LLMMessage[],
   apiKey: string,
-  model = 'google/gemini-flash-1.5',
+  model = 'google/gemini-3.5-flash',
 ): Promise<T> {
   const res = await fetch(OPENROUTER_URL, {
     method: 'POST',

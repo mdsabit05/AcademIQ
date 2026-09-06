@@ -1,5 +1,5 @@
 import { createMiddleware } from 'hono/factory'
-import { createClerkClient } from '@clerk/backend'
+import { verifyToken } from '@clerk/backend'
 import sql from '../db/client.js'
 
 export type AuthEnv = {
@@ -19,8 +19,9 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
   const token = authHeader.replace('Bearer ', '')
 
   try {
-    const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! })
-    const payload = await clerk.verifyToken(token)
+    const payload = await verifyToken(token, {
+      secretKey: process.env.CLERK_SECRET_KEY!,
+    })
     const clerkUserId = payload.sub
 
     // Look up DB user, auto-create if missing (race-safe via ON CONFLICT)
@@ -35,7 +36,8 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
     c.set('dbUserId', user.id)
     c.set('userSettings', user.settings ?? {})
     await next()
-  } catch {
+  } catch (err) {
+    console.error('[auth] verifyToken failed:', err)
     return c.json({ error: 'Unauthorized' }, 401)
   }
 })
