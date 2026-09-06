@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { CheckCircle, XCircle, AlertTriangle, Clock, ArrowLeft, RotateCcw, RefreshCw } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
+import StreamingText from '../components/StreamingText.tsx'
+import { useExplanations } from '../lib/useExplanations.ts'
 import type { Test, TestAttempt, TestQuestion } from 'shared'
 import { generateExamPaper } from '../lib/pdf.ts'
 
@@ -14,11 +16,13 @@ export default function TestResults() {
   const [questions, setQuestions] = useState<TestQuestion[]>([])
   const [test, setTest] = useState<Test | null>(null)
   const [docTitle, setDocTitle] = useState('')
+  const [authToken, setAuthToken] = useState('')
 
   useEffect(() => {
     async function load() {
       const token = await getToken()
       if (!token || !testId) return
+      setAuthToken(token)
       const res = await makeApi(token).test.get(testId)
       setQuestions(res.questions)
       setTest(res.test)
@@ -33,6 +37,8 @@ export default function TestResults() {
     }
     load()
   }, [testId, getToken])
+
+  const { explanations } = useExplanations(questions, attempt, test?.document_id ?? '', authToken)
 
   if (!attempt) {
     return (
@@ -108,9 +114,19 @@ export default function TestResults() {
                     </span>
                   </p>
                   {!correct && (
-                    <p className="mt-1 text-xs text-muted">
-                      Correct: <span className="text-success">{q.correct_answer}</span>
-                    </p>
+                    <>
+                      <p className="mt-1 text-xs text-muted">
+                        Correct: <span className="text-success">{q.correct_answer}</span>
+                      </p>
+                      {explanations[q.id] ? (
+                        <div className="mt-3 rounded-lg border border-border bg-surface/60 px-3 py-2 text-xs text-muted">
+                          <p className="mb-1 font-semibold text-primary">AI Explanation</p>
+                          <StreamingText text={explanations[q.id]} streaming={false} />
+                        </div>
+                      ) : authToken && test?.document_id ? (
+                        <p className="mt-2 text-xs text-muted italic">Loading explanation...</p>
+                      ) : null}
+                    </>
                   )}
                 </div>
               </div>
