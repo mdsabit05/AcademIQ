@@ -78,13 +78,12 @@ describe('generateExamPaper', () => {
     expect(hasOptionA).toBe(true)
   })
 
-  it('does not include correct answers in the rendered text', () => {
+  it('does not add an answer key section to the PDF', () => {
     generateExamPaper(mockTest, mockQuestions, 'DB Notes')
     const allTextArgs = mockText.mock.calls.map((c) => String(c[0]))
-    // "Atomic values" should only appear as an MCQ option label, not standalone
-    // The correct_answer field should never be written as a standalone text call
-    const hasStandaloneCorrectAnswer = allTextArgs.some((t) => t === 'Atomic values')
-    expect(hasStandaloneCorrectAnswer).toBe(false)
+    // Should never print "Correct:" or "Answer:" headings — this is a blank exam paper
+    const hasAnswerKey = allTextArgs.some((t) => /correct:|answer key/i.test(t))
+    expect(hasAnswerKey).toBe(false)
   })
 
   it('draws blank lines for non-MCQ questions based on marks count', () => {
