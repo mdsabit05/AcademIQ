@@ -5,9 +5,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: '#0A0A0F',
-        surface: '#13131f',
-        border: '#2d2d3d',
+        bg: 'rgb(var(--color-bg) / <alpha-value>)',
+        surface: 'rgb(var(--color-surface) / <alpha-value>)',
+        border: 'rgb(var(--color-border) / <alpha-value>)',
+        muted: 'rgb(var(--color-muted) / <alpha-value>)',
+        subtle: 'rgb(var(--color-subtle) / <alpha-value>)',
         primary: {
           DEFAULT: '#6366F1',
           hover: '#4F46E5',
@@ -21,8 +23,6 @@ export default {
           DEFAULT: '#FBBF24',
           muted: 'rgba(251,191,36,0.15)',
         },
-        muted: '#94a3b8',
-        subtle: '#475569',
         success: '#22C55E',
         danger: '#EF4444',
       },
