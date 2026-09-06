@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { retrieveChunks, buildContext } from '../services/rag.service.js'
+import { retrieveChunks, retrieveChunksMulti, buildContext } from '../services/rag.service.js'
 import { completeJson } from '../services/openrouter.service.js'
 import { testPrompt } from '../prompts/test.prompt.js'
 import { authMiddleware, type AuthEnv } from '../middleware/auth.js'
@@ -63,7 +63,10 @@ app.post('/generate', async (c) => {
 
   if (!apiKey) return c.json({ error: 'OpenRouter API key not configured' }, 400)
 
-  const chunks = await retrieveChunks(topic, documentId, 8, ollamaUrl)
+  const docIds = body.documentIds && body.documentIds.length > 1 ? body.documentIds : null
+  const chunks = docIds
+    ? await retrieveChunksMulti(topic, docIds, 8, ollamaUrl)
+    : await retrieveChunks(topic, documentId, 8, ollamaUrl)
   const context = buildContext(chunks)
   const messages = testPrompt(topic, context, count, type, difficulty)
 
@@ -75,8 +78,9 @@ app.post('/generate', async (c) => {
 
   // Persist test
   const [test] = await sql`
-    INSERT INTO tests (user_id, document_id, topic, question_count, type, difficulty)
-    VALUES (${userId}, ${documentId}, ${topic}, ${count}, ${type}, ${difficulty})
+    INSERT INTO tests (user_id, document_id, topic, question_count, type, difficulty, document_ids)
+    VALUES (${userId}, ${documentId}, ${topic}, ${count}, ${type}, ${difficulty},
+            ${body.documentIds ?? []})
     RETURNING *
   `
 
