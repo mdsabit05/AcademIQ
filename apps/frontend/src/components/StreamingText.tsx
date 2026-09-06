@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { memo, useEffect, useRef } from 'react'
 import { clsx } from 'clsx'
 import ReactMarkdown from 'react-markdown'
 
@@ -8,7 +8,7 @@ interface StreamingTextProps {
   className?: string
 }
 
-export default function StreamingText({ text, streaming, className }: StreamingTextProps) {
+export default memo(function StreamingText({ text, streaming, className }: StreamingTextProps) {
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -50,4 +50,4 @@ export default function StreamingText({ text, streaming, className }: StreamingT
       <div ref={endRef} />
     </div>
   )
-}
+})
