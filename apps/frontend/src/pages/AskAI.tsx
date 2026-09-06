@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '@clerk/clerk-react'
+import { useLocation } from 'react-router-dom'
 import { Send, Mic, MicOff } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
 import { useSSE } from '../lib/sse.ts'
@@ -9,6 +10,7 @@ import type { Document, ChatMessage, MessageRole } from 'shared'
 
 export default function AskAI() {
   const { getToken } = useAuth()
+  const { state } = useLocation()
   const [documents, setDocuments] = useState<Document[]>([])
   const [selectedDoc, setSelectedDoc] = useState('')
   const [history, setHistory] = useState<ChatMessage[]>([])
@@ -27,10 +29,14 @@ export default function AskAI() {
       const res = await api.documents.list()
       const ready = res.documents.filter((d) => d.status === 'ready')
       setDocuments(ready)
-      if (ready.length > 0) setSelectedDoc(ready[0].id)
+      if (state?.documentId) {
+        setSelectedDoc(state.documentId)
+      } else if (ready.length > 0) {
+        setSelectedDoc(ready[0].id)
+      }
     }
     load()
-  }, [getToken])
+  }, [getToken, state?.documentId])
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })

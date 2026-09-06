@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Search, BookOpen } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
@@ -8,6 +8,7 @@ import type { Document } from 'shared'
 export default function Learn() {
   const { getToken } = useAuth()
   const navigate = useNavigate()
+  const { state } = useLocation()
   const [documents, setDocuments] = useState<Document[]>([])
   const [topic, setTopic] = useState('')
   const [selectedDoc, setSelectedDoc] = useState('')
@@ -19,10 +20,14 @@ export default function Learn() {
       const res = await makeApi(token).documents.list()
       const ready = res.documents.filter((d) => d.status === 'ready')
       setDocuments(ready)
-      if (ready.length > 0) setSelectedDoc(ready[0].id)
+      if (state?.documentId) {
+        setSelectedDoc(state.documentId)
+      } else if (ready.length > 0) {
+        setSelectedDoc(ready[0].id)
+      }
     }
     load()
-  }, [getToken])
+  }, [getToken, state?.documentId])
 
   function handleLearn() {
     if (!topic.trim() || !selectedDoc) return

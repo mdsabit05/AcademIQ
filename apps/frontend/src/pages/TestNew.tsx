@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { Loader2 } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
@@ -22,6 +22,7 @@ const DIFFICULTIES: { value: Difficulty; label: string }[] = [
 export default function TestNew() {
   const { getToken } = useAuth()
   const navigate = useNavigate()
+  const { state } = useLocation()
   const [documents, setDocuments] = useState<Document[]>([])
   const [form, setForm] = useState({
     documentId: '',
@@ -39,10 +40,11 @@ export default function TestNew() {
       const res = await makeApi(token).documents.list()
       const ready = res.documents.filter((d) => d.status === 'ready')
       setDocuments(ready)
-      if (ready.length > 0) setForm((f) => ({ ...f, documentId: ready[0].id }))
+      const defaultDoc = state?.documentId ?? (ready.length > 0 ? ready[0].id : '')
+      setForm((f) => ({ ...f, documentId: defaultDoc }))
     }
     load()
-  }, [getToken])
+  }, [getToken, state?.documentId])
 
   async function generate() {
     if (!form.documentId || !form.topic.trim()) return
