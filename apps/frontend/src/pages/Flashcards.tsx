@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
-import { Layers, Plus, Brain } from 'lucide-react'
+import { Layers, Plus, BrainCircuit } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
 import { groupIntoSets, type FlashcardSet } from '../lib/groupFlashcards.ts'
 
@@ -47,7 +47,7 @@ export default function Flashcards() {
 
       {sets.length === 0 ? (
         <div className="py-16 text-center">
-          <Brain size={40} className="mx-auto mb-4 text-muted" />
+          <BrainCircuit size={40} className="mx-auto mb-4 text-muted" />
           <p className="text-muted">No flashcards yet. Create a set to start studying.</p>
           <button
             onClick={() => navigate('/flashcards/new')}

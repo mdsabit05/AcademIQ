@@ -17,6 +17,12 @@ export default function LearnSession() {
   const { text: explanation, streaming: loadingExplanation, stream: streamExplanation } = useSSE()
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
 
+  const cacheKey = documentId && topic ? `learn:${documentId}:${topic}` : null
+  const [cachedExplanation, setCachedExplanation] = useState(() =>
+    cacheKey ? (sessionStorage.getItem(cacheKey) ?? '') : '',
+  )
+  const displayExplanation = cachedExplanation || explanation
+
   const explanationRef = useRef<HTMLDivElement>(null)
   const [selectionText, setSelectionText] = useState('')
   const [savePos, setSavePos] = useState<{ top: number; left: number } | null>(null)
@@ -55,13 +61,17 @@ export default function LearnSession() {
   const { text: chatResponse, streaming: streamingChat, stream: streamChat, reset } = useSSE()
   const chatEndRef = useRef<HTMLDivElement>(null)
 
-  // Load initial explanation
+  // Load initial explanation — skip if cached
   useEffect(() => {
-    if (!documentId || !topic) return
+    if (!documentId || !topic || cachedExplanation) return
     async function load() {
       const token = await getToken()
       if (!token) return
-      streamExplanation('/api/learn', { documentId, topic }, token)
+      const full = await streamExplanation('/api/learn', { documentId, topic }, token)
+      if (full && cacheKey) {
+        sessionStorage.setItem(cacheKey, full)
+        setCachedExplanation(full)
+      }
     }
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -137,8 +147,8 @@ export default function LearnSession() {
               onMouseUp={handleMouseUp}
             >
               <h2 className="mb-4 font-semibold text-primary">AI Explanation</h2>
-              {explanation ? (
-                <StreamingText text={explanation} streaming={loadingExplanation} />
+              {displayExplanation ? (
+                <StreamingText text={displayExplanation} streaming={loadingExplanation} />
               ) : (
                 <div className="flex items-center gap-2 text-sm text-muted">
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
