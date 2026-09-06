@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
-import { CheckCircle, XCircle, AlertTriangle, Clock, ArrowLeft, RotateCcw } from 'lucide-react'
+import { CheckCircle, XCircle, AlertTriangle, Clock, ArrowLeft, RotateCcw, RefreshCw } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
-import type { TestAttempt, TestQuestion } from 'shared'
+import type { Test, TestAttempt, TestQuestion } from 'shared'
+import { generateExamPaper } from '../lib/pdf.ts'
 
 export default function TestResults() {
   const { testId } = useParams<{ testId: string }>()
@@ -11,6 +12,8 @@ export default function TestResults() {
   const navigate = useNavigate()
   const [attempt, setAttempt] = useState<TestAttempt | null>(null)
   const [questions, setQuestions] = useState<TestQuestion[]>([])
+  const [test, setTest] = useState<Test | null>(null)
+  const [docTitle, setDocTitle] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -18,9 +21,15 @@ export default function TestResults() {
       if (!token || !testId) return
       const res = await makeApi(token).test.get(testId)
       setQuestions(res.questions)
-      const attemptsRes = await makeApi(token).test.attempts()
+      setTest(res.test)
+      const [attemptsRes, docsRes] = await Promise.all([
+        makeApi(token).test.attempts(),
+        makeApi(token).documents.list(),
+      ])
       const latest = attemptsRes.attempts.find((a) => a.test_id === testId)
       if (latest) setAttempt(latest as unknown as TestAttempt)
+      const doc = docsRes.documents.find((d) => d.id === res.test.document_id)
+      setDocTitle(doc?.title ?? '')
     }
     load()
   }, [testId, getToken])
@@ -110,12 +119,26 @@ export default function TestResults() {
         })}
       </div>
 
-      <div className="mt-8 flex gap-3">
+      <div className="mt-8 flex flex-wrap gap-3">
         <button
           onClick={() => navigate('/test/new')}
           className="flex items-center gap-2 rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-muted hover:text-white"
         >
           <RotateCcw size={15} /> New Test
+        </button>
+        {test && questions.length > 0 && (
+          <button
+            onClick={() => generateExamPaper(test, questions, docTitle)}
+            className="flex items-center gap-2 rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-muted hover:text-white"
+          >
+            📄 Download Paper
+          </button>
+        )}
+        <button
+          onClick={() => navigate(`/test/${testId}`)}
+          className="flex items-center gap-2 rounded-xl border border-primary/50 px-5 py-2.5 text-sm font-medium text-primary hover:bg-primary/10"
+        >
+          <RefreshCw size={15} /> Repeat Test
         </button>
         <button
           onClick={() => navigate('/progress')}
