@@ -26,6 +26,8 @@ export default function TestNew() {
   const [documents, setDocuments] = useState<Document[]>([])
   const [form, setForm] = useState({
     documentId: '',
+    documentIds: [] as string[],
+    multiDoc: false,
     topic: '',
     count: 10,
     type: 'mcq' as TestType,
@@ -51,12 +53,24 @@ export default function TestNew() {
   }, [getToken, state?.documentId])
 
   async function generate() {
-    if (!form.documentId || !form.topic.trim()) return
+    if (
+      (!form.multiDoc && !form.documentId) ||
+      (form.multiDoc && form.documentIds.length < 2) ||
+      !form.topic.trim()
+    ) return
     setLoading(true)
     try {
       const token = await getToken()
       if (!token) return
-      const res = await makeApi(token).test.generate({ ...form, topic: form.topic.trim() })
+      const payload = {
+        documentId: form.multiDoc ? form.documentIds[0] : form.documentId,
+        documentIds: form.multiDoc ? form.documentIds : undefined,
+        topic: form.topic.trim(),
+        count: form.count,
+        type: form.type,
+        difficulty: form.difficulty,
+      }
+      const res = await makeApi(token).test.generate(payload)
       navigate(`/test/${res.test.id}`)
     } catch {
       alert('Failed to generate test. Check your settings.')
@@ -78,15 +92,56 @@ export default function TestNew() {
 
       <div className="max-w-lg space-y-6">
         <div>
-          <label className="mb-2 block text-sm font-medium text-muted">Material</label>
-          <select
-            value={form.documentId}
-            onChange={(e) => toggle('documentId', e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-white outline-none focus:border-primary"
-          >
-            {documents.length === 0 && <option value="">No materials — upload a PDF first</option>}
-            {documents.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}
-          </select>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-sm font-medium text-muted">Material</label>
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-muted">
+              <input
+                type="checkbox"
+                checked={form.multiDoc}
+                onChange={(e) => setForm((f) => ({ ...f, multiDoc: e.target.checked, documentIds: [] }))}
+                className="accent-primary"
+              />
+              Multiple documents
+            </label>
+          </div>
+
+          {!form.multiDoc ? (
+            <select
+              value={form.documentId}
+              onChange={(e) => toggle('documentId', e.target.value)}
+              className="w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-white outline-none focus:border-primary"
+            >
+              {documents.length === 0 && <option value="">No materials — upload a PDF first</option>}
+              {documents.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}
+            </select>
+          ) : (
+            <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border bg-surface p-2">
+              {documents.length === 0 && (
+                <p className="px-2 py-1 text-sm text-muted">No materials — upload a PDF first</p>
+              )}
+              {documents.map((d) => (
+                <label key={d.id} className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-white/5">
+                  <input
+                    type="checkbox"
+                    checked={form.documentIds.includes(d.id)}
+                    onChange={(e) => {
+                      setForm((f) => ({
+                        ...f,
+                        documentIds: e.target.checked
+                          ? [...f.documentIds, d.id]
+                          : f.documentIds.filter((id) => id !== d.id),
+                      }))
+                    }}
+                    className="accent-primary"
+                  />
+                  <span className="text-sm text-white">{d.title}</span>
+                </label>
+              ))}
+            </div>
+          )}
+          {form.multiDoc && form.documentIds.length < 2 && (
+            <p className="mt-1 text-xs text-muted">Select at least 2 documents</p>
+          )}
         </div>
 
         <div>
@@ -152,7 +207,12 @@ export default function TestNew() {
 
         <button
           onClick={generate}
-          disabled={!form.documentId || !form.topic.trim() || loading}
+          disabled={
+            (!form.multiDoc && !form.documentId) ||
+            (form.multiDoc && form.documentIds.length < 2) ||
+            !form.topic.trim() ||
+            loading
+          }
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-bold text-white hover:bg-primary-hover disabled:opacity-40"
         >
           {loading ? <><Loader2 size={18} className="animate-spin" /> Generating...</> : 'Generate Test'}
