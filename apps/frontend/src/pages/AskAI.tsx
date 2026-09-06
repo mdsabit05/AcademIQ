@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '@clerk/clerk-react'
-import { Send } from 'lucide-react'
+import { Send, Mic, MicOff } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
 import { useSSE } from '../lib/sse.ts'
+import { useVoiceInput } from '../lib/voice.ts'
 import StreamingText from '../components/StreamingText.tsx'
 import type { Document, ChatMessage, MessageRole } from 'shared'
 
@@ -14,6 +15,9 @@ export default function AskAI() {
   const [input, setInput] = useState('')
   const { text, streaming, stream, reset } = useSSE()
   const endRef = useRef<HTMLDivElement>(null)
+  const { listening, supported, toggle: toggleMic } = useVoiceInput((transcript) => {
+    setInput(transcript)
+  })
 
   useEffect(() => {
     async function load() {
@@ -51,14 +55,14 @@ export default function AskAI() {
     const token = await getToken()
     if (!token) return
     const chatHistory = history.map((m) => ({ role: m.role, content: m.content }))
-    await stream('/api/ask', { documentId: selectedDoc, message, history: chatHistory }, token)
+    const finalText = await stream('/api/ask', { documentId: selectedDoc, message, history: chatHistory }, token)
 
     const assistantMsg: ChatMessage = {
       id: (Date.now() + 1).toString(),
       user_id: '',
       document_id: selectedDoc,
       role: 'assistant',
-      content: text,
+      content: finalText ?? '',
       mode: 'ask',
       created_at: new Date().toISOString(),
     }
@@ -94,14 +98,25 @@ export default function AskAI() {
             <div className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm ${
               msg.role === 'user' ? 'bg-primary text-white' : 'border border-border bg-surface text-white'
             }`}>
-              {msg.content}
+              {msg.role === 'assistant'
+                ? <StreamingText text={msg.content} />
+                : msg.content}
             </div>
           </div>
         ))}
-        {streaming && text && (
+        {streaming && (
           <div className="flex justify-start">
             <div className="max-w-[70%] rounded-2xl border border-border bg-surface px-4 py-3">
-              <StreamingText text={text} streaming={streaming} />
+              {text ? (
+                <StreamingText text={text} streaming={streaming} />
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-muted">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:0ms]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:150ms]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:300ms]" />
+                  <span className="ml-1">Thinking...</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -117,6 +132,19 @@ export default function AskAI() {
             placeholder="Ask anything about your material..."
             className="flex-1 rounded-xl border border-border bg-surface px-4 py-3 text-sm text-white placeholder-muted outline-none focus:border-primary"
           />
+          {supported && (
+            <button
+              onClick={toggleMic}
+              className={`rounded-xl px-4 py-3 transition-colors ${
+                listening
+                  ? 'bg-danger text-white animate-pulse'
+                  : 'border border-border text-muted hover:text-white'
+              }`}
+              title={listening ? 'Stop recording' : 'Start voice input'}
+            >
+              {listening ? <MicOff size={16} /> : <Mic size={16} />}
+            </button>
+          )}
           <button
             onClick={send}
             disabled={!input.trim() || streaming}
