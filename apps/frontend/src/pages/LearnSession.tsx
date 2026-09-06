@@ -23,28 +23,51 @@ export default function LearnSession() {
   )
   const displayExplanation = cachedExplanation || explanation
 
+  // accRef tracks whatever has been streamed so far; saved to sessionStorage on unmount
+  // This handles the case where the user navigates away before the stream finishes
+  const accRef = useRef(cachedExplanation)
+  useEffect(() => {
+    if (explanation) accRef.current = explanation
+  }, [explanation])
+  useEffect(() => {
+    return () => {
+      if (accRef.current && cacheKey) sessionStorage.setItem(cacheKey, accRef.current)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cacheKey])
+
   const explanationRef = useRef<HTMLDivElement>(null)
   const [selectionText, setSelectionText] = useState('')
   const [savePos, setSavePos] = useState<{ top: number; left: number } | null>(null)
   const [savedToast, setSavedToast] = useState(false)
 
-  function handleMouseUp() {
-    const sel = window.getSelection()
-    const text = sel?.toString().trim() ?? ''
-    if (!text || !explanationRef.current) {
-      setSelectionText('')
-      setSavePos(null)
-      return
+  // Document-level mouseup: captures selections that start/end anywhere,
+  // uses viewport-relative fixed positioning (no scroll offset math needed)
+  useEffect(() => {
+    function onMouseUp(e: MouseEvent) {
+      if ((e.target as HTMLElement).closest('[data-save-note]')) return
+      setTimeout(() => {
+        const sel = window.getSelection()
+        const text = sel?.toString().trim() ?? ''
+        if (!text || !sel?.rangeCount || !explanationRef.current) {
+          setSavePos(null)
+          setSelectionText('')
+          return
+        }
+        const range = sel.getRangeAt(0)
+        if (!explanationRef.current.contains(range.commonAncestorContainer)) {
+          setSavePos(null)
+          setSelectionText('')
+          return
+        }
+        const rect = range.getBoundingClientRect()
+        setSelectionText(text)
+        setSavePos({ top: rect.bottom + 6, left: rect.left })
+      }, 10)
     }
-    const range = sel!.getRangeAt(0)
-    const rect = range.getBoundingClientRect()
-    const containerRect = explanationRef.current.getBoundingClientRect()
-    setSelectionText(text)
-    setSavePos({
-      top: rect.bottom - containerRect.top + 6,
-      left: Math.max(0, rect.left - containerRect.left),
-    })
-  }
+    document.addEventListener('mouseup', onMouseUp)
+    return () => document.removeEventListener('mouseup', onMouseUp)
+  }, [])
 
   async function handleSaveNote() {
     if (!selectionText || !documentId) return
@@ -57,6 +80,7 @@ export default function LearnSession() {
     setSavedToast(true)
     setTimeout(() => setSavedToast(false), 2000)
   }
+
   const [chatInput, setChatInput] = useState('')
   const { text: chatResponse, streaming: streamingChat, stream: streamChat, reset } = useSSE()
   const chatEndRef = useRef<HTMLDivElement>(null)
@@ -68,10 +92,7 @@ export default function LearnSession() {
       const token = await getToken()
       if (!token) return
       const full = await streamExplanation('/api/learn', { documentId, topic }, token)
-      if (full && cacheKey) {
-        sessionStorage.setItem(cacheKey, full)
-        setCachedExplanation(full)
-      }
+      if (full) setCachedExplanation(full)
     }
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,8 +164,7 @@ export default function LearnSession() {
           <div className="mx-auto max-w-2xl">
             <div
               ref={explanationRef}
-              className="relative rounded-xl border border-border bg-surface p-6"
-              onMouseUp={handleMouseUp}
+              className="rounded-xl border border-border bg-surface p-6"
             >
               <h2 className="mb-4 font-semibold text-primary">AI Explanation</h2>
               {displayExplanation ? (
@@ -154,16 +174,6 @@ export default function LearnSession() {
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                   Generating explanation...
                 </div>
-              )}
-              {savePos && (
-                <button
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={handleSaveNote}
-                  style={{ top: savePos.top, left: savePos.left }}
-                  className="absolute z-10 flex items-center gap-1 rounded-lg bg-primary px-2 py-1 text-xs font-medium text-white shadow-lg hover:bg-primary-hover"
-                >
-                  💾 Save
-                </button>
               )}
             </div>
           </div>
@@ -228,6 +238,16 @@ export default function LearnSession() {
         </div>
       </div>
 
+      {savePos && (
+        <button
+          data-save-note
+          onClick={handleSaveNote}
+          style={{ position: 'fixed', top: savePos.top, left: savePos.left }}
+          className="z-50 flex items-center gap-1 rounded-lg bg-primary px-2 py-1 text-xs font-medium text-white shadow-lg hover:bg-primary-hover"
+        >
+          💾 Save
+        </button>
+      )}
       {savedToast && (
         <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-success px-4 py-2 text-sm font-medium text-white shadow-lg">
           Saved ✓
