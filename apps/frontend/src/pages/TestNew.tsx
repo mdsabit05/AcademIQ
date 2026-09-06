@@ -41,7 +41,11 @@ export default function TestNew() {
       const ready = res.documents.filter((d) => d.status === 'ready')
       setDocuments(ready)
       const defaultDoc = state?.documentId ?? (ready.length > 0 ? ready[0].id : '')
-      setForm((f) => ({ ...f, documentId: defaultDoc }))
+      setForm((f) => ({
+        ...f,
+        documentId: defaultDoc,
+        topic: state?.topic ?? f.topic,
+      }))
     }
     load()
   }, [getToken, state?.documentId])
