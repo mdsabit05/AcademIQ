@@ -53,7 +53,7 @@ export function generateExamPaper(test: Test, questions: TestQuestion[], docTitl
 
     if (opts && opts.length > 0) {
       for (let idx = 0; idx < opts.length; idx++) {
-        const optLines = doc.splitTextToSize(`[ ] ${opts[idx]}`, 148)
+        const optLines = doc.splitTextToSize(`${opts[idx]}`, 148)
         doc.text(optLines, margin + 6, y)
         y += optLines.length * 5 + 1
       }
