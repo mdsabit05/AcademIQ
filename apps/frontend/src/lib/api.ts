@@ -48,7 +48,11 @@ export function makeApi(token: string) {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: form,
-        }).then((r) => r.json() as Promise<{ document: Document }>)
+        }).then(async (r) => {
+          const data = await r.json()
+          if (!r.ok) throw new Error(data.error ?? r.statusText)
+          return data as { document: Document }
+        })
       },
 
       delete: (id: string) =>
@@ -72,7 +76,7 @@ export function makeApi(token: string) {
         }),
 
       attempts: () =>
-        apiFetch<{ attempts: (TestAttempt & { topic: string; document_title: string })[] }>(
+        apiFetch<{ attempts: (TestAttempt & { topic: string; document_id: string; document_title: string })[] }>(
           '/test/attempts',
           token,
         ),

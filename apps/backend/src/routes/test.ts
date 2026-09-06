@@ -39,6 +39,7 @@ app.get('/attempts', async (c) => {
       t.topic,
       t.type,
       t.difficulty,
+      t.document_id,
       d.title AS document_title
     FROM test_attempts ta
     JOIN tests t ON ta.test_id = t.id
@@ -58,7 +59,7 @@ app.post('/generate', async (c) => {
 
   const apiKey = settings.openrouterKey ?? process.env.OPENROUTER_API_KEY!
   const ollamaUrl = settings.ollamaUrl ?? process.env.OLLAMA_URL ?? 'http://localhost:11434'
-  const model = settings.defaultModel ?? 'google/gemini-flash-1.5'
+  const model = settings.defaultModel ?? 'google/gemini-3.5-flash'
 
   if (!apiKey) return c.json({ error: 'OpenRouter API key not configured' }, 400)
 
