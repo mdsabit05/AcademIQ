@@ -75,3 +75,26 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   mode        TEXT NOT NULL,
   created_at  TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE tests ADD COLUMN IF NOT EXISTS document_ids text[] NOT NULL DEFAULT '{}';
+
+CREATE TABLE IF NOT EXISTS notes (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  document_id  UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  topic        TEXT NOT NULL,
+  content      TEXT NOT NULL,
+  created_at   TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS flashcards (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  document_id  UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  topic        TEXT NOT NULL,
+  question     TEXT NOT NULL,
+  answer       TEXT NOT NULL,
+  pass_count   INT NOT NULL DEFAULT 0,
+  fail_count   INT NOT NULL DEFAULT 0,
+  created_at   TIMESTAMPTZ DEFAULT now()
+);
