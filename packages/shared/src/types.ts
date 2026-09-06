@@ -125,4 +125,5 @@ export interface ProgressResponse {
   studyTimeSeconds: number
   topicPerformance: Array<{ topic: string; score: number; attempts: number }>
   topicsToReview: string[]
+  topicDocumentMap: Record<string, string>
 }

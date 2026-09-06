@@ -51,11 +51,25 @@ app.get('/', async (c) => {
     ORDER BY score DESC
   `
 
+  // Most recent document_id per topic (for "Test Me" navigation)
+  const topicDocRows = await sql<Array<{ topic: string; document_id: string }>>`
+    SELECT DISTINCT ON (t.topic) t.topic, t.document_id
+    FROM test_attempts ta
+    JOIN tests t ON ta.test_id = t.id
+    WHERE ta.user_id = ${userId}
+    ORDER BY t.topic, ta.submitted_at DESC
+  `
+
   const topicsToReview = topicRows
     .filter((t) => t.score < 70)
     .sort((a, b) => a.score - b.score)
     .slice(0, 3)
     .map((t) => t.topic)
+
+  const topicDocumentMap: Record<string, string> = {}
+  for (const row of topicDocRows) {
+    topicDocumentMap[row.topic] = row.document_id
+  }
 
   const response: ProgressResponse = {
     testsCompleted: stats.tests_completed,
@@ -64,6 +78,7 @@ app.get('/', async (c) => {
     studyTimeSeconds: stats.total_time_seconds,
     topicPerformance: topicRows,
     topicsToReview,
+    topicDocumentMap,
   }
 
   return c.json(response)
