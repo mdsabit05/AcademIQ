@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/clerk-react'
 import { ArrowLeft, FileText, Send } from 'lucide-react'
 import { useSSE } from '../lib/sse.ts'
 import StreamingText from '../components/StreamingText.tsx'
+import { makeApi } from '../lib/api.ts'
 import type { ChatMessage, MessageRole } from 'shared'
 
 export default function LearnSession() {
@@ -15,6 +16,41 @@ export default function LearnSession() {
 
   const { text: explanation, streaming: loadingExplanation, stream: streamExplanation } = useSSE()
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
+
+  const explanationRef = useRef<HTMLDivElement>(null)
+  const [selectionText, setSelectionText] = useState('')
+  const [savePos, setSavePos] = useState<{ top: number; left: number } | null>(null)
+  const [savedToast, setSavedToast] = useState(false)
+
+  function handleMouseUp() {
+    const sel = window.getSelection()
+    const text = sel?.toString().trim() ?? ''
+    if (!text || !explanationRef.current) {
+      setSelectionText('')
+      setSavePos(null)
+      return
+    }
+    const range = sel!.getRangeAt(0)
+    const rect = range.getBoundingClientRect()
+    const containerRect = explanationRef.current.getBoundingClientRect()
+    setSelectionText(text)
+    setSavePos({
+      top: rect.bottom - containerRect.top + 6,
+      left: Math.max(0, rect.left - containerRect.left),
+    })
+  }
+
+  async function handleSaveNote() {
+    if (!selectionText || !documentId) return
+    const token = await getToken()
+    if (!token) return
+    await makeApi(token).notes.create({ documentId, topic, content: selectionText })
+    setSavePos(null)
+    setSelectionText('')
+    window.getSelection()?.removeAllRanges()
+    setSavedToast(true)
+    setTimeout(() => setSavedToast(false), 2000)
+  }
   const [chatInput, setChatInput] = useState('')
   const { text: chatResponse, streaming: streamingChat, stream: streamChat, reset } = useSSE()
   const chatEndRef = useRef<HTMLDivElement>(null)
@@ -95,7 +131,11 @@ export default function LearnSession() {
         {/* Main explanation */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="mx-auto max-w-2xl">
-            <div className="rounded-xl border border-border bg-surface p-6">
+            <div
+              ref={explanationRef}
+              className="relative rounded-xl border border-border bg-surface p-6"
+              onMouseUp={handleMouseUp}
+            >
               <h2 className="mb-4 font-semibold text-primary">AI Explanation</h2>
               {explanation ? (
                 <StreamingText text={explanation} streaming={loadingExplanation} />
@@ -104,6 +144,16 @@ export default function LearnSession() {
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                   Generating explanation...
                 </div>
+              )}
+              {savePos && (
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleSaveNote}
+                  style={{ top: savePos.top, left: savePos.left }}
+                  className="absolute z-10 flex items-center gap-1 rounded-lg bg-primary px-2 py-1 text-xs font-medium text-white shadow-lg hover:bg-primary-hover"
+                >
+                  💾 Save
+                </button>
               )}
             </div>
           </div>
@@ -167,6 +217,12 @@ export default function LearnSession() {
           </div>
         </div>
       </div>
+
+      {savedToast && (
+        <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-success px-4 py-2 text-sm font-medium text-white shadow-lg">
+          Saved ✓
+        </div>
+      )}
     </div>
   )
 }

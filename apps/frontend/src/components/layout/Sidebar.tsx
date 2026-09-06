@@ -14,6 +14,8 @@ import {
   LogOut,
   Sun,
   Moon,
+  BookMarked,
+  Layers,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import Logo from '../Logo.tsx'
@@ -23,6 +25,8 @@ const NAV_ITEMS = [
   { to: '/dashboard', icon: Home, label: 'Home' },
   { to: '/materials', icon: Upload, label: 'Materials' },
   { to: '/learn', icon: BookOpen, label: 'Learn' },
+  { to: '/notes', icon: BookMarked, label: 'Notes' },
+  { to: '/flashcards', icon: Layers, label: 'Flashcards' },
   { to: '/ask', icon: MessageSquare, label: 'Ask AI' },
   { to: '/test/new', icon: FileText, label: 'Tests' },
   { to: '/progress', icon: BarChart2, label: 'Progress' },

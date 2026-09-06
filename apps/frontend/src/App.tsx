@@ -12,6 +12,10 @@ import TestTake from './pages/TestTake.tsx'
 import TestResults from './pages/TestResults.tsx'
 import Progress from './pages/Progress.tsx'
 import Settings from './pages/Settings.tsx'
+import Notes from './pages/Notes.tsx'
+import Flashcards from './pages/Flashcards.tsx'
+import FlashcardsNew from './pages/FlashcardsNew.tsx'
+import FlashcardsStudy from './pages/FlashcardsStudy.tsx'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth()
@@ -66,6 +70,10 @@ export default function App() {
         <Route path="/test/:testId/results" element={<TestResults />} />
         <Route path="/progress" element={<Progress />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/notes" element={<Notes />} />
+        <Route path="/flashcards" element={<Flashcards />} />
+        <Route path="/flashcards/new" element={<FlashcardsNew />} />
+        <Route path="/flashcards/study/:documentId/:topic" element={<FlashcardsStudy />} />
       </Route>
     </Routes>
   )
