@@ -7,8 +7,18 @@ import StreamingText from '../components/StreamingText.tsx'
 import { makeApi } from '../lib/api.ts'
 import type { ChatMessage, MessageRole } from 'shared'
 
-function applyHighlights(container: HTMLElement, highlights: string[]) {
-  // Remove previous highlight marks
+const COLORS = [
+  { id: 'yellow', dot: 'bg-yellow-400', mark: 'rounded bg-yellow-400/35 text-yellow-100 px-0.5' },
+  { id: 'green',  dot: 'bg-emerald-400', mark: 'rounded bg-emerald-400/35 text-emerald-100 px-0.5' },
+  { id: 'blue',   dot: 'bg-blue-400', mark: 'rounded bg-blue-400/35 text-blue-100 px-0.5' },
+  { id: 'pink',   dot: 'bg-pink-400', mark: 'rounded bg-pink-400/35 text-pink-100 px-0.5' },
+]
+
+function applyHighlights(
+  container: HTMLElement,
+  highlights: { text: string; color: string }[],
+) {
+  // Remove existing marks
   container.querySelectorAll('mark[data-save-highlight]').forEach((m) => {
     const parent = m.parentNode
     if (parent) {
@@ -18,11 +28,10 @@ function applyHighlights(container: HTMLElement, highlights: string[]) {
   })
   if (!highlights.length) return
 
-  const escaped = highlights.map((h) => h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const colorMap = new Map(highlights.map((h) => [h.text, h.color]))
+  const escaped = highlights.map((h) => h.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   const pattern = new RegExp(`(${escaped.join('|')})`, 'g')
-  const highlightSet = new Set(highlights)
 
-  // Collect all text nodes first, then process (avoids walker invalidation)
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
   const textNodes: Text[] = []
   let node: Node | null
@@ -39,10 +48,12 @@ function applyHighlights(container: HTMLElement, highlights: string[]) {
 
     const fragment = document.createDocumentFragment()
     for (const part of parts) {
-      if (highlightSet.has(part)) {
+      if (colorMap.has(part)) {
+        const colorId = colorMap.get(part)!
+        const cls = COLORS.find((c) => c.id === colorId)?.mark ?? COLORS[0].mark
         const mark = document.createElement('mark')
         mark.setAttribute('data-save-highlight', '')
-        mark.className = 'rounded bg-amber-400/25 px-0.5 text-amber-100'
+        mark.className = cls
         mark.textContent = part
         fragment.appendChild(mark)
       } else if (part) {
@@ -61,110 +72,100 @@ export default function LearnSession() {
   const navigate = useNavigate()
 
   const { text: explanation, streaming: loadingExplanation, stream: streamExplanation } = useSSE()
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
 
+  // Explanation cache (persists across page changes)
   const cacheKey = documentId && topic ? `learn:${documentId}:${topic}` : null
   const [cachedExplanation, setCachedExplanation] = useState(() =>
     cacheKey ? (sessionStorage.getItem(cacheKey) ?? '') : '',
   )
   const displayExplanation = cachedExplanation || explanation
-
-  // accRef tracks whatever has been streamed so far; saved to sessionStorage on unmount
-  // This handles the case where the user navigates away before the stream finishes
   const accRef = useRef(cachedExplanation)
+  useEffect(() => { if (explanation) accRef.current = explanation }, [explanation])
   useEffect(() => {
-    if (explanation) accRef.current = explanation
-  }, [explanation])
-  useEffect(() => {
-    return () => {
-      if (accRef.current && cacheKey) sessionStorage.setItem(cacheKey, accRef.current)
-    }
+    return () => { if (accRef.current && cacheKey) sessionStorage.setItem(cacheKey, accRef.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cacheKey])
 
-  const highlightKey = documentId && topic ? `highlights:${documentId}:${topic}` : null
-  const [highlights, setHighlights] = useState<string[]>(() =>
-    highlightKey ? JSON.parse(sessionStorage.getItem(highlightKey) ?? '[]') : [],
-  )
+  // Highlights
+  const pendingKey = documentId && topic ? `pending:${documentId}:${topic}` : null
+  const [activeColor, setActiveColor] = useState('yellow')
+  const activeColorRef = useRef(activeColor)
+  activeColorRef.current = activeColor
 
-  // Load saved notes for this topic from the API (persists across browser sessions)
+  const [pendingHighlights, setPendingHighlights] = useState<{ text: string; color: string }[]>(() =>
+    pendingKey ? JSON.parse(sessionStorage.getItem(pendingKey) ?? '[]') : [],
+  )
+  const [savedHighlights, setSavedHighlights] = useState<{ text: string; color: string }[]>([])
+  const [savedToast, setSavedToast] = useState(false)
+
+  // Persist pending highlights to sessionStorage
+  useEffect(() => {
+    if (pendingKey) sessionStorage.setItem(pendingKey, JSON.stringify(pendingHighlights))
+  }, [pendingHighlights, pendingKey])
+
+  // Load already-saved notes for this topic from API
   useEffect(() => {
     if (!documentId || !topic) return
-    async function loadHighlights() {
+    async function loadSaved() {
       const token = await getToken()
       if (!token) return
       const res = await makeApi(token).notes.list()
       const saved = res.notes
         .filter((n) => n.document_id === documentId && n.topic === topic)
-        .map((n) => n.content)
-      if (saved.length > 0) {
-        setHighlights(saved)
-        if (highlightKey) sessionStorage.setItem(highlightKey, JSON.stringify(saved))
-      }
+        .map((n) => ({ text: n.content, color: 'yellow' as const }))
+      setSavedHighlights(saved)
     }
-    loadHighlights()
+    loadSaved()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentId, topic])
 
-  // Apply highlight marks to the rendered explanation DOM
-  useEffect(() => {
-    if (!explanationRef.current || loadingExplanation || !displayExplanation || !highlights.length) return
-    applyHighlights(explanationRef.current, highlights)
-  }, [displayExplanation, loadingExplanation, highlights])
-
   const explanationRef = useRef<HTMLDivElement>(null)
-  const [selectionText, setSelectionText] = useState('')
-  const [savePos, setSavePos] = useState<{ top: number; left: number } | null>(null)
-  const [savedToast, setSavedToast] = useState(false)
 
-  // Document-level mouseup: captures selections that start/end anywhere,
-  // uses viewport-relative fixed positioning (no scroll offset math needed)
+  // Re-apply highlight marks after explanation renders or highlights change
+  useEffect(() => {
+    if (!explanationRef.current || loadingExplanation || !displayExplanation) return
+    applyHighlights(explanationRef.current, [...savedHighlights, ...pendingHighlights])
+  }, [displayExplanation, loadingExplanation, savedHighlights, pendingHighlights])
+
+  // Document-level mouseup: highlight selected text immediately
   useEffect(() => {
     function onMouseUp(e: MouseEvent) {
-      if ((e.target as HTMLElement).closest('[data-save-note]')) return
+      if ((e.target as HTMLElement).closest('[data-highlight-toolbar]')) return
       setTimeout(() => {
         const sel = window.getSelection()
         const text = sel?.toString().trim() ?? ''
-        if (!text || !sel?.rangeCount || !explanationRef.current) {
-          setSavePos(null)
-          setSelectionText('')
-          return
-        }
+        if (!text || !sel?.rangeCount || !explanationRef.current) return
         const range = sel.getRangeAt(0)
-        if (!explanationRef.current.contains(range.commonAncestorContainer)) {
-          setSavePos(null)
-          setSelectionText('')
-          return
-        }
-        const rect = range.getBoundingClientRect()
-        setSelectionText(text)
-        setSavePos({ top: rect.bottom + 6, left: rect.left })
+        if (!explanationRef.current.contains(range.commonAncestorContainer)) return
+        setPendingHighlights((prev) =>
+          prev.some((h) => h.text === text) ? prev : [...prev, { text, color: activeColorRef.current }],
+        )
+        sel.removeAllRanges()
       }, 10)
     }
     document.addEventListener('mouseup', onMouseUp)
     return () => document.removeEventListener('mouseup', onMouseUp)
   }, [])
 
-  async function handleSaveNote() {
-    if (!selectionText || !documentId) return
+  async function saveAllNotes() {
+    if (!pendingHighlights.length || !documentId) return
     const token = await getToken()
     if (!token) return
-    await makeApi(token).notes.create({ documentId, topic, content: selectionText })
-    const newHighlights = [...highlights, selectionText]
-    setHighlights(newHighlights)
-    if (highlightKey) sessionStorage.setItem(highlightKey, JSON.stringify(newHighlights))
-    setSavePos(null)
-    setSelectionText('')
-    window.getSelection()?.removeAllRanges()
+    for (const h of pendingHighlights) {
+      await makeApi(token).notes.create({ documentId, topic, content: h.text })
+    }
+    setSavedHighlights((prev) => [...prev, ...pendingHighlights])
+    setPendingHighlights([])
+    if (pendingKey) sessionStorage.removeItem(pendingKey)
     setSavedToast(true)
     setTimeout(() => setSavedToast(false), 2000)
   }
 
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
   const [chatInput, setChatInput] = useState('')
   const { text: chatResponse, streaming: streamingChat, stream: streamChat, reset } = useSSE()
   const chatEndRef = useRef<HTMLDivElement>(null)
 
-  // Load initial explanation — skip if cached
   useEffect(() => {
     if (!documentId || !topic || cachedExplanation) return
     async function load() {
@@ -174,7 +175,7 @@ export default function LearnSession() {
       if (full) setCachedExplanation(full)
     }
     load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentId, topic])
 
   useEffect(() => {
@@ -196,13 +197,10 @@ export default function LearnSession() {
     }
     setChatHistory((prev) => [...prev, userMsg])
     reset()
-
     const token = await getToken()
     if (!token) return
-
     const history = chatHistory.map((m) => ({ role: m.role, content: m.content }))
     const finalText = await streamChat('/api/ask', { documentId, message, history }, token)
-
     setChatHistory((prev) => [
       ...prev,
       {
@@ -240,11 +238,44 @@ export default function LearnSession() {
       <div className="flex flex-1 overflow-hidden">
         {/* Main explanation */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="mx-auto max-w-2xl">
+          <div className="mx-auto max-w-2xl space-y-3">
+
+            {/* Highlighter toolbar */}
             <div
-              ref={explanationRef}
-              className="rounded-xl border border-border bg-surface p-6"
+              data-highlight-toolbar
+              className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-2.5"
             >
+              <span className="text-xs font-medium text-muted">Highlight colour:</span>
+              <div className="flex items-center gap-2">
+                {COLORS.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => setActiveColor(c.id)}
+                    title={c.id}
+                    className={`h-5 w-5 rounded-full ${c.dot} transition-transform ${
+                      activeColor === c.id
+                        ? 'scale-125 ring-2 ring-white ring-offset-1 ring-offset-surface'
+                        : 'hover:scale-110 opacity-70'
+                    }`}
+                  />
+                ))}
+              </div>
+              <div className="ml-auto flex items-center gap-3">
+                {pendingHighlights.length > 0 && (
+                  <span className="text-xs text-muted">{pendingHighlights.length} unsaved</span>
+                )}
+                <button
+                  onClick={saveAllNotes}
+                  disabled={pendingHighlights.length === 0}
+                  className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-40"
+                >
+                  Save Notes
+                </button>
+              </div>
+            </div>
+
+            {/* Explanation */}
+            <div ref={explanationRef} className="rounded-xl border border-border bg-surface p-6">
               <h2 className="mb-4 font-semibold text-primary">AI Explanation</h2>
               {displayExplanation ? (
                 <StreamingText text={displayExplanation} streaming={loadingExplanation} />
@@ -264,7 +295,6 @@ export default function LearnSession() {
             <p className="text-sm font-semibold text-white">AI Tutor</p>
             <p className="text-xs text-muted">Ask anything about {topic}</p>
           </div>
-
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
             {chatHistory.map((msg) => (
               <div key={msg.id} className={msg.role === 'user' ? 'text-right' : ''}>
@@ -295,7 +325,6 @@ export default function LearnSession() {
             )}
             <div ref={chatEndRef} />
           </div>
-
           <div className="border-t border-border p-3">
             <div className="flex gap-2">
               <input
@@ -317,19 +346,9 @@ export default function LearnSession() {
         </div>
       </div>
 
-      {savePos && (
-        <button
-          data-save-note
-          onClick={handleSaveNote}
-          style={{ position: 'fixed', top: savePos.top, left: savePos.left }}
-          className="z-50 flex items-center gap-1 rounded-lg bg-primary px-2 py-1 text-xs font-medium text-white shadow-lg hover:bg-primary-hover"
-        >
-          💾 Save
-        </button>
-      )}
       {savedToast && (
         <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-success px-4 py-2 text-sm font-medium text-white shadow-lg">
-          Saved ✓
+          Notes saved ✓
         </div>
       )}
     </div>

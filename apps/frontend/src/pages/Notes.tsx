@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
-import { Trash2, BookMarked } from 'lucide-react'
+import { Trash2, BookMarked, Download } from 'lucide-react'
+import jsPDF from 'jspdf'
 import { makeApi } from '../lib/api.ts'
 import { groupByDocument } from '../lib/groupNotes.ts'
 import type { NoteWithTitle } from 'shared'
@@ -22,6 +23,47 @@ export default function Notes() {
     }
     load()
   }, [getToken])
+
+  function exportPDF(docTitle: string, topicGroups: Record<string, NoteWithTitle[]>) {
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const margin = 16
+    const maxWidth = pageWidth - margin * 2
+    let y = 20
+
+    function checkPage(needed: number) {
+      if (y + needed > doc.internal.pageSize.getHeight() - 16) {
+        doc.addPage()
+        y = 20
+      }
+    }
+
+    doc.setFontSize(18)
+    doc.setFont('helvetica', 'bold')
+    doc.text(docTitle, margin, y)
+    y += 12
+
+    for (const [topic, topicNotes] of Object.entries(topicGroups)) {
+      checkPage(14)
+      doc.setFontSize(13)
+      doc.setFont('helvetica', 'bold')
+      doc.text(topic, margin, y)
+      y += 8
+
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'normal')
+      for (const note of topicNotes) {
+        const lines = doc.splitTextToSize(`• ${note.content}`, maxWidth)
+        checkPage(lines.length * 6 + 2)
+        doc.text(lines, margin, y)
+        y += lines.length * 6 + 2
+      }
+      y += 4
+    }
+
+    const safeName = docTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+    doc.save(`notes_${safeName}.pdf`)
+  }
 
   async function handleDelete(id: string) {
     const token = await getToken()
@@ -64,7 +106,15 @@ export default function Notes() {
         <div className="space-y-8">
           {docTitles.map((docTitle) => (
             <div key={docTitle}>
-              <h2 className="mb-4 font-semibold text-white">{docTitle}</h2>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="font-semibold text-white">{docTitle}</h2>
+                <button
+                  onClick={() => exportPDF(docTitle, grouped[docTitle])}
+                  className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs text-muted hover:border-primary/40 hover:text-white"
+                >
+                  <Download size={13} /> Export PDF
+                </button>
+              </div>
               <div className="space-y-4">
                 {Object.entries(grouped[docTitle]).map(([topic, topicNotes]) => (
                   <div key={topic} className="rounded-xl border border-border bg-surface p-5">
