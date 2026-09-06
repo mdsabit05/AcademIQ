@@ -96,6 +96,7 @@ export interface AskRequest {
 
 export interface GenerateTestRequest {
   documentId: string
+  documentIds?: string[]
   topic: string
   count: number
   type: TestType
@@ -126,4 +127,35 @@ export interface ProgressResponse {
   topicPerformance: Array<{ topic: string; score: number; attempts: number }>
   topicsToReview: string[]
   topicDocumentMap: Record<string, string>
+}
+
+export interface Note {
+  id: string
+  user_id: string
+  document_id: string
+  topic: string
+  content: string
+  created_at: string
+}
+
+export interface NoteWithTitle extends Note {
+  document_title: string
+}
+
+export interface Flashcard {
+  id: string
+  user_id: string
+  document_id: string
+  topic: string
+  question: string
+  answer: string
+  pass_count: number
+  fail_count: number
+  created_at: string
+}
+
+export interface GenerateFlashcardsRequest {
+  documentId: string
+  topic: string
+  count: number
 }
