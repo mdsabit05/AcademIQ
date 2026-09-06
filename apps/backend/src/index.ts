@@ -10,6 +10,7 @@ import askRoute from './routes/ask.js'
 import testRoute from './routes/test.js'
 import progressRoute from './routes/progress.js'
 import settingsRoute from './routes/settings.js'
+import notesRoute from './routes/notes.js'
 
 const app = new Hono()
 
@@ -33,6 +34,7 @@ app.route('/api/ask', askRoute)
 app.route('/api/test', testRoute)
 app.route('/api/progress', progressRoute)
 app.route('/api/settings', settingsRoute)
+app.route('/api/notes', notesRoute)
 
 const port = Number(process.env.PORT ?? 3001)
 console.log(`Backend running on http://localhost:${port}`)
