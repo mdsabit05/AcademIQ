@@ -33,7 +33,9 @@ export function generateExamPaper(test: Test, questions: TestQuestion[], docTitl
     const q = questions[i]
     const lines = doc.splitTextToSize(`${i + 1}. ${q.question}`, 155)
 
-    const optionHeight = q.options ? q.options.length * 6 : q.marks * 8
+    const opts: string[] | null =
+      typeof q.options === 'string' ? JSON.parse(q.options) : q.options
+    const optionHeight = opts ? opts.length * 6 : q.marks * 8
     const needed = lines.length * 6 + optionHeight + 10
 
     if (y + needed > pageHeight - margin) {
@@ -49,9 +51,9 @@ export function generateExamPaper(test: Test, questions: TestQuestion[], docTitl
     doc.text(`[${q.marks} mark${q.marks !== 1 ? 's' : ''}]`, 185, y, { align: 'right' })
     y += lines.length * 6 + 2
 
-    if (q.options && q.options.length > 0) {
-      for (let idx = 0; idx < q.options.length; idx++) {
-        const optLines = doc.splitTextToSize(`□ ${letters[idx]}. ${q.options[idx]}`, 148)
+    if (opts && opts.length > 0) {
+      for (let idx = 0; idx < opts.length; idx++) {
+        const optLines = doc.splitTextToSize(`[ ] ${letters[idx]}. ${opts[idx]}`, 148)
         doc.text(optLines, margin + 6, y)
         y += optLines.length * 5 + 1
       }
