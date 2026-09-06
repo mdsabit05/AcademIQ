@@ -12,9 +12,12 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import Logo from '../Logo.tsx'
+import { useTheme } from '../../lib/theme.tsx'
 
 const NAV_ITEMS = [
   { to: '/dashboard', icon: Home, label: 'Home' },
@@ -30,6 +33,7 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const { signOut } = useClerk()
   const navigate = useNavigate()
+  const { theme, toggle } = useTheme()
 
   return (
     <aside
@@ -65,8 +69,20 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Sign out */}
-      <div className="border-t border-border p-2">
+      {/* Theme + Sign out */}
+      <div className="border-t border-border p-2 space-y-1">
+        <button
+          onClick={toggle}
+          className={clsx(
+            'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-white/5 hover:text-white',
+            collapsed && 'justify-center px-2',
+          )}
+        >
+          {theme === 'dark'
+            ? <Sun size={18} className="shrink-0" />
+            : <Moon size={18} className="shrink-0" />}
+          {!collapsed && <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}
+        </button>
         <button
           onClick={() => signOut(() => navigate('/'))}
           className={clsx(
