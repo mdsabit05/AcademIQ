@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth, useUser } from '@clerk/clerk-react'
 import { BookOpen, MessageSquare, FileText, BarChart2, CheckCircle } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
+import OnboardingModal from '../components/OnboardingModal.tsx'
 import type { Document, TestAttempt } from 'shared'
 
 function greeting() {
@@ -18,6 +19,14 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [documents, setDocuments] = useState<Document[]>([])
   const [recentAttempts, setRecentAttempts] = useState<(TestAttempt & { topic: string; document_title: string })[]>([])
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !localStorage.getItem('note2test_onboarded'),
+  )
+
+  function dismissOnboarding() {
+    localStorage.setItem('note2test_onboarded', 'true')
+    setShowOnboarding(false)
+  }
 
   useEffect(() => {
     async function load() {
@@ -41,6 +50,8 @@ export default function Dashboard() {
   ]
 
   return (
+    <>
+      {showOnboarding && <OnboardingModal onDismiss={dismissOnboarding} />}
     <div className="p-8">
       {/* Greeting */}
       <div className="mb-8">
@@ -140,5 +151,6 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+    </>
   )
 }
