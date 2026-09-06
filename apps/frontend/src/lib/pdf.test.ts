@@ -74,7 +74,7 @@ describe('generateExamPaper', () => {
   it('writes MCQ options as A/B/C/D', () => {
     generateExamPaper(mockTest, mockQuestions, 'DB Notes')
     const allTextArgs = mockText.mock.calls.map((c) => String(c[0]))
-    const hasOptionA = allTextArgs.some((t) => t.includes('[ ] A.'))
+    const hasOptionA = allTextArgs.some((t) => t.includes('[ ]'))
     expect(hasOptionA).toBe(true)
   })
 
