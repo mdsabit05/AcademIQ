@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { ArrowLeft, FileText, Send } from 'lucide-react'
@@ -81,7 +81,7 @@ function applyRangeHighlight(range: Range, colorId: string) {
   const cls = COLORS.find((c) => c.id === colorId)?.mark ?? COLORS[0].mark
   const mark = document.createElement('mark')
   mark.setAttribute('data-pending-highlight', '')
-  mark.className = cls
+  mark.className = `${cls} cursor-pointer`
   try {
     range.surroundContents(mark)
   } catch {
@@ -134,6 +134,55 @@ export default function LearnSession() {
   )
   const pendingHighlightsRef = useRef(pendingHighlights)
   useEffect(() => { pendingHighlightsRef.current = pendingHighlights }, [pendingHighlights])
+
+  // Remove-highlight button shown on hover over a pending mark
+  const [removeBtn, setRemoveBtn] = useState<{ el: HTMLElement; x: number; y: number } | null>(null)
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const scheduleHide = useCallback(() => {
+    hideTimer.current = setTimeout(() => setRemoveBtn(null), 180)
+  }, [])
+  const cancelHide = useCallback(() => {
+    if (hideTimer.current) clearTimeout(hideTimer.current)
+  }, [])
+
+  function removeHighlight(el: HTMLElement) {
+    const text = el.textContent ?? ''
+    const parent = el.parentNode
+    if (parent) {
+      while (el.firstChild) parent.insertBefore(el.firstChild, el)
+      parent.removeChild(el)
+      parent.normalize()
+    }
+    setPendingHighlights((prev) => prev.filter((h) => h.text !== text))
+    setRemoveBtn(null)
+  }
+
+  // Hover detection for pending marks (event delegation on the container)
+  useEffect(() => {
+    const container = explanationRef.current
+    if (!container) return
+
+    function onMouseOver(e: MouseEvent) {
+      const mark = (e.target as HTMLElement).closest('mark[data-pending-highlight]') as HTMLElement | null
+      if (!mark) return
+      cancelHide()
+      const rect = mark.getBoundingClientRect()
+      setRemoveBtn({ el: mark, x: rect.right + 2, y: rect.top - 12 })
+    }
+    function onMouseOut(e: MouseEvent) {
+      const related = e.relatedTarget as HTMLElement | null
+      if (related?.closest('mark[data-pending-highlight]') || related?.closest('[data-remove-btn]')) return
+      scheduleHide()
+    }
+
+    container.addEventListener('mouseover', onMouseOver)
+    container.addEventListener('mouseout', onMouseOut)
+    return () => {
+      container.removeEventListener('mouseover', onMouseOver)
+      container.removeEventListener('mouseout', onMouseOut)
+    }
+  }, [cancelHide, scheduleHide])
 
   // Saved highlights (from API)
   const [savedHighlights, setSavedHighlights] = useState<{ text: string; color: string }[]>([])
@@ -408,6 +457,20 @@ export default function LearnSession() {
         <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-success px-4 py-2 text-sm font-medium text-white shadow-lg">
           Notes saved ✓
         </div>
+      )}
+
+      {removeBtn && (
+        <button
+          data-remove-btn
+          onMouseEnter={cancelHide}
+          onMouseLeave={scheduleHide}
+          onClick={() => removeHighlight(removeBtn.el)}
+          style={{ position: 'fixed', top: removeBtn.y, left: removeBtn.x, zIndex: 200 }}
+          className="flex h-4 w-4 items-center justify-center rounded-full bg-danger text-white text-[10px] leading-none shadow hover:scale-110"
+          title="Remove highlight"
+        >
+          ✕
+        </button>
       )}
     </div>
   )
