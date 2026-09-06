@@ -6,12 +6,6 @@ import { makeApi } from '../lib/api.ts'
 import { groupByDocument } from '../lib/groupNotes.ts'
 import type { NoteWithTitle } from 'shared'
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-IN', {
-    day: 'numeric', month: 'short', year: 'numeric',
-  })
-}
-
 export default function Notes() {
   const { getToken } = useAuth()
   const navigate = useNavigate()
@@ -83,7 +77,6 @@ export default function Notes() {
                         >
                           <div className="flex-1">
                             <p className="text-sm text-white">{note.content}</p>
-                            <p className="mt-1 text-xs text-muted">{formatDate(note.created_at)}</p>
                           </div>
                           <button
                             onClick={() => handleDelete(note.id)}

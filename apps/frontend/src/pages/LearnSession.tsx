@@ -7,6 +7,52 @@ import StreamingText from '../components/StreamingText.tsx'
 import { makeApi } from '../lib/api.ts'
 import type { ChatMessage, MessageRole } from 'shared'
 
+function applyHighlights(container: HTMLElement, highlights: string[]) {
+  // Remove previous highlight marks
+  container.querySelectorAll('mark[data-save-highlight]').forEach((m) => {
+    const parent = m.parentNode
+    if (parent) {
+      parent.replaceChild(document.createTextNode(m.textContent ?? ''), m)
+      parent.normalize()
+    }
+  })
+  if (!highlights.length) return
+
+  const escaped = highlights.map((h) => h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const pattern = new RegExp(`(${escaped.join('|')})`, 'g')
+  const highlightSet = new Set(highlights)
+
+  // Collect all text nodes first, then process (avoids walker invalidation)
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+  const textNodes: Text[] = []
+  let node: Node | null
+  while ((node = walker.nextNode())) textNodes.push(node as Text)
+
+  for (const textNode of textNodes) {
+    const text = textNode.textContent ?? ''
+    pattern.lastIndex = 0
+    if (!pattern.test(text)) continue
+    pattern.lastIndex = 0
+
+    const parts = text.split(pattern)
+    if (parts.length <= 1) continue
+
+    const fragment = document.createDocumentFragment()
+    for (const part of parts) {
+      if (highlightSet.has(part)) {
+        const mark = document.createElement('mark')
+        mark.setAttribute('data-save-highlight', '')
+        mark.className = 'rounded bg-amber-400/25 px-0.5 text-amber-100'
+        mark.textContent = part
+        fragment.appendChild(mark)
+      } else if (part) {
+        fragment.appendChild(document.createTextNode(part))
+      }
+    }
+    textNode.parentNode!.replaceChild(fragment, textNode)
+  }
+}
+
 export default function LearnSession() {
   const { sessionId: documentId } = useParams<{ sessionId: string }>()
   const [searchParams] = useSearchParams()
@@ -35,6 +81,36 @@ export default function LearnSession() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cacheKey])
+
+  const highlightKey = documentId && topic ? `highlights:${documentId}:${topic}` : null
+  const [highlights, setHighlights] = useState<string[]>(() =>
+    highlightKey ? JSON.parse(sessionStorage.getItem(highlightKey) ?? '[]') : [],
+  )
+
+  // Load saved notes for this topic from the API (persists across browser sessions)
+  useEffect(() => {
+    if (!documentId || !topic) return
+    async function loadHighlights() {
+      const token = await getToken()
+      if (!token) return
+      const res = await makeApi(token).notes.list()
+      const saved = res.notes
+        .filter((n) => n.document_id === documentId && n.topic === topic)
+        .map((n) => n.content)
+      if (saved.length > 0) {
+        setHighlights(saved)
+        if (highlightKey) sessionStorage.setItem(highlightKey, JSON.stringify(saved))
+      }
+    }
+    loadHighlights()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documentId, topic])
+
+  // Apply highlight marks to the rendered explanation DOM
+  useEffect(() => {
+    if (!explanationRef.current || loadingExplanation || !displayExplanation || !highlights.length) return
+    applyHighlights(explanationRef.current, highlights)
+  }, [displayExplanation, loadingExplanation, highlights])
 
   const explanationRef = useRef<HTMLDivElement>(null)
   const [selectionText, setSelectionText] = useState('')
@@ -74,6 +150,9 @@ export default function LearnSession() {
     const token = await getToken()
     if (!token) return
     await makeApi(token).notes.create({ documentId, topic, content: selectionText })
+    const newHighlights = [...highlights, selectionText]
+    setHighlights(newHighlights)
+    if (highlightKey) sessionStorage.setItem(highlightKey, JSON.stringify(newHighlights))
     setSavePos(null)
     setSelectionText('')
     window.getSelection()?.removeAllRanges()
