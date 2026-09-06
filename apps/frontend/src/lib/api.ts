@@ -10,6 +10,10 @@ import type {
   Test,
   TestQuestion,
   TestAttempt,
+  Note,
+  NoteWithTitle,
+  Flashcard,
+  GenerateFlashcardsRequest,
 } from 'shared'
 
 const BASE = '/api'
@@ -98,6 +102,33 @@ export function makeApi(token: string) {
           method: 'PUT',
           body: JSON.stringify(body),
         }),
+    },
+
+    notes: {
+      create: (body: { documentId: string; topic: string; content: string }) =>
+        apiFetch<{ note: Note }>('/notes', token, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }),
+      list: () => apiFetch<{ notes: NoteWithTitle[] }>('/notes', token),
+      delete: (id: string) =>
+        apiFetch<{ deleted: boolean }>(`/notes/${id}`, token, { method: 'DELETE' }),
+    },
+
+    flashcards: {
+      generate: (body: GenerateFlashcardsRequest) =>
+        apiFetch<{ flashcards: Flashcard[] }>('/flashcards/generate', token, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }),
+      list: () => apiFetch<{ flashcards: Flashcard[] }>('/flashcards', token),
+      attempt: (cardId: string, known: boolean) =>
+        apiFetch<{ updated: boolean }>(`/flashcards/${cardId}/attempt`, token, {
+          method: 'POST',
+          body: JSON.stringify({ known }),
+        }),
+      delete: (cardId: string) =>
+        apiFetch<{ deleted: boolean }>(`/flashcards/${cardId}`, token, { method: 'DELETE' }),
     },
   }
 }
