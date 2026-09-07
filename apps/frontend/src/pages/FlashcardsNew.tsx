@@ -38,8 +38,8 @@ export default function FlashcardsNew() {
       navigate(
         `/flashcards/study/${form.documentId}/${encodeURIComponent(form.topic.trim())}`,
       )
-    } catch {
-      alert('Failed to generate flashcards. Check your OpenRouter API key in Settings.')
+    } catch (err) {
+      alert(`Failed to generate flashcards: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
       setLoading(false)
     }
