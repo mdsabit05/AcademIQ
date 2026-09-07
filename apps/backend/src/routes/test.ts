@@ -110,33 +110,38 @@ app.post('/generate', async (c) => {
 
 // POST /api/test/paper — generate question paper (no DB save)
 app.post('/paper', async (c) => {
-  const body = await c.req.json<{
-    documentId: string
-    topic: string
-    difficulty: Difficulty
-    sections: Array<{ type: TestType; count: number; marksPerQ: number }>
-  }>()
+  try {
+    const body = await c.req.json<{
+      documentId: string
+      topic: string
+      difficulty: Difficulty
+      sections: Array<{ type: TestType; count: number; marksPerQ: number }>
+    }>()
 
-  const settings = c.get('userSettings')
-  const apiKey = settings.openrouterKey ?? process.env.OPENROUTER_API_KEY!
-  const ollamaUrl = settings.ollamaUrl ?? process.env.OLLAMA_URL ?? 'http://localhost:11434'
-  const model = settings.defaultModel ?? 'google/gemini-3.5-flash'
+    const settings = c.get('userSettings')
+    const apiKey = settings.openrouterKey ?? process.env.OPENROUTER_API_KEY!
+    const ollamaUrl = settings.ollamaUrl ?? process.env.OLLAMA_URL ?? 'http://localhost:11434'
+    const model = settings.defaultModel ?? 'google/gemini-3.5-flash'
 
-  if (!apiKey) return c.json({ error: 'OpenRouter API key not configured' }, 400)
+    if (!apiKey) return c.json({ error: 'OpenRouter API key not configured' }, 400)
 
-  const chunks = await retrieveChunks(body.topic, body.documentId, 10, ollamaUrl)
-  const context = buildContext(chunks)
+    const chunks = await retrieveChunks(body.topic, body.documentId, 10, ollamaUrl)
+    const context = buildContext(chunks)
 
-  const resultSections = []
-  for (const section of body.sections) {
-    const messages = testPrompt(body.topic, context, section.count, section.type, body.difficulty)
-    const result = await completeJson<{
-      questions: Array<{ question: string; options: string[] | null; correct_answer: string; marks: number }>
-    }>(messages, apiKey, model)
-    resultSections.push({ type: section.type, marksPerQ: section.marksPerQ, questions: result.questions })
+    const resultSections = []
+    for (const section of body.sections) {
+      const messages = testPrompt(body.topic, context, section.count, section.type, body.difficulty)
+      const result = await completeJson<{
+        questions: Array<{ question: string; options: string[] | null; correct_answer: string; marks: number }>
+      }>(messages, apiKey, model)
+      resultSections.push({ type: section.type, marksPerQ: section.marksPerQ, questions: result.questions })
+    }
+
+    return c.json({ sections: resultSections })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Internal server error'
+    return c.json({ error: msg }, 500)
   }
-
-  return c.json({ sections: resultSections })
 })
 
 // GET /api/test/:testId
