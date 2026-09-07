@@ -15,11 +15,16 @@ export default function Notes() {
 
   useEffect(() => {
     async function load() {
-      const token = await getToken()
-      if (!token) return
-      const res = await makeApi(token).notes.list()
-      setNotes(res.notes)
-      setLoading(false)
+      try {
+        const token = await getToken()
+        if (!token) return
+        const res = await makeApi(token).notes.list()
+        setNotes(res.notes)
+      } catch (err) {
+        console.error('Failed to load notes:', err)
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [getToken])

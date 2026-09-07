@@ -10,14 +10,20 @@ export default function Flashcards() {
   const navigate = useNavigate()
   const [sets, setSets] = useState<FlashcardSet[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     async function load() {
-      const token = await getToken()
-      if (!token) return
-      const res = await makeApi(token).flashcards.list()
-      setSets(groupIntoSets(res.flashcards))
-      setLoading(false)
+      try {
+        const token = await getToken()
+        if (!token) return
+        const res = await makeApi(token).flashcards.list()
+        setSets(groupIntoSets(res.flashcards))
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load flashcards')
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [getToken])
@@ -26,6 +32,20 @@ export default function Flashcards() {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <p className="mb-2 font-semibold text-danger">Failed to load flashcards</p>
+          <p className="text-sm text-muted">{error}</p>
+          <button onClick={() => window.location.reload()} className="mt-4 text-sm text-primary hover:underline">
+            Retry
+          </button>
+        </div>
       </div>
     )
   }
