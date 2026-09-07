@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, FileText } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
 import type { Document, TestType, Difficulty } from 'shared'
 
@@ -88,6 +88,17 @@ export default function TestNew() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Create Test</h1>
         <p className="mt-1 text-muted">Configure your AI-generated test.</p>
+      </div>
+
+      <div className="mb-6 flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+        <FileText size={15} className="shrink-0 text-muted" />
+        <span className="text-sm text-muted">Making a question paper instead?</span>
+        <button
+          onClick={() => navigate('/test/paper')}
+          className="ml-auto rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted hover:border-primary/40 hover:text-white"
+        >
+          Question Paper →
+        </button>
       </div>
 
       <div className="max-w-lg space-y-6">

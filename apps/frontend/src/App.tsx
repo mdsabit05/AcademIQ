@@ -16,6 +16,7 @@ import Notes from './pages/Notes.tsx'
 import Flashcards from './pages/Flashcards.tsx'
 import FlashcardsNew from './pages/FlashcardsNew.tsx'
 import FlashcardsStudy from './pages/FlashcardsStudy.tsx'
+import QuestionPaper from './pages/QuestionPaper.tsx'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth()
@@ -66,6 +67,7 @@ export default function App() {
         <Route path="/learn/:sessionId" element={<LearnSession />} />
         <Route path="/ask" element={<AskAI />} />
         <Route path="/test/new" element={<TestNew />} />
+        <Route path="/test/paper" element={<QuestionPaper />} />
         <Route path="/test/:testId" element={<TestTake />} />
         <Route path="/test/:testId/results" element={<TestResults />} />
         <Route path="/progress" element={<Progress />} />

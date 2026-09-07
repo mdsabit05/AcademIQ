@@ -130,5 +130,21 @@ export function makeApi(token: string) {
       delete: (cardId: string) =>
         apiFetch<{ deleted: boolean }>(`/flashcards/${cardId}`, token, { method: 'DELETE' }),
     },
+
+    paper: {
+      generate: (body: {
+        documentId: string
+        topic: string
+        difficulty: string
+        sections: Array<{ type: string; count: number; marksPerQ: number }>
+      }) =>
+        apiFetch<{
+          sections: Array<{
+            type: string
+            marksPerQ: number
+            questions: Array<{ question: string; options: string[] | null; correct_answer: string }>
+          }>
+        }>('/test/paper', token, { method: 'POST', body: JSON.stringify(body) }),
+    },
   }
 }
