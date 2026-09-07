@@ -29,44 +29,38 @@ export default function Notes() {
     load()
   }, [getToken])
 
-  function exportPDF(docTitle: string, topicGroups: Record<string, NoteWithTitle[]>) {
+  function exportTopicPDF(docTitle: string, topic: string, topicNotes: NoteWithTitle[]) {
     const doc = new jsPDF()
-    const pageWidth = doc.internal.pageSize.getWidth()
     const margin = 16
-    const maxWidth = pageWidth - margin * 2
+    const maxWidth = doc.internal.pageSize.getWidth() - margin * 2
     let y = 20
 
     function checkPage(needed: number) {
-      if (y + needed > doc.internal.pageSize.getHeight() - 16) {
-        doc.addPage()
-        y = 20
-      }
+      if (y + needed > doc.internal.pageSize.getHeight() - 16) { doc.addPage(); y = 20 }
     }
+
+    doc.setFontSize(13)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(120, 120, 120)
+    doc.text(docTitle, margin, y)
+    y += 8
 
     doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
-    doc.text(docTitle, margin, y)
-    y += 12
+    doc.setTextColor(0, 0, 0)
+    doc.text(topic, margin, y)
+    y += 10
 
-    for (const [topic, topicNotes] of Object.entries(topicGroups)) {
-      checkPage(14)
-      doc.setFontSize(13)
-      doc.setFont('helvetica', 'bold')
-      doc.text(topic, margin, y)
-      y += 8
-
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'normal')
-      for (const note of topicNotes) {
-        const lines = doc.splitTextToSize(`• ${note.content}`, maxWidth)
-        checkPage(lines.length * 6 + 2)
-        doc.text(lines, margin, y)
-        y += lines.length * 6 + 2
-      }
-      y += 4
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'normal')
+    for (const note of topicNotes) {
+      const lines = doc.splitTextToSize(`• ${note.content}`, maxWidth)
+      checkPage(lines.length * 6 + 2)
+      doc.text(lines, margin, y)
+      y += lines.length * 6 + 3
     }
 
-    const safeName = docTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+    const safeName = topic.replace(/[^a-z0-9]/gi, '_').toLowerCase()
     doc.save(`notes_${safeName}.pdf`)
   }
 
@@ -111,19 +105,19 @@ export default function Notes() {
         <div className="space-y-8">
           {docTitles.map((docTitle) => (
             <div key={docTitle}>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-semibold text-white">{docTitle}</h2>
-                <button
-                  onClick={() => exportPDF(docTitle, grouped[docTitle])}
-                  className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs text-muted hover:border-primary/40 hover:text-white"
-                >
-                  <Download size={13} /> Export PDF
-                </button>
-              </div>
+              <h2 className="mb-4 font-semibold text-white">{docTitle}</h2>
               <div className="space-y-4">
                 {Object.entries(grouped[docTitle]).map(([topic, topicNotes]) => (
                   <div key={topic} className="rounded-xl border border-border bg-surface p-5">
-                    <h3 className="mb-3 text-sm font-semibold text-primary">{topic}</h3>
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-primary">{topic}</h3>
+                      <button
+                        onClick={() => exportTopicPDF(docTitle, topic, topicNotes)}
+                        className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs text-muted hover:border-primary/40 hover:text-white"
+                      >
+                        <Download size={12} /> Export PDF
+                      </button>
+                    </div>
                     <div className="space-y-3">
                       {topicNotes.map((note) => (
                         <div
