@@ -38,7 +38,7 @@ export async function streamCompletion(
 
 /**
  * Non-streaming JSON completion — waits for full response.
- * Used for test generation where we need structured output.
+ * Extracts JSON from text rather than using response_format (not supported by all models).
  */
 export async function completeJson<T>(
   messages: LLMMessage[],
@@ -48,12 +48,7 @@ export async function completeJson<T>(
   const res = await fetch(OPENROUTER_URL, {
     method: 'POST',
     headers: headers(apiKey),
-    body: JSON.stringify({
-      model,
-      messages,
-      stream: false,
-      response_format: { type: 'json_object' },
-    }),
+    body: JSON.stringify({ model, messages, stream: false }),
   })
 
   if (!res.ok) {
@@ -64,5 +59,11 @@ export async function completeJson<T>(
     choices: Array<{ message: { content: string } }>
   }
 
-  return JSON.parse(data.choices[0].message.content) as T
+  const content = data.choices[0].message.content
+  // Strip optional markdown code fences then parse
+  const stripped = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
+  const start = stripped.indexOf('{')
+  const end = stripped.lastIndexOf('}')
+  if (start === -1 || end === -1) throw new Error(`No JSON object found in model response`)
+  return JSON.parse(stripped.slice(start, end + 1)) as T
 }
