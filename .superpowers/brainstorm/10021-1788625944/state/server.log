@@ -1,0 +1,9 @@
+{"type":"server-started","port":60581,"host":"0.0.0.0","url_host":"localhost","url":"http://localhost:60581","screen_dir":"/home/coder/main/.superpowers/brainstorm/10021-1788625944/content","state_dir":"/home/coder/main/.superpowers/brainstorm/10021-1788625944/state"}
+{"type":"screen-added","file":"/home/coder/main/.superpowers/brainstorm/10021-1788625944/content/design-direction.html"}
+{"type":"screen-added","file":"/home/coder/main/.superpowers/brainstorm/10021-1788625944/content/design-direction-v2.html"}
+{"type":"screen-added","file":"/home/coder/main/.superpowers/brainstorm/10021-1788625944/content/design-all.html"}
+{"type":"screen-added","file":"/home/coder/main/.superpowers/brainstorm/10021-1788625944/content/waiting-1.html"}
+{"type":"screen-added","file":"/home/coder/main/.superpowers/brainstorm/10021-1788625944/content/logo-options.html"}
+{"type":"screen-added","file":"/home/coder/main/.superpowers/brainstorm/10021-1788625944/content/logo-lettermarks.html"}
+{"type":"screen-added","file":"/home/coder/main/.superpowers/brainstorm/10021-1788625944/content/waiting-2.html"}
+{"type":"server-stopped","reason":"idle timeout"}

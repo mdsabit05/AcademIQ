@@ -1,38 +1,19 @@
-import type { LLMMessage } from '../services/openrouter.service.js'
-import type { MessageRole } from 'shared'
+/**
+ * System prompt for Ask mode (direct Q&A with citations).
+ * The AI answers directly and cites sources.
+ */
 
-export function askPrompt(
-  question: string,
-  context: string,
-  history: Array<{ role: MessageRole; content: string }>,
-): LLMMessage[] {
-  const systemMessage: LLMMessage = {
-    role: 'system',
-    content: `You are a helpful AI tutor answering questions about a student's study material.
-Answer questions using ONLY the provided context. Be conversational but accurate.
-If the answer isn't in the context, say "I don't see that in your material" and offer what you do know from the context.
-Keep answers concise — aim for 2-4 sentences unless a longer explanation is clearly needed.`,
-  }
+export function askSystemPrompt(context: string): string {
+  return `You are a precise academic assistant. Answer the student's question directly and accurately.
 
-  const contextMessage: LLMMessage = {
-    role: 'user',
-    content: `Relevant context from my notes:\n\n${context}`,
-  }
+Guidelines:
+- Answer directly — do not be evasive or overly Socratic
+- Cite specific sources using [1], [2] etc. notation matching the reference material
+- If the answer is not in the provided material, clearly state that
+- Keep answers concise but complete
+- If the question is ambiguous, answer the most likely interpretation
 
-  const contextAck: LLMMessage = {
-    role: 'assistant',
-    content: 'Got it, I have the relevant context. Ask me anything about your material.',
-  }
+${context ? `\n${context}\n` : ''}
 
-  const historyMessages: LLMMessage[] = history.map((m) => ({
-    role: m.role,
-    content: m.content,
-  }))
-
-  const userMessage: LLMMessage = {
-    role: 'user',
-    content: question,
-  }
-
-  return [systemMessage, contextMessage, contextAck, ...historyMessages, userMessage]
+IMPORTANT: Ground every factual claim in the reference material above.`
 }

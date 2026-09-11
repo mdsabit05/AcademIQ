@@ -3,8 +3,7 @@ import { SignIn, SignUp, useAuth } from '@clerk/clerk-react'
 import AppLayout from './components/layout/AppLayout.tsx'
 import Landing from './pages/Landing.tsx'
 import Dashboard from './pages/Dashboard.tsx'
-import Materials from './pages/Materials.tsx'
-import Learn from './pages/Learn.tsx'
+import Books from './pages/Books.tsx'
 import LearnSession from './pages/LearnSession.tsx'
 import AskAI from './pages/AskAI.tsx'
 import TestNew from './pages/TestNew.tsx'
@@ -12,11 +11,10 @@ import TestTake from './pages/TestTake.tsx'
 import TestResults from './pages/TestResults.tsx'
 import Progress from './pages/Progress.tsx'
 import Settings from './pages/Settings.tsx'
-import Notes from './pages/Notes.tsx'
-import Flashcards from './pages/Flashcards.tsx'
-import FlashcardsNew from './pages/FlashcardsNew.tsx'
-import FlashcardsStudy from './pages/FlashcardsStudy.tsx'
-import QuestionPaper from './pages/QuestionPaper.tsx'
+import Subjects from './pages/Subjects.tsx'
+import Papers from './pages/Papers.tsx'
+import AdminDashboard from './pages/AdminDashboard.tsx'
+import MemoryView from './pages/MemoryView.tsx'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth()
@@ -40,7 +38,7 @@ export default function App() {
         path="/sign-in/*"
         element={
           <div className="flex min-h-screen items-center justify-center bg-bg">
-            <SignIn routing="path" path="/sign-in" />
+            <SignIn routing="path" path={`${import.meta.env.BASE_URL}sign-in`} />
           </div>
         }
       />
@@ -48,7 +46,7 @@ export default function App() {
         path="/sign-up/*"
         element={
           <div className="flex min-h-screen items-center justify-center bg-bg">
-            <SignUp routing="path" path="/sign-up" />
+            <SignUp routing="path" path={`${import.meta.env.BASE_URL}sign-up`} />
           </div>
         }
       />
@@ -62,20 +60,20 @@ export default function App() {
         }
       >
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/materials" element={<Materials />} />
-        <Route path="/learn" element={<Learn />} />
+        <Route path="/books" element={<Books />} />
         <Route path="/learn/:sessionId" element={<LearnSession />} />
-        <Route path="/ask" element={<AskAI />} />
+        <Route path="/ask/:sessionId?" element={<AskAI />} />
         <Route path="/test/new" element={<TestNew />} />
-        <Route path="/test/paper" element={<QuestionPaper />} />
         <Route path="/test/:testId" element={<TestTake />} />
-        <Route path="/test/:testId/results" element={<TestResults />} />
+        <Route path="/test/:testId/results/:attemptId" element={<TestResults />} />
         <Route path="/progress" element={<Progress />} />
+        <Route path="/memory" element={<MemoryView />} />
         <Route path="/settings" element={<Settings />} />
-        <Route path="/notes" element={<Notes />} />
-        <Route path="/flashcards" element={<Flashcards />} />
-        <Route path="/flashcards/new" element={<FlashcardsNew />} />
-        <Route path="/flashcards/study/:documentId/:topic" element={<FlashcardsStudy />} />
+        {/* Teacher routes */}
+        <Route path="/subjects" element={<Subjects />} />
+        <Route path="/papers" element={<Papers />} />
+        {/* Admin routes */}
+        <Route path="/admin" element={<AdminDashboard />} />
       </Route>
     </Routes>
   )

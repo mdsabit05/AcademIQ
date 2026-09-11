@@ -3,15 +3,26 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 
+import { authMiddleware } from './middleware/auth.js'
+import { startWorker, stopWorker } from './jobs/worker.js'
+import { terminateOcr } from './services/ocr.service.js'
+
+// Unauthenticated
 import webhooksRoute from './routes/webhooks.js'
-import documentsRoute from './routes/documents.js'
-import learnRoute from './routes/learn.js'
-import askRoute from './routes/ask.js'
-import testRoute from './routes/test.js'
+
+// Authenticated
+import booksRoute from './routes/books.js'
+import sessionsRoute from './routes/sessions.js'
+import chatRoute from './routes/chat.js'
+import testsRoute from './routes/tests.js'
 import progressRoute from './routes/progress.js'
+import memoryRoute from './routes/memory.js'
 import settingsRoute from './routes/settings.js'
-import notesRoute from './routes/notes.js'
-import flashcardsRoute from './routes/flashcards.js'
+import subjectsRoute from './routes/subjects.js'
+import syllabusRoute from './routes/syllabus.js'
+import papersRoute from './routes/papers.js'
+import adminRoute from './routes/admin.js'
+import agentRoute from './routes/agent.js'
 
 const app = new Hono()
 
@@ -21,24 +32,56 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
     allowHeaders: ['Content-Type', 'Authorization'],
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   }),
 )
 
 app.get('/health', (c) => c.json({ status: 'ok' }))
 
+// ── Unauthenticated routes ──────────────────────────────────────────────────
 app.route('/api/webhooks', webhooksRoute)
-app.route('/api/documents', documentsRoute)
-app.route('/api/learn', learnRoute)
-app.route('/api/ask', askRoute)
-app.route('/api/test', testRoute)
-app.route('/api/progress', progressRoute)
-app.route('/api/settings', settingsRoute)
-app.route('/api/notes', notesRoute)
-app.route('/api/flashcards', flashcardsRoute)
 
-const port = Number(process.env.PORT ?? 3001)
-console.log(`Backend running on http://localhost:${port}`)
+// ── Authenticated routes ────────────────────────────────────────────────────
+const api = new Hono()
+api.use('*', authMiddleware)
 
-serve({ fetch: app.fetch, port })
+api.route('/books', booksRoute)
+api.route('/sessions', sessionsRoute)
+api.route('/chat', chatRoute)
+api.route('/tests', testsRoute)
+api.route('/progress', progressRoute)
+api.route('/memory', memoryRoute)
+api.route('/settings', settingsRoute)
+api.route('/subjects', subjectsRoute)
+api.route('/syllabus', syllabusRoute)
+api.route('/papers', papersRoute)
+api.route('/admin', adminRoute)
+api.route('/agent', agentRoute)
+
+app.route('/api', api)
+
+// ── Server startup ──────────────────────────────────────────────────────────
+const port = Number(process.env.PORT ?? 2001)
+
+async function main() {
+  await startWorker()
+  console.log(`Backend running on http://localhost:${port}`)
+  serve({ fetch: app.fetch, port, hostname: '0.0.0.0' })
+}
+
+// ── Graceful shutdown ───────────────────────────────────────────────────────
+async function shutdown(signal: string) {
+  console.log(`[shutdown] received ${signal}`)
+  await stopWorker()
+  await terminateOcr()
+  process.exit(0)
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))
+
+main().catch((err) => {
+  console.error('[startup] fatal error:', err)
+  process.exit(1)
+})

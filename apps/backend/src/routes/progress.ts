@@ -1,87 +1,93 @@
+/**
+ * Progress routes — study history and performance analytics.
+ *
+ * GET /progress/summary    — overall stats (tests taken, avg score, topics)
+ * GET /progress/history    — paginated study session + test attempt history
+ */
+
 import { Hono } from 'hono'
-import { authMiddleware, type AuthEnv } from '../middleware/auth.js'
 import sql from '../db/client.js'
-import type { ProgressResponse } from 'shared'
+import type { AuthEnv } from '../middleware/auth.js'
 
-const app = new Hono<AuthEnv>()
-app.use('*', authMiddleware)
+const progress = new Hono<AuthEnv>()
 
-app.get('/', async (c) => {
-  const userId = c.get('dbUserId')
+progress.get('/summary', async (c) => {
+  const dbUserId = c.get('dbUserId')
 
-  // Aggregate stats from test_attempts
-  const [stats] = await sql<Array<{
-    tests_completed: number
-    avg_score_pct: number
-    total_time_seconds: number
-  }>>`
+  const [stats] = await sql<[{
+    tests_taken: number
+    avg_score_pct: number | null
+    total_study_seconds: number | null
+  }]>`
     SELECT
-      COUNT(*)::int                                          AS tests_completed,
-      COALESCE(AVG(score::float / NULLIF(total_marks, 0) * 100), 0) AS avg_score_pct,
-      COALESCE(SUM(time_elapsed_seconds), 0)::int           AS total_time_seconds
-    FROM test_attempts
-    WHERE user_id = ${userId}
+      COUNT(DISTINCT ta.id)::int          AS tests_taken,
+      AVG(ta.score::float / NULLIF(ta.total_marks, 0) * 100) AS avg_score_pct,
+      SUM(ss.duration_seconds)            AS total_study_seconds
+    FROM users u
+    LEFT JOIN test_attempts ta ON ta.user_id = u.id
+    LEFT JOIN study_sessions ss ON ss.user_id = u.id
+    WHERE u.id = ${dbUserId}
   `
 
-  // Topics learned = distinct topics from test_attempts + learn chat messages
-  const [topicsRow] = await sql<Array<{ count: number }>>`
-    SELECT COUNT(DISTINCT topic)::int AS count
-    FROM (
-      SELECT t.topic
-      FROM test_attempts ta
-      JOIN tests t ON ta.test_id = t.id
-      WHERE ta.user_id = ${userId}
-      UNION
-      SELECT content AS topic
-      FROM chat_messages
-      WHERE user_id = ${userId} AND mode = 'learn' AND role = 'user'
-    ) combined
+  // Topic mastery breakdown
+  const masteryRows = await sql`
+    SELECT context_key, value, confidence
+    FROM student_memory
+    WHERE user_id = ${dbUserId}
+      AND memory_type = 'topic_mastery'
+    ORDER BY confidence DESC
+    LIMIT 20
   `
 
-  // Per-topic performance
-  const topicRows = await sql<Array<{ topic: string; score: number; attempts: number }>>`
-    SELECT
-      t.topic,
-      ROUND(AVG(ta.score::float / NULLIF(ta.total_marks, 0) * 100))::int AS score,
-      COUNT(*)::int AS attempts
-    FROM test_attempts ta
-    JOIN tests t ON ta.test_id = t.id
-    WHERE ta.user_id = ${userId}
-    GROUP BY t.topic
-    ORDER BY score DESC
+  // Weak topics
+  const weakRows = await sql`
+    SELECT context_key, value, confidence
+    FROM student_memory
+    WHERE user_id = ${dbUserId}
+      AND memory_type = 'weak_topic'
+    ORDER BY confidence DESC
+    LIMIT 10
   `
 
-  // Most recent document_id per topic (for "Test Me" navigation)
-  const topicDocRows = await sql<Array<{ topic: string; document_id: string }>>`
-    SELECT DISTINCT ON (t.topic) t.topic, t.document_id
-    FROM test_attempts ta
-    JOIN tests t ON ta.test_id = t.id
-    WHERE ta.user_id = ${userId}
-    ORDER BY t.topic, ta.submitted_at DESC
-  `
-
-  const topicsToReview = topicRows
-    .filter((t) => t.score < 70)
-    .sort((a, b) => a.score - b.score)
-    .slice(0, 3)
-    .map((t) => t.topic)
-
-  const topicDocumentMap: Record<string, string> = {}
-  for (const row of topicDocRows) {
-    topicDocumentMap[row.topic] = row.document_id
-  }
-
-  const response: ProgressResponse = {
-    testsCompleted: stats.tests_completed,
-    topicsLearned: topicsRow.count,
-    averageScore: Math.round(stats.avg_score_pct),
-    studyTimeSeconds: stats.total_time_seconds,
-    topicPerformance: topicRows,
-    topicsToReview,
-    topicDocumentMap,
-  }
-
-  return c.json(response)
+  return c.json({
+    summary: {
+      testsTaken: stats.tests_taken ?? 0,
+      avgScorePct: stats.avg_score_pct ? Math.round(stats.avg_score_pct) : null,
+      totalStudyMinutes: stats.total_study_seconds
+        ? Math.round(stats.total_study_seconds / 60)
+        : 0,
+    },
+    topicMastery: masteryRows,
+    weakTopics: weakRows,
+  })
 })
 
-export default app
+progress.get('/history', async (c) => {
+  const dbUserId = c.get('dbUserId')
+  const limit = Math.min(Number(c.req.query('limit') ?? 20), 100)
+  const offset = Number(c.req.query('offset') ?? 0)
+
+  const attempts = await sql`
+    SELECT ta.id, ta.score, ta.total_marks, ta.submitted_at,
+           t.topic, t.type, t.difficulty
+    FROM test_attempts ta
+    JOIN tests t ON t.id = ta.test_id
+    WHERE ta.user_id = ${dbUserId}
+    ORDER BY ta.submitted_at DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `
+
+  const sessions = await sql`
+    SELECT ss.id, ss.mode, ss.topic, ss.duration_seconds, ss.created_at,
+           cs.id AS session_id
+    FROM study_sessions ss
+    LEFT JOIN chat_sessions cs ON cs.id = ss.session_id
+    WHERE ss.user_id = ${dbUserId}
+    ORDER BY ss.created_at DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `
+
+  return c.json({ attempts, sessions })
+})
+
+export default progress

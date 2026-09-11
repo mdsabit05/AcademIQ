@@ -1,0 +1,129 @@
+<h2>Design Direction</h2>
+<p class="subtitle">Which visual identity fits Note2Test best? Click one to select.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="aurora" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: linear-gradient(135deg, #0D0E1A 0%, #1a1030 50%, #0D0E1A 100%); padding: 20px; border-radius: 8px; min-height: 180px; display: flex; flex-direction: column; gap: 12px;">
+      <!-- Nav -->
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #7C3AED, #06B6D4); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; color: white; font-family: serif;">N</div>
+        <span style="color: #e2e8f0; font-size: 12px; font-weight: 700; letter-spacing: 1px;">NOTE2TEST</span>
+        <div style="margin-left: auto; display: flex; gap: 8px;">
+          <div style="width: 40px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.15);"></div>
+          <div style="width: 30px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1);"></div>
+          <div style="width: 35px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1);"></div>
+        </div>
+      </div>
+      <!-- Hero -->
+      <div style="background: rgba(124,58,237,0.12); border: 1px solid rgba(124,58,237,0.3); border-radius: 12px; padding: 14px; backdrop-filter: blur(10px);">
+        <div style="font-size: 11px; color: #7C3AED; font-weight: 700; letter-spacing: 2px; margin-bottom: 6px;">WHAT DO YOU WANT TO DO?</div>
+        <div style="display: flex; gap: 8px;">
+          <div style="flex: 1; background: rgba(124,58,237,0.2); border: 1px solid rgba(124,58,237,0.4); border-radius: 8px; padding: 8px; text-align: center;">
+            <div style="font-size: 16px;">📖</div>
+            <div style="font-size: 9px; color: #a78bfa; font-weight: 600; margin-top: 3px;">LEARN</div>
+          </div>
+          <div style="flex: 1; background: rgba(6,182,212,0.2); border: 1px solid rgba(6,182,212,0.4); border-radius: 8px; padding: 8px; text-align: center;">
+            <div style="font-size: 16px;">💬</div>
+            <div style="font-size: 9px; color: #67e8f9; font-weight: 600; margin-top: 3px;">ASK AI</div>
+          </div>
+          <div style="flex: 1; background: rgba(245,158,11,0.2); border: 1px solid rgba(245,158,11,0.4); border-radius: 8px; padding: 8px; text-align: center;">
+            <div style="font-size: 16px;">📝</div>
+            <div style="font-size: 9px; color: #fcd34d; font-weight: 600; margin-top: 3px;">TEST</div>
+          </div>
+        </div>
+      </div>
+      <!-- Progress bar accent -->
+      <div style="height: 3px; background: linear-gradient(90deg, #7C3AED, #06B6D4, #F59E0B); border-radius: 2px; opacity: 0.8;"></div>
+    </div>
+    <div class="card-body">
+      <h3>A — Aurora Dark</h3>
+      <p>Deep space navy base with purple/cyan/amber accents. Glassmorphism cards with glowing borders. Gradient rainbow progress bar. Premium, futuristic feel — like a high-end SaaS product.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="midnight" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #0A0A0F; padding: 20px; border-radius: 8px; min-height: 180px; display: flex; flex-direction: column; gap: 12px;">
+      <!-- Nav -->
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 28px; height: 28px; border-radius: 6px; background: #6366F1; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; color: white;">N</div>
+        <span style="color: #f8fafc; font-size: 12px; font-weight: 600;">Note2Test</span>
+        <div style="margin-left: auto; display: flex; gap: 8px;">
+          <div style="width: 40px; height: 5px; border-radius: 2px; background: #1e1e2e;"></div>
+          <div style="width: 30px; height: 5px; border-radius: 2px; background: #1e1e2e;"></div>
+          <div style="width: 35px; height: 5px; border-radius: 2px; background: #1e1e2e;"></div>
+        </div>
+      </div>
+      <!-- Cards -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+        <div style="background: #13131f; border: 1px solid #2d2d3d; border-radius: 10px; padding: 10px;">
+          <div style="font-size: 14px; margin-bottom: 4px;">📖</div>
+          <div style="font-size: 9px; color: #6366F1; font-weight: 700; letter-spacing: 0.5px;">LEARN</div>
+          <div style="font-size: 8px; color: #64748b; margin-top: 3px; line-height: 1.3;">Understand any topic</div>
+        </div>
+        <div style="background: #13131f; border: 1px solid #2d2d3d; border-radius: 10px; padding: 10px;">
+          <div style="font-size: 14px; margin-bottom: 4px;">💬</div>
+          <div style="font-size: 9px; color: #22D3EE; font-weight: 700; letter-spacing: 0.5px;">ASK AI</div>
+          <div style="font-size: 8px; color: #64748b; margin-top: 3px; line-height: 1.3;">Chat with material</div>
+        </div>
+        <div style="background: #13131f; border: 1px solid #6366F1; border-radius: 10px; padding: 10px;">
+          <div style="font-size: 14px; margin-bottom: 4px;">📝</div>
+          <div style="font-size: 9px; color: #A78BFA; font-weight: 700; letter-spacing: 0.5px;">TEST</div>
+          <div style="font-size: 8px; color: #64748b; margin-top: 3px; line-height: 1.3;">Generate questions</div>
+        </div>
+      </div>
+      <!-- Bottom stat row -->
+      <div style="display: flex; gap: 6px;">
+        <div style="flex: 1; background: #13131f; border-radius: 8px; padding: 6px 8px; display: flex; align-items: center; gap: 6px;">
+          <div style="width: 6px; height: 6px; border-radius: 50%; background: #22C55E;"></div>
+          <div style="font-size: 8px; color: #94a3b8;">82% avg score</div>
+        </div>
+        <div style="flex: 1; background: #13131f; border-radius: 8px; padding: 6px 8px; display: flex; align-items: center; gap: 6px;">
+          <div style="width: 6px; height: 6px; border-radius: 50%; background: #6366F1;"></div>
+          <div style="font-size: 8px; color: #94a3b8;">12 tests done</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Midnight Indigo</h3>
+      <p>True black base (#0A0A0F) with indigo (#6366F1) as primary, cyan highlights, violet accents. Clean flat cards with subtle borders. Less glow, more precision. Developer-aesthetic — focused and minimal.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="nebula" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: linear-gradient(145deg, #0F0C29 0%, #302b63 50%, #24243e 100%); padding: 20px; border-radius: 8px; min-height: 180px; display: flex; flex-direction: column; gap: 12px; position: relative; overflow: hidden;">
+      <!-- Background glow blobs -->
+      <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: rgba(139,92,246,0.3); border-radius: 50%; filter: blur(25px); pointer-events: none;"></div>
+      <div style="position: absolute; bottom: -10px; left: 10px; width: 60px; height: 60px; background: rgba(6,182,212,0.25); border-radius: 50%; filter: blur(20px); pointer-events: none;"></div>
+      <!-- Nav -->
+      <div style="display: flex; align-items: center; gap: 10px; position: relative; z-index: 1;">
+        <div style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #8B5CF6, #06B6D4); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; color: white; box-shadow: 0 0 12px rgba(139,92,246,0.6);">N</div>
+        <span style="color: white; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; text-shadow: 0 0 10px rgba(139,92,246,0.8);">Note2Test</span>
+      </div>
+      <!-- Main card with strong glow -->
+      <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(139,92,246,0.5); border-radius: 12px; padding: 12px; backdrop-filter: blur(20px); box-shadow: 0 0 20px rgba(139,92,246,0.2), inset 0 1px 0 rgba(255,255,255,0.1); position: relative; z-index: 1;">
+        <div style="font-size: 9px; color: #8B5CF6; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px;">Your Study Hub</div>
+        <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+          <div style="flex: 1; height: 50px; background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(139,92,246,0.1)); border: 1px solid rgba(139,92,246,0.4); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; box-shadow: 0 0 10px rgba(139,92,246,0.15);">
+            <span style="font-size: 14px;">📖</span>
+            <span style="font-size: 8px; color: #C4B5FD; font-weight: 600;">Learn</span>
+          </div>
+          <div style="flex: 1; height: 50px; background: linear-gradient(135deg, rgba(6,182,212,0.3), rgba(6,182,212,0.1)); border: 1px solid rgba(6,182,212,0.4); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; box-shadow: 0 0 10px rgba(6,182,212,0.15);">
+            <span style="font-size: 14px;">💬</span>
+            <span style="font-size: 8px; color: #67E8F9; font-weight: 600;">Ask AI</span>
+          </div>
+          <div style="flex: 1; height: 50px; background: linear-gradient(135deg, rgba(245,158,11,0.3), rgba(245,158,11,0.1)); border: 1px solid rgba(245,158,11,0.4); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; box-shadow: 0 0 10px rgba(245,158,11,0.15);">
+            <span style="font-size: 14px;">📝</span>
+            <span style="font-size: 8px; color: #FCD34D; font-weight: 600;">Test</span>
+          </div>
+        </div>
+        <div style="height: 4px; background: linear-gradient(90deg, #8B5CF6, #06B6D4, #F59E0B); border-radius: 2px; box-shadow: 0 0 8px rgba(139,92,246,0.5);"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Nebula Glass</h3>
+      <p>Deep purple-to-navy gradient base with ambient glow blobs in background. Heavy glassmorphism with glowing borders and inset highlights. Glowing progress bars. Most dramatic and immersive — feels like an AI-native product.</p>
+    </div>
+  </div>
+
+</div>

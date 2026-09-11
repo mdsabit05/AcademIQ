@@ -1,167 +1,113 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
-import { CheckCircle, XCircle, AlertTriangle, Clock, ArrowLeft, RotateCcw, RefreshCw } from 'lucide-react'
+import { CheckCircle, XCircle, ArrowLeft, RotateCcw } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
-import StreamingText from '../components/StreamingText.tsx'
-import { useExplanations } from '../lib/useExplanations.ts'
-import type { Test, TestAttempt, TestQuestion } from 'shared'
-import { generateExamPaper } from '../lib/pdf.ts'
+
+interface AnswerRow {
+  question_id: string
+  answer: string
+  is_correct: boolean
+  marks_awarded: number
+  question: string
+  question_type: string
+  correct_answer: string
+  marks: number
+}
 
 export default function TestResults() {
-  const { testId } = useParams<{ testId: string }>()
+  const { testId, attemptId } = useParams<{ testId: string; attemptId: string }>()
   const { getToken } = useAuth()
   const navigate = useNavigate()
-  const [attempt, setAttempt] = useState<TestAttempt | null>(null)
-  const [questions, setQuestions] = useState<TestQuestion[]>([])
-  const [test, setTest] = useState<Test | null>(null)
-  const [docTitle, setDocTitle] = useState('')
-  const [authToken, setAuthToken] = useState('')
+
+  const [score, setScore] = useState<{ score: number; totalMarks: number } | null>(null)
+  const [answers, setAnswers] = useState<AnswerRow[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
       const token = await getToken()
-      if (!token || !testId) return
-      setAuthToken(token)
-      const res = await makeApi(token).test.get(testId)
-      setQuestions(res.questions)
-      setTest(res.test)
-      const [attemptsRes, docsRes] = await Promise.all([
-        makeApi(token).test.attempts(),
-        makeApi(token).documents.list(),
-      ])
-      const latest = attemptsRes.attempts.find((a) => a.test_id === testId)
-      if (latest) setAttempt(latest as unknown as TestAttempt)
-      const doc = docsRes.documents.find((d) => d.id === res.test.document_id)
-      setDocTitle(doc?.title ?? '')
+      if (!token || !testId || !attemptId) return
+      const { attempt, answers: ans } = await makeApi(token).tests.getAttempt(testId, attemptId)
+      setScore({ score: attempt.score, totalMarks: attempt.total_marks })
+      setAnswers(ans as AnswerRow[])
+      setLoading(false)
     }
     load()
-  }, [testId, getToken])
+  }, [testId, attemptId, getToken])
 
-  const { explanations } = useExplanations(questions, attempt, test?.document_id ?? '', authToken)
-
-  if (!attempt) {
+  if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-full items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     )
   }
 
-  const pct = Math.round((attempt.score / attempt.total_marks) * 100)
-  const passed = pct >= 60
-  const fmt = (s: number) => `${Math.floor(s / 60)}m ${s % 60}s`
+  const pct = score ? Math.round((score.score / score.totalMarks) * 100) : 0
 
   return (
     <div className="p-8">
-      <div className="mb-6 flex items-center gap-4">
-        <button onClick={() => navigate('/test/new')} className="text-muted hover:text-white">
-          <ArrowLeft size={18} />
-        </button>
-        <h1 className="text-2xl font-bold text-white">Test Results</h1>
-      </div>
+      <button
+        onClick={() => navigate('/test/new')}
+        className="mb-6 flex items-center gap-2 text-sm text-muted hover:text-white"
+      >
+        <ArrowLeft size={16} /> Back to Tests
+      </button>
 
       {/* Score card */}
-      <div className="mb-8 rounded-2xl border border-border bg-surface p-8 text-center">
-        <div className={`text-6xl font-black ${passed ? 'text-success' : 'text-danger'}`}>
-          {pct}%
-        </div>
-        <p className="mt-2 text-xl font-semibold text-white">
-          {attempt.score} / {attempt.total_marks} marks
+      <div className="mb-8 rounded-xl border border-border bg-surface p-6 text-center">
+        <p className="text-5xl font-black text-white">{pct}%</p>
+        <p className="mt-1 text-muted">
+          {score?.score} / {score?.totalMarks} marks
         </p>
-        <p className={`mt-1 text-sm font-medium ${passed ? 'text-success' : 'text-danger'}`}>
-          {passed ? 'Well done! 🎉' : 'Keep practicing! 💪'}
+        <p className="mt-3 text-sm font-medium text-primary">
+          {pct >= 80 ? 'Excellent!' : pct >= 60 ? 'Good work!' : 'Keep practising!'}
         </p>
-
-        <div className="mt-6 flex justify-center gap-8 border-t border-border pt-6">
-          <div className="flex items-center gap-2 text-sm text-muted">
-            <Clock size={14} />
-            {attempt.time_elapsed_seconds ? fmt(attempt.time_elapsed_seconds) : '—'}
-          </div>
-          {attempt.tab_switches > 0 && (
-            <div className="flex items-center gap-2 text-sm text-danger">
-              <AlertTriangle size={14} />
-              {attempt.tab_switches} tab switch{attempt.tab_switches !== 1 ? 'es' : ''}
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* Question review */}
-      <h2 className="mb-4 font-semibold text-white">Review</h2>
-      <div className="space-y-4">
-        {questions.map((q, i) => {
-          const userAnswer = (attempt.answers as Record<string, string>)[q.id] ?? ''
-          const correct = userAnswer.trim().toLowerCase() === q.correct_answer.trim().toLowerCase()
-          return (
-            <div
-              key={q.id}
-              className={`rounded-xl border p-5 ${correct ? 'border-success/30 bg-success/5' : 'border-danger/30 bg-danger/5'}`}
-            >
-              <div className="flex items-start gap-3">
-                {correct
-                  ? <CheckCircle size={18} className="mt-0.5 shrink-0 text-success" />
-                  : <XCircle size={18} className="mt-0.5 shrink-0 text-danger" />
-                }
-                <div className="flex-1">
-                  <p className="mb-2 text-sm font-medium text-white">
-                    Q{i + 1}. {q.question}
-                  </p>
-                  <p className="text-xs text-muted">
-                    Your answer:{' '}
-                    <span className={correct ? 'text-success' : 'text-danger'}>
-                      {userAnswer || '(no answer)'}
-                    </span>
-                  </p>
-                  {!correct && (
-                    <>
-                      <p className="mt-1 text-xs text-muted">
-                        Correct: <span className="text-success">{q.correct_answer}</span>
-                      </p>
-                      {explanations[q.id] ? (
-                        <div className="mt-3 rounded-lg border border-border bg-surface/60 px-3 py-2 text-xs text-muted">
-                          <p className="mb-1 font-semibold text-primary">AI Explanation</p>
-                          <StreamingText text={explanations[q.id]} streaming={false} />
-                        </div>
-                      ) : authToken && test?.document_id ? (
-                        <p className="mt-2 text-xs text-muted italic">Loading explanation...</p>
-                      ) : null}
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      <div className="mt-8 flex flex-wrap gap-3">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="font-semibold text-white">Question Review</h2>
         <button
           onClick={() => navigate('/test/new')}
-          className="flex items-center gap-2 rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-muted hover:text-white"
+          className="flex items-center gap-1.5 text-sm text-primary hover:underline"
         >
-          <RotateCcw size={15} /> New Test
+          <RotateCcw size={13} /> New Test
         </button>
-        {test && questions.length > 0 && (
-          <button
-            onClick={() => generateExamPaper(test, questions, docTitle)}
-            className="flex items-center gap-2 rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-muted hover:text-white"
+      </div>
+
+      <div className="space-y-4">
+        {answers.map((a, i) => (
+          <div
+            key={a.question_id}
+            className={`rounded-xl border p-5 ${
+              a.is_correct ? 'border-emerald-800/40 bg-emerald-950/10' : 'border-red-800/40 bg-red-950/10'
+            }`}
           >
-            📄 Download Paper
-          </button>
-        )}
-        <button
-          onClick={() => navigate(`/test/${testId}`)}
-          className="flex items-center gap-2 rounded-xl border border-primary/50 px-5 py-2.5 text-sm font-medium text-primary hover:bg-primary/10"
-        >
-          <RefreshCw size={15} /> Repeat Test
-        </button>
-        <button
-          onClick={() => navigate('/progress')}
-          className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover"
-        >
-          View Progress →
-        </button>
+            <div className="mb-3 flex items-start gap-3">
+              {a.is_correct
+                ? <CheckCircle size={16} className="mt-0.5 shrink-0 text-emerald-400" />
+                : <XCircle size={16} className="mt-0.5 shrink-0 text-red-400" />}
+              <div className="flex-1">
+                <p className="text-xs text-muted mb-1">Q{i + 1} · {a.marks_awarded}/{a.marks} marks</p>
+                <p className="text-sm font-medium text-white">{a.question}</p>
+              </div>
+            </div>
+
+            <div className="ml-7 space-y-1.5 text-sm">
+              <div className="flex gap-2">
+                <span className="text-muted shrink-0">Your answer:</span>
+                <span className={a.is_correct ? 'text-emerald-300' : 'text-red-300'}>{a.answer || '—'}</span>
+              </div>
+              {!a.is_correct && (
+                <div className="flex gap-2">
+                  <span className="text-muted shrink-0">Correct:</span>
+                  <span className="text-emerald-300">{a.correct_answer}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

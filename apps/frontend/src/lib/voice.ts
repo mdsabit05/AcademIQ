@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 export function useVoiceInput(onTranscript: (text: string) => void) {
   const [listening, setListening] = useState(false)
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const recognitionRef = useRef<any>(null)
   const onTranscriptRef = useRef(onTranscript)
   onTranscriptRef.current = onTranscript
 
@@ -12,14 +12,14 @@ export function useVoiceInput(onTranscript: (text: string) => void) {
 
   useEffect(() => {
     if (!supported) return
-    const SR: new () => SpeechRecognition =
+    const SR: new () => any =
       (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition
     const recognition = new SR()
     recognition.continuous = true
     recognition.interimResults = true
     recognition.lang = 'en-US'
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event: any) => {
       let transcript = ''
       for (let i = 0; i < event.results.length; i++) {
         transcript += event.results[i][0].transcript
