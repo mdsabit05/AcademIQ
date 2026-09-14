@@ -298,7 +298,7 @@ export default function Tests() {
   const [tests,    setTests]    = useState<Test[]>([])
   const [attempts, setAttempts] = useState<Record<string, TestAttempt[]>>({})
   const [loading,  setLoading]  = useState(true)
-  const [filter,   setFilter]   = useState<'all' | 'attempted' | 'pending'>('all')
+  const [filter,   setFilter]   = useState<'all' | 'revision' | 'ontrack' | 'mastered'>('all')
 
   useEffect(() => {
     async function load() {
@@ -331,9 +331,17 @@ export default function Tests() {
     : null
 
   // ── Filter ─────────────────────────────────────────────────────────────────
+  const getBest = (t: Test) => {
+    const atts = attempts[t.id] ?? []
+    if (atts.length === 0) return null
+    return Math.max(...atts.map((a) => pct(a.score, a.total_marks)))
+  }
+
   const filtered = tests.filter((t) => {
-    if (filter === 'attempted') return (attempts[t.id]?.length ?? 0) > 0
-    if (filter === 'pending')   return (attempts[t.id]?.length ?? 0) === 0
+    const best = getBest(t)
+    if (filter === 'revision') return best !== null && best < 50
+    if (filter === 'ontrack')  return best !== null && best >= 50 && best < 80
+    if (filter === 'mastered') return best !== null && best >= 80
     return true
   })
 
@@ -404,21 +412,36 @@ export default function Tests() {
           <>
             {/* Filter tabs */}
             <div className="flex items-center gap-2">
-              {(['all', 'attempted', 'pending'] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all capitalize ${
-                    filter === f
-                      ? 'bg-primary text-bg'
-                      : 'border border-border text-muted hover:text-white'
-                  }`}
-                >
-                  {f === 'all'       ? `All (${tests.length})` :
-                   f === 'attempted' ? `Attempted (${tests.filter(t => (attempts[t.id]?.length ?? 0) > 0).length})` :
-                                       `Not Started (${tests.filter(t => (attempts[t.id]?.length ?? 0) === 0).length})`}
-                </button>
-              ))}
+              {([
+                { key: 'all',      label: 'All',             color: '' },
+                { key: 'revision', label: 'Needs Revision',  color: 'data-active:bg-red-500/20 data-active:text-red-400 data-active:border-red-500/30' },
+                { key: 'ontrack',  label: 'On Track',        color: '' },
+                { key: 'mastered', label: 'Mastered',        color: '' },
+              ] as const).map(({ key, label }) => {
+                const active = filter === key
+                const count =
+                  key === 'all'      ? tests.length :
+                  key === 'revision' ? tests.filter(t => { const b = getBest(t); return b !== null && b < 50 }).length :
+                  key === 'ontrack'  ? tests.filter(t => { const b = getBest(t); return b !== null && b >= 50 && b < 80 }).length :
+                                       tests.filter(t => { const b = getBest(t); return b !== null && b >= 80 }).length
+
+                const activeStyle =
+                  active && key === 'revision' ? 'bg-red-500/15 text-red-400 border-red-500/30' :
+                  active && key === 'ontrack'  ? 'bg-yellow-400/15 text-yellow-400 border-yellow-400/30' :
+                  active && key === 'mastered' ? 'bg-emerald-400/15 text-emerald-400 border-emerald-400/30' :
+                  active                       ? 'bg-primary text-bg border-primary' :
+                  'border-border text-muted hover:text-white'
+
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setFilter(key)}
+                    className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition-all ${activeStyle}`}
+                  >
+                    {label} ({count})
+                  </button>
+                )
+              })}
             </div>
 
             {/* Test list */}
