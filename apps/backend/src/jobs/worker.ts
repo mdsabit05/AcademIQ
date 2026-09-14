@@ -18,6 +18,9 @@ export async function startWorker(): Promise<PgBoss> {
 
   await boss.start()
 
+  // In pg-boss v10, queues must be explicitly created before send() or work()
+  await boss.createQueue(PROCESS_BOOK_JOB)
+
   // Register job handlers
   await boss.work(PROCESS_BOOK_JOB, { batchSize: 2 }, handleProcessBook)
 

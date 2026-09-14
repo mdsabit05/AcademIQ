@@ -6,7 +6,6 @@
 
 import pdfParse from 'pdf-parse'
 import { readFile } from 'fs/promises'
-import { recognizePath } from './ocr.service.js'
 import { chunkPages, type PageText, type TextChunk } from '../lib/chunker.js'
 
 export interface ExtractionResult {
@@ -31,7 +30,7 @@ export async function extractPages(filePath: string): Promise<ExtractionResult> 
   const parsed = await pdfParse(buffer)
 
   const pageCount = parsed.numpages
-  let ocrApplied = false
+  const ocrApplied = false
 
   // pdf-parse gives us the full text; split by form feeds to approximate pages
   const rawPageTexts = parsed.text
@@ -53,19 +52,13 @@ export async function extractPages(filePath: string): Promise<ExtractionResult> 
         isOcr: false,
       })
     } else {
-      // Insufficient text — likely a scanned/image page, apply OCR
-      ocrApplied = true
-      let ocrText = ''
-      try {
-        // OCR the file path directly (tesseract handles multi-page PDFs by page)
-        ocrText = await recognizePath(filePath)
-      } catch (err) {
-        console.error(`[chunker] OCR failed on page ${pageNumber}:`, err)
-      }
+      // Low-text page — for PDFs this is a blank/diagram page (not a scanned image).
+      // Tesseract cannot read PDF files directly, so skip OCR for PDF inputs.
+      // OCR is only applicable when the input is already an image file.
       pages.push({
         pageNumber,
-        text: ocrText,
-        isOcr: true,
+        text: pageText, // use whatever text pdf-parse extracted (may be empty)
+        isOcr: false,
       })
     }
   }

@@ -54,7 +54,7 @@ export default function LearnSession() {
       const token = await getToken()
       if (!token) return
 
-      const res = await fetch(`/api/chat/${sessionId}/message`, {
+      const res = await fetch(`${window.location.pathname.replace(/\/$/, '')}/api/chat/${sessionId}/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -79,7 +79,8 @@ export default function LearnSession() {
           if (!line.startsWith('data: ')) continue
           const data = line.slice(6).trim()
           if (data === '[DONE]') continue
-          fullText += data
+          try { fullText += JSON.parse(data) as string }
+          catch { fullText += data }
           setStreamBuffer(fullText)
         }
       }
@@ -127,10 +128,12 @@ export default function LearnSession() {
               className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
                 msg.role === 'user'
                   ? 'bg-primary text-white'
-                  : 'border border-border bg-surface text-white'
+                  : 'border border-border bg-surface'
               }`}
             >
-              {msg.content}
+              {msg.role === 'assistant'
+                ? <StreamingText text={msg.content} />
+                : msg.content}
             </div>
           </div>
         ))}

@@ -134,7 +134,11 @@ export default function TestTake() {
 
         {q.options ? (
           <div className="space-y-2">
-            {Object.entries(q.options).map(([key, val]) => (
+            {Object.entries(
+              typeof q.options === 'string'
+                ? (JSON.parse(q.options) as Record<string, string>)
+                : q.options,
+            ).map(([key, val]) => (
               <button
                 key={key}
                 onClick={() => setAnswers((a) => ({ ...a, [q.id]: key }))}

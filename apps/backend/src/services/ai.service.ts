@@ -35,7 +35,7 @@ export async function stream(
   const res = await fetch(`${BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ model, messages, stream: true }),
+    body: JSON.stringify({ model, messages, stream: true, max_tokens: 4096 }),
   })
 
   if (!res.ok || !res.body) {

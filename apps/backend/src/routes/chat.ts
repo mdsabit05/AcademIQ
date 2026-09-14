@@ -97,6 +97,12 @@ chat.post('/:sessionId/message', requireOwnership('chat_sessions', 'sessionId'),
     VALUES (${sessionId}, 'user', ${userContent}, '{}')
   `
 
+  // ── Auto-title: set from first user message if not already titled ─────────
+  if (conversationHistory.length === 0) {
+    const autoTitle = userContent.slice(0, 55).replace(/\s+/g, ' ').trim()
+    await sql`UPDATE chat_sessions SET title = ${autoTitle} WHERE id = ${sessionId} AND title IS NULL`
+  }
+
   // ── Stream AI response ────────────────────────────────────────────────────
   const rawStream = await aiStream(messages, MODELS.default)
 
@@ -105,7 +111,7 @@ chat.post('/:sessionId/message', requireOwnership('chat_sessions', 'sessionId'),
   return streamSSE(c, async (sseStream) => {
     for await (const token of parseSSEStream(rawStream)) {
       fullResponse += token
-      await sseStream.writeSSE({ data: token })
+      await sseStream.writeSSE({ data: JSON.stringify(token) })
     }
 
     // ── Guardrails (post-generation) ────────────────────────────────────────

@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
+import heroBgUrl from '../assets/hero-bg.png'
+import lightLandingUrl from '../assets/lightLanding.png'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, useUser } from '@clerk/clerk-react'
+import { useTheme } from '../lib/theme.tsx'
 import {
-  Upload,
-  MessageSquare,
   FileText,
-  TrendingUp,
   ArrowRight,
   BookOpen,
   CheckCircle,
   ChevronRight,
   Brain,
-  Zap,
+  Sparkles,
+  MessageSquare,
+  Calendar,
 } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
 import type { Book, Subject } from 'shared'
@@ -64,18 +66,18 @@ const PALETTE = ['#22C55E', '#A855F7', '#F97316', '#EF4444', '#22D3EE', '#6366F1
 
 const ACTION_CARDS = [
   {
-    icon: Upload,
+    icon: BookOpen,
     label: 'Upload Book',
     sub: 'Add PDF & start learning',
     to: '/books',
     color: '#22C55E',
   },
   {
-    icon: MessageSquare,
+    icon: Sparkles,
     label: 'AI Tutor',
     sub: 'Get instant, accurate answers',
-    to: '/ask',
-    color: '#6366F1',
+    to: '/tutor',
+    color: '#22D3EE',
   },
   {
     icon: FileText,
@@ -85,18 +87,18 @@ const ACTION_CARDS = [
     color: '#EF4444',
   },
   {
-    icon: TrendingUp,
+    icon: Calendar,
     label: 'Study Plan',
     sub: 'Plan your learning journey',
-    to: '/progress',
-    color: '#F97316',
+    to: '/study-plan',
+    color: '#F59E0B',
   },
 ]
 
 const QUICK_ACTIONS = [
-  { icon: MessageSquare, label: 'Ask AI', sub: 'Get instant help', to: '/ask', color: '#6366F1' },
+  { icon: Sparkles, label: 'Ask AI', sub: 'Get instant help', to: '/tutor', color: '#22D3EE' },
   { icon: FileText, label: 'Generate Test', sub: 'Create custom tests', to: '/test/new', color: '#EF4444' },
-  { icon: BookOpen, label: 'View Syllabus', sub: 'Explore your syllabus', to: '/subjects', color: '#22C55E' },
+  { icon: BookOpen, label: 'View Syllabus', sub: 'Explore your syllabus', to: '/syllabus', color: '#22C55E' },
   { icon: Brain, label: 'My Memory', sub: 'Review what you know', to: '/memory', color: '#A855F7' },
 ]
 
@@ -125,6 +127,8 @@ export default function Dashboard() {
   const { getToken } = useAuth()
   const { user } = useUser()
   const navigate = useNavigate()
+  const { theme } = useTheme()
+  const isLight = theme === 'light'
 
   const [books, setBooks] = useState<Book[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
@@ -196,15 +200,33 @@ export default function Dashboard() {
     .slice(0, 4)
 
   return (
-    <div className="p-6 space-y-5 min-h-full">
+    <div className="space-y-3 min-h-full pb-6">
 
       {/* ── Hero ──────────────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-surface">
-        {/* Ambient glow */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-2xl">
+        {/* Hero background image */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          backgroundImage: `url(${isLight ? lightLandingUrl : heroBgUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center right',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.9,
+        }} />
+        {/* Gradient blend */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: isLight
+            ? 'linear-gradient(to right, rgba(243,247,251,0.97) 0%, rgba(243,247,251,0.92) 30%, rgba(243,247,251,0.65) 50%, rgba(243,247,251,0.15) 72%, rgba(243,247,251,0.0) 88%)'
+            : 'linear-gradient(to right, rgba(8,12,20,0.97) 0%, rgba(8,12,20,0.92) 30%, rgba(8,12,20,0.65) 50%, rgba(8,12,20,0.15) 72%, rgba(8,12,20,0.0) 88%)',
+        }} />
+        {/* Bottom fade */}
+        <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{
+          height: '28%',
+          background: isLight
+            ? 'linear-gradient(to top, rgba(243,247,251,0.85) 0%, transparent 100%)'
+            : 'linear-gradient(to top, rgba(8,12,20,0.85) 0%, transparent 100%)',
+        }} />
 
-        <div className="relative flex items-center justify-between gap-8 px-8 py-8">
+        <div className="relative flex items-center justify-between gap-8 px-8 pt-10 pb-2">
           {/* Left */}
           <div className="min-w-0 flex-1">
             <p className="text-sm text-muted mb-2">
@@ -215,7 +237,7 @@ export default function Dashboard() {
               Build{' '}
               <span
                 className="text-primary"
-                style={{ textShadow: '0 0 40px rgba(99,102,241,0.4)' }}
+                style={{ textShadow: '0 0 40px rgba(34,211,238,0.4)' }}
               >
                 Tomorrow.
               </span>
@@ -226,55 +248,26 @@ export default function Dashboard() {
             </p>
           </div>
 
-          {/* Right: decorative */}
-          <div className="hidden lg:flex items-end gap-8 shrink-0 self-stretch pb-2">
-            {/* Quote card */}
-            <div className="self-center border border-border/70 rounded-xl p-4 bg-bg/60 backdrop-blur-sm max-w-[150px]">
-              <p className="text-[11px] font-mono text-muted uppercase tracking-wider leading-relaxed">
-                "Discipline<br />turns knowledge<br />into freedom."
-              </p>
-              <div className="mt-2 h-px bg-primary/50 w-14" />
-            </div>
-
-            {/* Stacked words */}
-            <div className="self-center flex flex-col gap-px">
-              {['STUDY', 'PRACTICE', 'PROGRESS', 'GROW'].map((word, i) => (
-                <span
-                  key={word}
-                  className="font-black tracking-[0.15em]"
-                  style={{
-                    fontSize: i === 3 ? '1.05rem' : '0.9rem',
-                    lineHeight: '1.6',
-                    color:
-                      i === 3
-                        ? '#6366F1'
-                        : `rgba(248,250,252,${0.85 - i * 0.2})`,
-                  }}
-                >
-                  {word}
-                </span>
-              ))}
-            </div>
-
-            {/* Geometric book decoration */}
-            <div className="self-end flex flex-col gap-1.5 opacity-40">
-              {[80, 96, 72, 88].map((h, i) => (
-                <div
-                  key={i}
-                  className="w-3 rounded-sm"
-                  style={{
-                    height: h / 4,
-                    backgroundColor: PALETTE[i % PALETTE.length],
-                  }}
-                />
-              ))}
-            </div>
+          {/* Quote — absolutely placed at center of hero (same as landing page) */}
+          <div className="hidden lg:block absolute" style={{ left: '42%', top: '50%', transform: 'translateY(-50%)' }}>
+            <p style={{
+              fontFamily: 'monospace',
+              fontSize: 12,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              color: isLight ? 'rgba(15,23,42,0.78)' : 'rgba(255,255,255,0.72)',
+              lineHeight: 2,
+              textShadow: isLight ? 'none' : '0 2px 12px rgba(0,0,0,0.8)',
+            }}>
+              "DISCIPLINE<br />TURNS KNOWLEDGE<br />INTO FREEDOM."
+            </p>
+            <div style={{ width: 26, height: 2, background: '#22D3EE', borderRadius: 1, marginTop: 10, boxShadow: '0 0 8px rgba(34,211,238,0.53)' }} />
           </div>
         </div>
       </div>
 
       {/* ── Action Cards ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="px-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
         {ACTION_CARDS.map(({ icon: Icon, label, sub, to, color }) => (
           <button
             key={label}
@@ -301,7 +294,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Middle Row: Learning Progress + Continue Learning ─────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div className="px-6 grid grid-cols-1 lg:grid-cols-12 gap-4">
 
         {/* Learning Progress */}
         <div className="lg:col-span-7 rounded-xl border border-border bg-surface p-5">
@@ -329,7 +322,7 @@ export default function Dashboard() {
               <div className="mb-1 flex items-end gap-3">
                 <span
                   className="text-4xl font-black"
-                  style={{ color: '#6366F1' }}
+                  style={{ color: '#22D3EE' }}
                 >
                   {overallPct}%
                 </span>
@@ -342,7 +335,7 @@ export default function Dashboard() {
                   className="h-full rounded-full transition-all duration-700"
                   style={{
                     width: `${overallPct}%`,
-                    background: 'linear-gradient(to right, #6366F1, #22D3EE)',
+                    background: 'linear-gradient(to right, #22D3EE, #06B6D4)',
                   }}
                 />
               </div>
@@ -408,7 +401,7 @@ export default function Dashboard() {
                 {/* Book cover */}
                 <div
                   className="w-20 h-24 rounded-lg flex items-center justify-center shrink-0 relative overflow-hidden"
-                  style={{ background: 'linear-gradient(135deg, #6366F1 0%, #4338CA 100%)' }}
+                  style={{ background: 'linear-gradient(135deg, #0e7490 0%, #164e63 100%)' }}
                 >
                   <BookOpen size={28} className="text-white/70" />
                   {/* Spine line */}
@@ -429,7 +422,7 @@ export default function Dashboard() {
               </div>
 
               <button
-                onClick={() => navigate(`/ask?bookId=${latestBook.id}`)}
+                onClick={() => navigate(`/tutor?bookId=${latestBook.id}`)}
                 className="mt-auto w-full flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary-hover transition-colors"
               >
                 Start Studying <ArrowRight size={15} />
@@ -453,7 +446,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Bottom Row: Tests + Subjects + Activity ────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="px-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Recent Tests */}
         <div className="rounded-xl border border-border bg-surface p-5">
@@ -521,7 +514,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-white">Your Subjects</h2>
             <button
-              onClick={() => navigate('/subjects')}
+              onClick={() => navigate('/syllabus')}
               className="text-xs text-primary hover:underline"
             >
               Manage
@@ -544,7 +537,7 @@ export default function Dashboard() {
             <div className="py-8 text-center">
               <p className="text-sm text-muted mb-2">No subjects yet</p>
               <button
-                onClick={() => navigate('/subjects')}
+                onClick={() => navigate('/syllabus')}
                 className="text-xs text-primary hover:underline"
               >
                 Add your first subject →
@@ -653,7 +646,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Quick Actions ──────────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-surface p-5">
+      <div className="mx-6 rounded-xl border border-border bg-surface p-5">
         <h2 className="font-semibold text-white mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {QUICK_ACTIONS.map(({ icon: Icon, label, sub, to, color }) => (

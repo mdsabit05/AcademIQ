@@ -94,44 +94,28 @@ export async function processBook(bookId: string): Promise<void> {
     await setStatus(bookId, 'INDEXING')
 
     // Delete any stale chunks from a previous failed attempt
-    await sql`DELETE FROM chunks WHERE book_id = ${bookId}`
+    // Use sql.unsafe to avoid postgres.js sending uuid as text parameter
+    await sql.unsafe(`DELETE FROM chunks WHERE book_id = '${bookId}'::uuid`)
 
-    // Insert all chunks in one multi-row statement
-    const rows = embeddedChunks.map((c) => ({
-      book_id:     bookId,
-      content:     c.content,
-      embedding:   JSON.stringify(c.embedding),  // postgres driver serializes as vector literal
-      chunk_index: c.chunkIndex,
-      page_number: c.pageNumber ?? null,
-      chapter:     c.chapter ?? null,
-      topic_hint:  c.topicHint ?? null,
-      has_ocr:     c.hasOcr,
-      token_count: c.tokenCount,
-    }))
-
-    // Insert in batches of 500 to avoid parameter limits
-    const BATCH = 500
-    for (let i = 0; i < rows.length; i += BATCH) {
-      const batch = rows.slice(i, i + BATCH)
-      await sql`
-        INSERT INTO chunks
+    // Insert chunks using unsafe to avoid uuid/vector type inference issues
+    for (const c of embeddedChunks) {
+      const embeddingLiteral = `[${c.embedding.join(',')}]`
+      await sql.unsafe(
+        `INSERT INTO chunks
           (book_id, content, embedding, chunk_index, page_number,
            chapter, topic_hint, has_ocr, token_count)
-        SELECT
-          r.book_id, r.content,
-          r.embedding::vector,
-          r.chunk_index::int,
-          r.page_number::int,
-          r.chapter, r.topic_hint,
-          r.has_ocr::boolean,
-          r.token_count::int
-        FROM json_to_recordset(${JSON.stringify(batch)}::json) AS r(
-          book_id text, content text, embedding text,
-          chunk_index int, page_number int,
-          chapter text, topic_hint text,
-          has_ocr boolean, token_count int
-        )
-      `
+         VALUES ('${bookId}'::uuid, $1, $2::vector, $3, $4, $5, $6, $7, $8)`,
+        [
+          c.content,
+          embeddingLiteral,
+          c.chunkIndex,
+          c.pageNumber ?? null,
+          c.chapter ?? null,
+          c.topicHint ?? null,
+          c.hasOcr,
+          c.tokenCount,
+        ],
+      )
     }
 
     // ── 6. Mark ready ────────────────────────────────────────────────────

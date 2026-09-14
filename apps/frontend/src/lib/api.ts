@@ -18,7 +18,9 @@ import type {
   LearningPrefs,
 } from 'shared'
 
-const BASE = '/api'
+// Compute API base dynamically so it works behind any proxy subpath
+const _pathname = window.location.pathname.replace(/\/$/, '')
+const BASE = `${_pathname}/api`
 
 async function apiFetch<T>(
   path: string,
@@ -65,9 +67,11 @@ export function makeApi(token: string) {
           headers: { Authorization: `Bearer ${token}` },
           body: form,
         }).then(async (r) => {
-          const data = await r.json()
-          if (!r.ok) throw new Error((data as { error: string }).error ?? r.statusText)
-          return data as { book: Book }
+          if (!r.ok) {
+            const err = await r.json().catch(() => ({ error: r.statusText }))
+            throw new Error((err as { error: string }).error ?? r.statusText)
+          }
+          return r.json() as Promise<{ book: Book }>
         })
       },
 

@@ -120,9 +120,12 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
   owner_id   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   mode       TEXT NOT NULL CHECK (mode IN ('learn','ask','general')),
   topic      TEXT,
+  title      TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- idempotent migration for existing deployments
+ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS title TEXT;
 
 -- Junction: which books are in scope for this session
 CREATE TABLE IF NOT EXISTS chat_session_books (

@@ -66,7 +66,9 @@ export interface ChatSession {
   owner_id: string
   mode: ChatMode
   topic: string | null
+  title: string | null
   book_ids: string[]
+  book_titles: string[]
   created_at: string
   updated_at: string
 }

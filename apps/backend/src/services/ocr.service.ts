@@ -11,14 +11,13 @@ let worker: Awaited<ReturnType<typeof createWorker>> | null = null
 async function getWorker() {
   if (!worker) {
     worker = await createWorker('eng', 1, {
-      // Suppress verbose tesseract logging in production
       logger: process.env.NODE_ENV === 'development'
         ? (m: { status: string; progress: number }) => {
             if (m.status === 'recognizing text') {
               process.stdout.write(`\r[OCR] ${Math.round(m.progress * 100)}%`)
             }
           }
-        : undefined,
+        : () => {},
     })
   }
   return worker

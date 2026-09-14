@@ -2,16 +2,16 @@ import { StrictMode, Component } from 'react'
 import type { ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ClerkProvider } from '@clerk/clerk-react'
-import { BrowserRouter } from 'react-router-dom'
+import { HashRouter } from 'react-router-dom'
 import { ThemeProvider } from './lib/theme.tsx'
 import App from './App.tsx'
 import './index.css'
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+if (!PUBLISHABLE_KEY) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env')
 
-if (!PUBLISHABLE_KEY) {
-  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env')
-}
+// After sign-in modal completes, stay on this same page (hash router takes over)
+const PAGE_URL = window.location.href.split('#')[0]
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null }
@@ -23,8 +23,8 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
           <p className="text-lg font-semibold text-white">Something went wrong</p>
           <p className="max-w-md text-sm text-[#94a3b8]">{(this.state.error as Error).message}</p>
           <button
-            onClick={() => { this.setState({ error: null }); window.location.href = '/' }}
-            className="rounded-lg bg-[#6366F1] px-4 py-2 text-sm font-semibold text-white"
+            onClick={() => { this.setState({ error: null }); window.location.hash = '/' }}
+            className="rounded-lg bg-[#22D3EE] px-4 py-2 text-sm font-semibold text-white"
           >
             Go Home
           </button>
@@ -39,10 +39,15 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
       <ErrorBoundary>
-        <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl={import.meta.env.BASE_URL}>
-          <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <ClerkProvider
+          publishableKey={PUBLISHABLE_KEY}
+          afterSignInUrl={PAGE_URL}
+          afterSignUpUrl={PAGE_URL}
+          afterSignOutUrl={PAGE_URL}
+        >
+          <HashRouter>
             <App />
-          </BrowserRouter>
+          </HashRouter>
         </ClerkProvider>
       </ErrorBoundary>
     </ThemeProvider>

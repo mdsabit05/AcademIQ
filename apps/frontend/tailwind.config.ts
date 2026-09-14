@@ -11,9 +11,9 @@ export default {
         muted: 'rgb(var(--color-muted) / <alpha-value>)',
         subtle: 'rgb(var(--color-subtle) / <alpha-value>)',
         primary: {
-          DEFAULT: '#6366F1',
-          hover: '#4F46E5',
-          muted: 'rgba(99,102,241,0.15)',
+          DEFAULT: 'rgb(var(--color-primary) / <alpha-value>)',
+          hover: 'rgb(var(--color-primary-hover) / <alpha-value>)',
+          muted: 'rgb(var(--color-primary-muted) / <alpha-value>)',
         },
         cyan: {
           DEFAULT: '#22D3EE',

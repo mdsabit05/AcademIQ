@@ -114,7 +114,7 @@ tests.post('/', async (c) => {
          topic, difficulty, order_index)
       VALUES (
         ${test.id}, ${q.question}, ${q.question_type},
-        ${q.options ? JSON.stringify(q.options) : null}::jsonb,
+        ${q.options ? sql.json(q.options) : null},
         ${q.correct_answer}, ${q.marks ?? 1},
         ${q.topic ?? null}, ${q.difficulty ?? body.difficulty}, ${i}
       )

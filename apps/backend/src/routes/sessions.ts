@@ -25,16 +25,20 @@ sessions.post('/', async (c) => {
     topic?: string
   }>()
 
+  console.log('[sessions] POST body:', JSON.stringify(body), 'dbUserId:', dbUserId)
+
   if (!body.mode || !['learn', 'ask', 'general'].includes(body.mode)) {
     return c.json({ error: 'Invalid mode. Must be learn | ask | general' }, 400)
   }
 
-  // Verify book access (ownership + READY status) — throws with status code on failure
-  try {
-    await verifyBookAccess(body.bookIds ?? [], dbUserId)
-  } catch (err: unknown) {
-    const status = (err as { status?: number }).status ?? 400
-    return c.json({ error: (err as Error).message }, status as 400 | 403)
+  // 'general' mode doesn't require books — skip verification
+  if (body.mode !== 'general') {
+    try {
+      await verifyBookAccess(body.bookIds ?? [], dbUserId)
+    } catch (err: unknown) {
+      const status = (err as { status?: number }).status ?? 400
+      return c.json({ error: (err as Error).message }, status as 400 | 403)
+    }
   }
 
   const [session] = await sql<[{ id: string }]>`
@@ -65,21 +69,26 @@ sessions.get('/', async (c) => {
   const dbUserId = c.get('dbUserId')
   const mode = c.req.query('mode')
 
-  const rows = mode
-    ? await sql`
-        SELECT id, mode, topic, created_at, updated_at
-        FROM chat_sessions
-        WHERE owner_id = ${dbUserId} AND mode = ${mode}
-        ORDER BY updated_at DESC
-        LIMIT 50
-      `
-    : await sql`
-        SELECT id, mode, topic, created_at, updated_at
-        FROM chat_sessions
-        WHERE owner_id = ${dbUserId}
-        ORDER BY updated_at DESC
-        LIMIT 50
-      `
+  const rows = await sql`
+    SELECT
+      s.id, s.mode, s.topic, s.title, s.created_at, s.updated_at,
+      COALESCE(
+        array_agg(csb.book_id) FILTER (WHERE csb.book_id IS NOT NULL),
+        '{}'
+      ) AS book_ids,
+      COALESCE(
+        array_agg(b.title) FILTER (WHERE b.title IS NOT NULL),
+        '{}'
+      ) AS book_titles
+    FROM chat_sessions s
+    LEFT JOIN chat_session_books csb ON csb.session_id = s.id
+    LEFT JOIN books b ON b.id = csb.book_id
+    WHERE s.owner_id = ${dbUserId}
+      ${mode ? sql`AND s.mode = ${mode}` : sql``}
+    GROUP BY s.id
+    ORDER BY s.updated_at DESC
+    LIMIT 100
+  `
 
   return c.json({ sessions: rows })
 })
