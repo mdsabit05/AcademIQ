@@ -463,6 +463,9 @@ export default function Landing() {
           .lp-footer-brand { grid-column: 1 / -1 !important; }
           .lp-footer-brand img { width: 130px !important; }
           .lp-stats-grid { grid-template-columns: repeat(2,1fr) !important; }
+          .lp-stats-cell { padding: 14px 16px !important; gap: 10px !important; }
+          .lp-stats-icon { display: none !important; }
+          .lp-stats-val { font-size: 20px !important; }
           .lp-hero-pills > div { flex: 1 1 100% !important; }
           .lp-btn-primary, .lp-btn-outline { width: 100% !important; justify-content: center !important; }
           .lp-hero-btns { flex-direction: column !important; width: 100% !important; }
@@ -470,10 +473,10 @@ export default function Landing() {
           .lp-nav-gap { display: none !important; }
           .lp-login-btn { display: none !important; }
           .lp-nav-actions { gap: 12px !important; }
-          .lp-stats-icon { width: 28px !important; height: 28px !important; }
           .lp-cta-nowrap { white-space: normal !important; font-size: 20px !important; }
           .lp-cta-sub-nowrap { white-space: normal !important; }
-          .lp-dash-text { display: none !important; }
+          .lp-dash-preview { display: none !important; }
+          .lp-dash-text { display: block !important; max-width: 100% !important; }
         }
       `}</style>
 
@@ -484,6 +487,7 @@ export default function Landing() {
         fontFamily: 'Manrope, system-ui, sans-serif',
         WebkitFontSmoothing: 'antialiased',
         transition: 'background 0.35s, color 0.35s',
+        overflowX: 'hidden',
       }}>
 
         {/* ════════════════════════════════════════════════════
@@ -821,7 +825,7 @@ export default function Landing() {
                 transition: 'background 0.35s',
               }} className="lp-stats-grid">
                 {STATS.map(({ icon: Icon, value, label }, i) => (
-                  <div key={label} style={{
+                  <div key={label} className="lp-stats-cell" style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 16,
@@ -839,7 +843,7 @@ export default function Landing() {
                     )}
                     <Icon size={44} className="lp-stats-icon" style={{ color: CYAN, flexShrink: 0 }} />
                     <div>
-                      <div style={{ fontSize: 24, fontWeight: 800, color: T.text, lineHeight: 1, transition: 'color 0.35s' }}>{value}</div>
+                      <div className="lp-stats-val" style={{ fontSize: 24, fontWeight: 800, color: T.text, lineHeight: 1, transition: 'color 0.35s' }}>{value}</div>
                       <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4, transition: 'color 0.35s' }}>{label}</div>
                     </div>
                   </div>
@@ -903,7 +907,7 @@ export default function Landing() {
                 </div>
 
                 {/* Right dashboard preview */}
-                <div style={{ position: 'relative' }}>
+                <div className="lp-dash-preview" style={{ position: 'relative' }}>
                   <div style={{
                     position: 'absolute', inset: -20,
                     background: `${CYAN}05`,
