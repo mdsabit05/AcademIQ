@@ -1,40 +1,26 @@
 /**
- * Tests — Test history page.
- * Shows all generated tests with attempt scores, best/avg, and quick actions.
+ * Tests — dual layout:
+ *   Desktop: old "Test History" design with row-style list
+ *   Mobile:  new card-based design with hero + sparklines
  */
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Plus,
-  FileText,
-  ChevronDown,
-  ChevronUp,
-  RotateCcw,
-  Trophy,
-  Clock,
-  BarChart2,
-  BookOpen,
-  PlayCircle,
-  ExternalLink,
-  Layers,
+  Plus, FileText, Trophy, Clock, BarChart2, BookOpen,
+  Search, SlidersHorizontal, ChevronRight, Eye, RotateCcw,
+  CheckCircle, AlertCircle, TrendingUp,
+  PlayCircle, ExternalLink, ChevronDown, ChevronUp, Layers, ArrowUpDown,
 } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
 import type { Test, TestAttempt } from 'shared'
+import heroBg from '../assets/hero-bg.png'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: 'short', day: 'numeric', year: 'numeric',
-  })
-}
-
-function fmtTime(s: number | null) {
-  if (!s) return '—'
-  if (s < 60) return `${s}s`
-  return `${Math.floor(s / 60)}m ${s % 60}s`
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function pct(score: number, total: number) {
@@ -63,13 +49,189 @@ function typeBadge(type: string) {
   return map[type] ?? type
 }
 
-// ── Stat card ──────────────────────────────────────────────────────────────────
+function getStatus(best: number | null): 'completed' | 'ontrack' | 'revision' | null {
+  if (best === null) return null
+  if (best >= 80) return 'completed'
+  if (best >= 50) return 'ontrack'
+  return 'revision'
+}
 
-function StatCard({ icon: Icon, label, value, color = 'text-white' }: {
-  icon: React.ElementType
-  label: string
-  value: string | number
-  color?: string
+const SUBJECT_COLORS = [
+  '#22D3EE', '#A855F7', '#22C55E', '#F97316', '#EF4444',
+  '#FBBF24', '#EC4899', '#6366F1', '#14B8A6', '#F43F5E',
+]
+function subjectColor(idx: number) { return SUBJECT_COLORS[idx % SUBJECT_COLORS.length] }
+
+// ── Desktop: Attempt Pill ─────────────────────────────────────────────────────
+
+function AttemptPill({ attempt, testId, navigate }: {
+  attempt: TestAttempt; testId: string; navigate: (to: string) => void
+}) {
+  const p = pct(attempt.score, attempt.total_marks)
+  return (
+    <button
+      onClick={() => navigate(`/test/${testId}/results/${attempt.id}`)}
+      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition-all hover:ring-1 hover:ring-primary/40 ${scoreBg(p)}`}
+    >
+      {p}%
+    </button>
+  )
+}
+
+// ── Desktop: Test Row ─────────────────────────────────────────────────────────
+
+function TestRow({ test, attempts, navigate }: {
+  test: Test; attempts: TestAttempt[]; navigate: (to: string) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+
+  const bestAttempt = attempts.length > 0
+    ? attempts.reduce((a, b) => pct(a.score, a.total_marks) >= pct(b.score, b.total_marks) ? a : b)
+    : null
+  const bestPct = bestAttempt ? pct(bestAttempt.score, bestAttempt.total_marks) : null
+  const lastAttempt = attempts.length > 0
+    ? [...attempts].sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())[0]
+    : null
+
+  return (
+    <div className="rounded-xl border border-border bg-surface overflow-hidden">
+      <div className="flex items-center gap-4 p-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <FileText size={16} className="text-primary" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-white truncate">{test.topic ?? 'General Test'}</p>
+            <span className="rounded-full bg-border/80 px-2 py-0.5 text-[10px] font-semibold text-muted">{typeBadge(test.type)}</span>
+            <span className="rounded-full bg-border/80 px-2 py-0.5 text-[10px] font-semibold capitalize text-muted">{test.difficulty}</span>
+          </div>
+          <div className="mt-0.5 flex items-center gap-3 text-xs text-muted">
+            <span>{fmtDate(test.created_at)}</span>
+            <span>·</span><span>{test.question_count} questions</span>
+            <span>·</span><span>{test.total_marks} marks</span>
+            {test.duration_minutes && <><span>·</span><span>{test.duration_minutes} min</span></>}
+          </div>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-4 shrink-0">
+          {attempts.length === 0 ? (
+            <span className="text-xs text-muted italic">Not attempted</span>
+          ) : (
+            <>
+              <div className="flex items-center gap-1">
+                {[...attempts]
+                  .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+                  .slice(0, 5)
+                  .map((a) => <AttemptPill key={a.id} attempt={a} testId={test.id} navigate={navigate} />)}
+              </div>
+              {bestPct !== null && (
+                <div className="text-center">
+                  <p className={`text-sm font-bold ${scoreColor(bestPct)}`}>{bestPct}%</p>
+                  <p className="text-[10px] text-muted">Best</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={() => navigate(`/test/${test.id}`)}
+            className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors">
+            <PlayCircle size={12} />
+            {attempts.length === 0 ? 'Start' : 'Retake'}
+          </button>
+          {lastAttempt && (
+            <button onClick={() => navigate(`/test/${test.id}/results/${lastAttempt.id}`)}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted hover:text-white hover:border-primary/30 transition-colors">
+              <ExternalLink size={11} /> Results
+            </button>
+          )}
+          {attempts.length > 0 && (
+            <button onClick={() => setExpanded(!expanded)}
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:text-white transition-colors">
+              {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {expanded && attempts.length > 0 && (
+        <div className="border-t border-border bg-bg/50 px-4 py-2">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted">All Attempts ({attempts.length})</p>
+          <div className="space-y-1">
+            {[...attempts]
+              .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+              .map((a, i) => {
+                const p = pct(a.score, a.total_marks)
+                const isBest = a.id === bestAttempt?.id
+                return (
+                  <div key={a.id} className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-surface transition-colors">
+                    <span className="w-6 text-center text-xs font-bold text-muted">#{attempts.length - i}</span>
+                    <div className="flex-1">
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className={`text-xs font-bold ${scoreColor(p)}`}>{p}%</span>
+                        <span className="text-[11px] text-muted">{a.score}/{a.total_marks} marks</span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-border">
+                        <div className={`h-1.5 rounded-full ${p >= 80 ? 'bg-emerald-400' : p >= 60 ? 'bg-primary' : p >= 40 ? 'bg-yellow-400' : 'bg-red-400'}`}
+                          style={{ width: `${p}%` }} />
+                      </div>
+                    </div>
+                    <span className="hidden sm:block w-24 text-right text-[11px] text-muted">{fmtDate(a.submitted_at)}</span>
+                    {isBest && <span className="rounded-full bg-yellow-400/10 px-2 py-0.5 text-[10px] font-bold text-yellow-400">Best</span>}
+                    <button onClick={() => navigate(`/test/${test.id}/results/${a.id}`)} className="text-[11px] text-primary hover:underline">View</button>
+                  </div>
+                )
+              })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Mobile: Sparkline ─────────────────────────────────────────────────────────
+
+function Sparkline() {
+  return (
+    <svg width="64" height="28" viewBox="0 0 64 28" fill="none">
+      <path d="M2 22 C10 20 16 14 24 12 C32 10 36 16 44 10 C52 4 58 8 62 6"
+        stroke="#22C55E" strokeWidth="2" strokeLinecap="round" fill="none" />
+      <path d="M2 22 C10 20 16 14 24 12 C32 10 36 16 44 10 C52 4 58 8 62 6 L62 28 L2 28 Z"
+        fill="url(#sg)" opacity="0.25" />
+      <defs>
+        <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#22C55E" />
+          <stop offset="100%" stopColor="#22C55E" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+    </svg>
+  )
+}
+
+// ── Mobile: Stat Card with sparkline ─────────────────────────────────────────
+
+function MobileStatCard({ icon: Icon, label, value, iconColor = '#22D3EE' }: {
+  icon: React.ElementType; label: string; value: string | number; iconColor?: string
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-surface px-3 py-2.5 flex items-center gap-2.5">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+        style={{ background: `${iconColor}18`, border: `1px solid ${iconColor}30` }}>
+        <Icon size={13} style={{ color: iconColor }} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-base font-black text-white leading-none">{value}</p>
+        <p className="text-[10px] text-muted mt-0.5 truncate">{label}</p>
+      </div>
+    </div>
+  )
+}
+
+// ── Desktop: Simple Stat Card ─────────────────────────────────────────────────
+
+function DesktopStatCard({ icon: Icon, label, value, color = 'text-white' }: {
+  icon: React.ElementType; label: string; value: string | number; color?: string
 }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border bg-surface p-4">
@@ -84,221 +246,100 @@ function StatCard({ icon: Icon, label, value, color = 'text-white' }: {
   )
 }
 
-// ── Attempt pill ───────────────────────────────────────────────────────────────
+// ── Mobile: Status Badge ──────────────────────────────────────────────────────
 
-function AttemptPill({ attempt, testId, navigate }: {
-  attempt: TestAttempt
-  testId: string
-  navigate: (to: string) => void
-}) {
-  const p = pct(attempt.score, attempt.total_marks)
+function StatusBadge({ status }: { status: 'completed' | 'ontrack' | 'revision' | null }) {
+  if (!status) return null
+  const map = {
+    completed: { label: 'Completed',      bg: 'rgba(34,197,94,0.12)',  border: 'rgba(34,197,94,0.3)',  color: '#22C55E', icon: CheckCircle },
+    ontrack:   { label: 'On Track',       bg: 'rgba(34,211,238,0.12)', border: 'rgba(34,211,238,0.3)', color: '#22D3EE', icon: TrendingUp  },
+    revision:  { label: 'Needs Revision', bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.3)',  color: '#EF4444', icon: AlertCircle },
+  }
+  const { label, bg, border, color, icon: Icon } = map[status]
   return (
-    <button
-      onClick={() => navigate(`/test/${testId}/results/${attempt.id}`)}
-      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition-all hover:ring-1 hover:ring-primary/40 ${scoreBg(p)}`}
-      title={`${attempt.score}/${attempt.total_marks} marks — ${fmtDate(attempt.submitted_at)}`}
-    >
-      {p}%
-    </button>
+    <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold shrink-0"
+      style={{ background: bg, border: `1px solid ${border}`, color }}>
+      <Icon size={9} />{label}
+    </span>
   )
 }
 
-// ── Test row ───────────────────────────────────────────────────────────────────
+// ── Mobile: Test Card ─────────────────────────────────────────────────────────
 
-function TestRow({ test, attempts, navigate }: {
-  test: Test
-  attempts: TestAttempt[]
-  navigate: (to: string) => void
+function TestCard({ test, attempts, colorIdx, navigate }: {
+  test: Test; attempts: TestAttempt[]; colorIdx: number; navigate: (to: string) => void
 }) {
-  const [expanded, setExpanded] = useState(false)
-
-  const bestAttempt = attempts.length > 0
-    ? attempts.reduce((a, b) => pct(a.score, a.total_marks) >= pct(b.score, b.total_marks) ? a : b)
-    : null
-  const bestPct  = bestAttempt ? pct(bestAttempt.score, bestAttempt.total_marks) : null
-  const avgPct   = attempts.length > 0
-    ? Math.round(attempts.reduce((s, a) => s + pct(a.score, a.total_marks), 0) / attempts.length)
-    : null
-  const lastAttempt = attempts.length > 0
-    ? attempts.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())[0]
-    : null
+  const sorted = [...attempts].sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+  const lastAttempt = sorted[0] ?? null
+  const bestPct = attempts.length > 0 ? Math.max(...attempts.map((a) => pct(a.score, a.total_marks))) : null
+  const status = getStatus(bestPct)
+  const color = subjectColor(colorIdx)
+  const lastScore = lastAttempt ? pct(lastAttempt.score, lastAttempt.total_marks) : null
+  const lastScoreColor = lastScore === null ? '#94A3B8' : lastScore >= 80 ? '#22C55E' : lastScore >= 50 ? '#22D3EE' : '#EF4444'
 
   return (
     <div className="rounded-xl border border-border bg-surface overflow-hidden">
-      {/* Main row */}
-      <div className="flex items-center gap-4 p-4">
-
-        {/* Icon */}
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-          <FileText size={16} className="text-primary" />
-        </div>
-
-        {/* Title + meta */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-semibold text-white truncate">
-              {test.topic ?? 'General Test'}
-            </p>
-            <span className="rounded-full bg-border/80 px-2 py-0.5 text-[10px] font-semibold text-muted">
-              {typeBadge(test.type)}
-            </span>
-            <span className="rounded-full bg-border/80 px-2 py-0.5 text-[10px] font-semibold capitalize text-muted">
-              {test.difficulty}
-            </span>
+      <div className="p-3.5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: `${color}18`, border: `1px solid ${color}30` }}>
+            <FileText size={16} style={{ color }} />
           </div>
-          <div className="mt-0.5 flex items-center gap-3 text-xs text-muted">
-            <span>{fmtDate(test.created_at)}</span>
-            <span>·</span>
-            <span>{test.question_count} questions</span>
-            <span>·</span>
-            <span>{test.total_marks} marks</span>
-            {test.duration_minutes && (
-              <><span>·</span><span>{test.duration_minutes} min</span></>
-            )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-bold text-white leading-tight line-clamp-1">{test.topic ?? 'General Test'}</p>
+              <StatusBadge status={status} />
+            </div>
+            <p className="text-[11px] text-muted mt-0.5">{test.topic?.split(' - ')[0] ?? 'General'} · {typeBadge(test.type)}</p>
           </div>
         </div>
-
-        {/* Scores summary */}
-        <div className="hidden sm:flex items-center gap-4 shrink-0">
-          {attempts.length === 0 ? (
-            <span className="text-xs text-muted italic">Not attempted</span>
-          ) : (
-            <>
-              {/* Recent attempts (up to 5 pills) */}
-              <div className="flex items-center gap-1">
-                {[...attempts]
-                  .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
-                  .slice(0, 5)
-                  .map((a) => (
-                    <AttemptPill key={a.id} attempt={a} testId={test.id} navigate={navigate} />
-                  ))}
-              </div>
-              {/* Best */}
-              {bestPct !== null && (
-                <div className="text-center">
-                  <p className={`text-sm font-bold ${scoreColor(bestPct)}`}>{bestPct}%</p>
-                  <p className="text-[10px] text-muted">Best</p>
-                </div>
-              )}
-            </>
-          )}
+        <div className="flex items-center gap-4 mt-3 text-[11px] text-muted">
+          <span className="flex items-center gap-1"><FileText size={11} />{test.question_count} Questions</span>
+          <span className="flex items-center gap-1"><BookOpen size={11} />{test.total_marks} Marks</span>
+          {test.duration_minutes && <span className="flex items-center gap-1"><Clock size={11} />{test.duration_minutes} Minutes</span>}
         </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => navigate(`/test/${test.id}`)}
-            className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
-          >
-            <PlayCircle size={12} />
-            {attempts.length === 0 ? 'Start' : 'Retake'}
-          </button>
-          {lastAttempt && (
-            <button
-              onClick={() => navigate(`/test/${test.id}/results/${lastAttempt.id}`)}
-              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted hover:text-white hover:border-primary/30 transition-colors"
-            >
-              <ExternalLink size={11} />
-              Results
-            </button>
-          )}
-          {attempts.length > 0 && (
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:text-white transition-colors"
-            >
-              {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-            </button>
+        <div className="flex items-center gap-2 mt-2.5">
+          <span className="text-[11px] text-muted">{fmtDate(test.created_at)}</span>
+          {lastScore !== null && lastAttempt && (
+            <><span className="text-muted/40">·</span>
+            <span className="text-[11px] font-bold" style={{ color: lastScoreColor }}>
+              {lastScore}% ({lastAttempt.score}/{lastAttempt.total_marks})
+            </span></>
           )}
         </div>
       </div>
-
-      {/* Expanded attempts table */}
-      {expanded && attempts.length > 0 && (
-        <div className="border-t border-border bg-bg/50">
-          <div className="px-4 py-2">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted">
-              All Attempts ({attempts.length})
-            </p>
-            <div className="space-y-1">
-              {[...attempts]
-                .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
-                .map((a, i) => {
-                  const p = pct(a.score, a.total_marks)
-                  const isBest = a.id === bestAttempt?.id
-                  return (
-                    <div
-                      key={a.id}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-surface transition-colors"
-                    >
-                      {/* Attempt # */}
-                      <span className="w-6 text-center text-xs font-bold text-muted">
-                        #{attempts.length - i}
-                      </span>
-
-                      {/* Score bar */}
-                      <div className="flex-1">
-                        <div className="mb-1 flex items-center justify-between">
-                          <span className={`text-xs font-bold ${scoreColor(p)}`}>{p}%</span>
-                          <span className="text-[11px] text-muted">
-                            {a.score}/{a.total_marks} marks
-                          </span>
-                        </div>
-                        <div className="h-1.5 w-full rounded-full bg-border">
-                          <div
-                            className={`h-1.5 rounded-full transition-all ${
-                              p >= 80 ? 'bg-emerald-400' : p >= 60 ? 'bg-primary' : p >= 40 ? 'bg-yellow-400' : 'bg-red-400'
-                            }`}
-                            style={{ width: `${p}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Time */}
-                      <span className="hidden sm:block w-14 text-right text-[11px] text-muted">
-                        {fmtTime(a.time_elapsed_seconds)}
-                      </span>
-
-                      {/* Date */}
-                      <span className="hidden md:block w-24 text-right text-[11px] text-muted">
-                        {fmtDate(a.submitted_at)}
-                      </span>
-
-                      {/* Best badge */}
-                      {isBest && (
-                        <span className="rounded-full bg-yellow-400/10 px-2 py-0.5 text-[10px] font-bold text-yellow-400">
-                          Best
-                        </span>
-                      )}
-
-                      {/* View */}
-                      <button
-                        onClick={() => navigate(`/test/${test.id}/results/${a.id}`)}
-                        className="text-[11px] text-primary hover:underline"
-                      >
-                        View
-                      </button>
-                    </div>
-                  )
-                })}
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="border-t border-border px-3.5 py-2.5 flex gap-2">
+        {lastAttempt && (
+          <button onClick={() => navigate(`/test/${test.id}/results/${lastAttempt.id}`)}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border py-2 text-xs font-bold text-muted hover:text-white hover:bg-white/5 transition-colors">
+            <Eye size={11} /> View
+          </button>
+        )}
+        <button onClick={() => navigate(`/test/${test.id}`)}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-colors"
+          style={{ background: 'rgba(34,211,238,0.1)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.25)' }}>
+          <RotateCcw size={11} /> {attempts.length === 0 ? 'Start' : 'Retake'}
+        </button>
+      </div>
     </div>
   )
 }
 
-// ── Main page ──────────────────────────────────────────────────────────────────
+// ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function Tests() {
   const { getToken } = useAuth()
-  const navigate     = useNavigate()
+  const navigate = useNavigate()
 
-  const [tests,    setTests]    = useState<Test[]>([])
+  const [tests, setTests] = useState<Test[]>([])
   const [attempts, setAttempts] = useState<Record<string, TestAttempt[]>>({})
-  const [loading,  setLoading]  = useState(true)
-  const [filter,   setFilter]   = useState<'all' | 'revision' | 'ontrack' | 'mastered'>('all')
+  const [loading, setLoading] = useState(true)
+
+  // Desktop filter
+  const [desktopFilter, setDesktopFilter] = useState<'all' | 'attempted' | 'notstarted'>('all')
+  // Mobile filter
+  const [mobileFilter, setMobileFilter] = useState<'all' | 'revision' | 'ontrack' | 'mastered'>('all')
+  const [mobileSearch, setMobileSearch] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -307,8 +348,6 @@ export default function Tests() {
       const api = makeApi(token)
       const { tests: all } = await api.tests.list()
       setTests(all)
-
-      // Load all attempts in parallel
       const results = await Promise.all(
         all.map((t) => api.tests.listAttempts(t.id).then((r) => ({ id: t.id, attempts: r.attempts })))
       )
@@ -320,30 +359,45 @@ export default function Tests() {
     load()
   }, [getToken])
 
-  // ── Stats ──────────────────────────────────────────────────────────────────
-  const allAttempts   = Object.values(attempts).flat()
+  // Stats
+  const allAttempts = Object.values(attempts).flat()
   const totalAttempts = allAttempts.length
-  const bestPct       = allAttempts.length > 0
-    ? Math.max(...allAttempts.map((a) => pct(a.score, a.total_marks)))
-    : null
-  const avgPct        = allAttempts.length > 0
-    ? Math.round(allAttempts.reduce((s, a) => s + pct(a.score, a.total_marks), 0) / allAttempts.length)
-    : null
+  const bestPct = allAttempts.length > 0 ? Math.max(...allAttempts.map((a) => pct(a.score, a.total_marks))) : null
+  const avgPct  = allAttempts.length > 0 ? Math.round(allAttempts.reduce((s, a) => s + pct(a.score, a.total_marks), 0) / allAttempts.length) : null
 
-  // ── Filter ─────────────────────────────────────────────────────────────────
   const getBest = (t: Test) => {
     const atts = attempts[t.id] ?? []
-    if (atts.length === 0) return null
-    return Math.max(...atts.map((a) => pct(a.score, a.total_marks)))
+    return atts.length === 0 ? null : Math.max(...atts.map((a) => pct(a.score, a.total_marks)))
   }
 
-  const filtered = tests.filter((t) => {
-    const best = getBest(t)
-    if (filter === 'revision') return best !== null && best < 50
-    if (filter === 'ontrack')  return best !== null && best >= 50 && best < 80
-    if (filter === 'mastered') return best !== null && best >= 80
+  // Desktop filtered list
+  const desktopFiltered = tests.filter((t) => {
+    const atts = attempts[t.id] ?? []
+    if (desktopFilter === 'attempted')  return atts.length > 0
+    if (desktopFilter === 'notstarted') return atts.length === 0
     return true
   })
+
+  // Mobile filtered list
+  const mobileFiltered = tests
+    .filter((t) => {
+      const best = getBest(t)
+      if (mobileFilter === 'revision') return best !== null && best < 50
+      if (mobileFilter === 'ontrack')  return best !== null && best >= 50 && best < 80
+      if (mobileFilter === 'mastered') return best !== null && best >= 80
+      return true
+    })
+    .filter((t) => {
+      if (!mobileSearch) return true
+      return (t.topic ?? '').toLowerCase().includes(mobileSearch.toLowerCase())
+    })
+
+  const MOBILE_TABS = [
+    { key: 'all' as const,      label: 'All',            count: tests.length },
+    { key: 'revision' as const, label: 'Needs Revision', count: tests.filter(t => { const b = getBest(t); return b !== null && b < 50 }).length },
+    { key: 'ontrack' as const,  label: 'On Track',       count: tests.filter(t => { const b = getBest(t); return b !== null && b >= 50 && b < 80 }).length },
+    { key: 'mastered' as const, label: 'Mastered',       count: tests.filter(t => { const b = getBest(t); return b !== null && b >= 80 }).length },
+  ]
 
   if (loading) {
     return (
@@ -355,41 +409,40 @@ export default function Tests() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="p-6 space-y-6">
 
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="mb-1 text-xs font-bold uppercase tracking-[0.2em] text-primary">Tests</p>
-            <h1 className="text-2xl font-extrabold text-white">Test History</h1>
-            <p className="mt-1 text-sm text-muted">All your generated tests and attempt scores.</p>
+      {/* ════════════════════════════════════════════════════════════════════
+          DESKTOP LAYOUT (hidden on mobile)
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="hidden lg:block space-y-6">
+
+        {/* Hero Banner */}
+        <div
+          className="relative overflow-hidden px-8 py-10"
+          style={{ backgroundImage: `url(${heroBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+        >
+          <div className="absolute inset-0 bg-bg/60" />
+          <div className="relative flex items-center justify-between">
+            <div>
+              <p className="mb-1 text-xs font-bold uppercase tracking-[0.2em] text-primary">Tests</p>
+              <h1 className="text-3xl font-extrabold text-white">Test History</h1>
+              <p className="mt-1 text-sm text-muted">All your generated tests and attempt scores.</p>
+            </div>
+            <button onClick={() => navigate('/test/new')}
+              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-bg hover:bg-primary-hover transition-colors">
+              <Plus size={15} /> New Test
+            </button>
           </div>
-          <button
-            onClick={() => navigate('/test/new')}
-            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-bg hover:bg-primary-hover transition-colors"
-          >
-            <Plus size={15} />
-            New Test
-          </button>
         </div>
 
-        {/* Stats */}
+        <div className="px-6 pb-6 space-y-6">
+
+        {/* Stats — 4 columns */}
         {tests.length > 0 && (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatCard icon={Layers}    label="Tests Created"   value={tests.length} />
-            <StatCard icon={BarChart2} label="Total Attempts"  value={totalAttempts} />
-            <StatCard
-              icon={Trophy}
-              label="Best Score"
-              value={bestPct !== null ? `${bestPct}%` : '—'}
-              color={bestPct !== null ? scoreColor(bestPct) : 'text-white'}
-            />
-            <StatCard
-              icon={BookOpen}
-              label="Avg Score"
-              value={avgPct !== null ? `${avgPct}%` : '—'}
-              color={avgPct !== null ? scoreColor(avgPct) : 'text-white'}
-            />
+          <div className="grid grid-cols-4 gap-3">
+            <DesktopStatCard icon={Layers}    label="Tests Created"  value={tests.length} />
+            <DesktopStatCard icon={BarChart2} label="Total Attempts" value={totalAttempts} />
+            <DesktopStatCard icon={Trophy}    label="Best Score"     value={bestPct !== null ? `${bestPct}%` : '—'} color={bestPct !== null ? (bestPct >= 80 ? 'text-emerald-400' : bestPct >= 60 ? 'text-primary' : bestPct >= 40 ? 'text-yellow-400' : 'text-red-400') : 'text-white'} />
+            <DesktopStatCard icon={BookOpen}  label="Avg Score"      value={avgPct  !== null ? `${avgPct}%`  : '—'} color={avgPct  !== null ? (avgPct  >= 80 ? 'text-emerald-400' : avgPct  >= 60 ? 'text-primary' : avgPct  >= 40 ? 'text-yellow-400' : 'text-red-400') : 'text-white'} />
           </div>
         )}
 
@@ -400,72 +453,149 @@ export default function Tests() {
             </div>
             <p className="text-lg font-semibold text-white">No tests yet</p>
             <p className="mt-1 text-sm text-muted">Create your first test to start practising.</p>
-            <button
-              onClick={() => navigate('/test/new')}
-              className="mt-5 flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-bg hover:bg-primary-hover"
-            >
-              <Plus size={15} />
-              Create Your First Test
+            <button onClick={() => navigate('/test/new')}
+              className="mt-5 flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-bg hover:bg-primary-hover">
+              <Plus size={15} /> Create Your First Test
             </button>
           </div>
         ) : (
           <>
-            {/* Filter tabs */}
+            {/* Desktop filter tabs */}
             <div className="flex items-center gap-2">
               {([
-                { key: 'all',      label: 'All',             color: '' },
-                { key: 'revision', label: 'Needs Revision',  color: 'data-active:bg-red-500/20 data-active:text-red-400 data-active:border-red-500/30' },
-                { key: 'ontrack',  label: 'On Track',        color: '' },
-                { key: 'mastered', label: 'Mastered',        color: '' },
-              ] as const).map(({ key, label }) => {
-                const active = filter === key
-                const count =
-                  key === 'all'      ? tests.length :
-                  key === 'revision' ? tests.filter(t => { const b = getBest(t); return b !== null && b < 50 }).length :
-                  key === 'ontrack'  ? tests.filter(t => { const b = getBest(t); return b !== null && b >= 50 && b < 80 }).length :
-                                       tests.filter(t => { const b = getBest(t); return b !== null && b >= 80 }).length
-
-                const activeStyle =
-                  active && key === 'revision' ? 'bg-red-500/15 text-red-400 border-red-500/30' :
-                  active && key === 'ontrack'  ? 'bg-yellow-400/15 text-yellow-400 border-yellow-400/30' :
-                  active && key === 'mastered' ? 'bg-emerald-400/15 text-emerald-400 border-emerald-400/30' :
-                  active                       ? 'bg-primary text-bg border-primary' :
-                  'border-border text-muted hover:text-white'
-
+                { key: 'all' as const,        label: 'All',         count: tests.length },
+                { key: 'attempted' as const,  label: 'Attempted',   count: tests.filter(t => (attempts[t.id] ?? []).length > 0).length },
+                { key: 'notstarted' as const, label: 'Not Started', count: tests.filter(t => (attempts[t.id] ?? []).length === 0).length },
+              ]).map(({ key, label, count }) => {
+                const active = desktopFilter === key
                 return (
-                  <button
-                    key={key}
-                    onClick={() => setFilter(key)}
-                    className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition-all ${activeStyle}`}
-                  >
+                  <button key={key} onClick={() => setDesktopFilter(key)}
+                    className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition-all ${
+                      active ? 'bg-primary text-bg border-primary' : 'border-border text-muted hover:text-white'
+                    }`}>
                     {label} ({count})
                   </button>
                 )
               })}
             </div>
 
-            {/* Test list */}
+            {/* Desktop test rows */}
             <div className="space-y-3">
-              {filtered.length === 0 ? (
+              {desktopFiltered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Clock size={28} className="mb-3 text-muted/30" />
                   <p className="font-medium text-white">No tests match this filter</p>
                 </div>
-              ) : (
-                filtered.map((test) => (
-                  <TestRow
-                    key={test.id}
-                    test={test}
-                    attempts={attempts[test.id] ?? []}
-                    navigate={navigate}
-                  />
-                ))
-              )}
+              ) : desktopFiltered.map((test) => (
+                <TestRow key={test.id} test={test} attempts={attempts[test.id] ?? []} navigate={navigate} />
+              ))}
             </div>
           </>
         )}
-
+        </div>{/* end inner px-6 div */}
       </div>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          MOBILE LAYOUT (hidden on desktop)
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="lg:hidden flex flex-col min-h-full">
+
+        {/* Hero */}
+        <div className="relative overflow-hidden" style={{ minHeight: 140 }}>
+          <div className="relative px-4 py-6 max-w-xl">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1">Tests</p>
+            <h1 className="text-xl font-black text-white leading-tight">
+              Practice. Improve.{' '}
+              <span className="text-primary" style={{ textShadow: '0 0 24px rgba(34,211,238,0.4)' }}>Progress.</span>
+            </h1>
+            <p className="mt-1 text-xs text-muted leading-relaxed">
+              Generate tests from your study materials, practice regularly and track your performance.
+            </p>
+          </div>
+        </div>
+
+        {/* Mobile stats 2×2 */}
+        {tests.length > 0 && (
+          <div className="grid grid-cols-2 gap-2.5 px-3 pb-3">
+            <MobileStatCard icon={FileText}  label="Tests Created"  value={tests.length}                           iconColor="#22D3EE" />
+            <MobileStatCard icon={BarChart2} label="Total Attempts" value={totalAttempts}                          iconColor="#22D3EE" />
+            <MobileStatCard icon={Trophy}    label="Best Score"     value={bestPct !== null ? `${bestPct}%` : '—'} iconColor="#FBBF24" />
+            <MobileStatCard icon={BookOpen}  label="Avg Score"      value={avgPct  !== null ? `${avgPct}%`  : '—'} iconColor="#A855F7" />
+          </div>
+        )}
+
+        {/* Sticky toolbar */}
+        <div className="sticky top-0 z-10 bg-bg border-b border-border">
+          <div className="flex gap-2 px-3 pt-2 pb-2 overflow-x-auto scrollbar-none">
+            {MOBILE_TABS.map(({ key, label, count }) => {
+              const active = mobileFilter === key
+              const style =
+                active && key === 'revision' ? { background: 'rgba(239,68,68,0.15)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)' } :
+                active && key === 'ontrack'  ? { background: 'rgba(34,211,238,0.15)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.3)' } :
+                active && key === 'mastered' ? { background: 'rgba(34,197,94,0.15)',  color: '#22C55E', border: '1px solid rgba(34,197,94,0.3)'  } :
+                active ? { background: '#22D3EE', color: '#0a0f1a', border: '1px solid #22D3EE' } :
+                { background: 'transparent', color: '#64748B', border: '1px solid rgba(100,116,139,0.3)' }
+              return (
+                <button key={key} onClick={() => setMobileFilter(key)}
+                  className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all whitespace-nowrap"
+                  style={style}>
+                  {label} ({count})
+                </button>
+              )
+            })}
+          </div>
+          <div className="flex items-center gap-2 px-3 pb-2.5">
+            <div className="relative flex-1">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+              <input value={mobileSearch} onChange={(e) => setMobileSearch(e.target.value)}
+                placeholder="Search tests…"
+                className="w-full rounded-lg border border-border bg-surface pl-8 pr-3 py-2 text-xs text-white placeholder:text-muted/50 focus:border-primary focus:outline-none transition-colors" />
+            </div>
+            <button className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted hover:text-white transition-colors shrink-0">
+              <ArrowUpDown size={12} /> Sort
+            </button>
+            <button className="flex items-center justify-center rounded-lg border border-border bg-surface w-8 h-8 text-muted hover:text-white transition-colors shrink-0">
+              <SlidersHorizontal size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile content */}
+        <div className="px-3 pt-3 pb-6 space-y-2.5">
+          <button onClick={() => navigate('/test/new')}
+            className="w-full flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3.5 text-left hover:border-primary/30 transition-colors">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+              style={{ background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.25)' }}>
+              <Plus size={18} className="text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white">Create a New Test</p>
+              <p className="text-xs text-muted">Generate questions from your books, syllabus or topics</p>
+            </div>
+            <ChevronRight size={16} className="text-muted shrink-0" />
+          </button>
+
+          {tests.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                <FileText size={24} className="text-primary" />
+              </div>
+              <p className="text-base font-bold text-white">No tests yet</p>
+              <p className="mt-1 text-sm text-muted">Create your first test to start practising.</p>
+            </div>
+          ) : mobileFiltered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Search size={24} className="mb-3 text-muted/30" />
+              <p className="text-sm font-medium text-white">No tests match this filter</p>
+              <button onClick={() => { setMobileFilter('all'); setMobileSearch('') }}
+                className="mt-2 text-xs text-primary hover:underline">Clear filters</button>
+            </div>
+          ) : mobileFiltered.map((test, i) => (
+            <TestCard key={test.id} test={test} attempts={attempts[test.id] ?? []} colorIdx={i} navigate={navigate} />
+          ))}
+        </div>
+      </div>
+
     </div>
   )
 }

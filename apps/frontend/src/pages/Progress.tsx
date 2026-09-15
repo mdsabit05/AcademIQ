@@ -8,7 +8,7 @@ import { useAuth } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../lib/theme.tsx'
 import {
-  FileText, Star, Clock, Target, TrendingUp, ChevronRight,
+  FileText, Star, Clock, Target, ChevronRight,
   AlertTriangle, Trophy, BookOpen, Flame, Lock, CheckCircle2,
   ArrowUpRight, RotateCcw,
 } from 'lucide-react'
@@ -67,18 +67,31 @@ function timeAgo(iso: string) {
   return `${Math.floor(days / 7)} weeks ago`
 }
 
-function scoreColor(pct: number) {
-  if (pct >= 80) return 'text-emerald-400'
-  if (pct >= 60) return 'text-yellow-400'
-  if (pct >= 40) return 'text-orange-400'
-  return 'text-red-400'
+function scoreColorValue(pct: number, theme: string) {
+  const light = theme === 'light'
+  if (pct >= 80) return light ? '#059669' : '#34d399'
+  if (pct >= 60) return light ? '#d97706' : '#facc15'
+  if (pct >= 40) return light ? '#ea580c' : '#fb923c'
+  return light ? '#dc2626' : '#f87171'
 }
 
-function scoreDot(pct: number) {
-  if (pct >= 80) return 'bg-emerald-400'
-  if (pct >= 60) return 'bg-yellow-400'
-  if (pct >= 40) return 'bg-orange-400'
-  return 'bg-red-400'
+function scoreDotColor(pct: number, theme: string) {
+  return scoreColorValue(pct, theme)
+}
+
+// Check if sessions include N consecutive calendar days
+function hasConsecutiveStreak(sessions: Session[], days: number): boolean {
+  const uniqueDays = [...new Set(sessions.map((s) => new Date(s.created_at).toDateString()))]
+    .map((d) => new Date(d).getTime())
+    .sort((a, b) => b - a) // newest first
+  if (uniqueDays.length < days) return false
+  let streak = 1
+  for (let i = 1; i < uniqueDays.length; i++) {
+    const diff = Math.round((uniqueDays[i - 1] - uniqueDays[i]) / 86400000)
+    if (diff === 1) { streak++; if (streak >= days) return true }
+    else streak = 1
+  }
+  return streak >= days
 }
 
 // Build last-7-days activity from sessions
@@ -108,56 +121,81 @@ const SUBJECT_COLORS = [
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function StatCard({
-  icon: Icon, iconBg, value, label, trend, trendLabel,
+  icon: Icon, iconBg, iconColor, value, label, trend, trendLabel, theme,
 }: {
   icon: React.ElementType
   iconBg: string
+  iconColor: string
   value: string
   label: string
   trend: string
   trendLabel: string
+  theme: string
 }) {
+  const isLight = theme === 'light'
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-border bg-surface p-5">
+    <div
+      className="flex items-center gap-2.5 rounded-xl p-3"
+      style={{
+        background: isLight ? '#fff' : 'rgb(var(--color-surface))',
+        border: isLight ? `1px solid ${iconColor}40` : '1px solid rgb(var(--color-border))',
+        borderLeft: isLight ? `4px solid ${iconColor}` : undefined,
+        boxShadow: isLight ? `0 2px 8px ${iconColor}18` : undefined,
+      }}
+    >
       <div
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
-        style={{ background: iconBg }}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+        style={{ background: isLight ? `${iconColor}18` : iconBg }}
       >
-        <Icon size={22} className="text-white" />
+        <Icon size={16} style={{ color: isLight ? iconColor : '#fff' }} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-2xl font-black text-white leading-tight">{value}</p>
-        <p className="text-xs text-muted mt-0.5">{label}</p>
+        <p className="text-base font-black leading-tight" style={{ color: isLight ? '#0f172a' : '#fff' }}>{value}</p>
+        <p className="text-[10px] mt-0.5 truncate" style={{ color: isLight ? '#64748b' : 'rgb(var(--color-muted))' }}>{label}</p>
       </div>
-      <div className="text-right shrink-0">
-        <p className="flex items-center justify-end gap-0.5 text-sm font-bold text-emerald-400">
-          <ArrowUpRight size={13} />
+      <div className="text-right shrink-0 hidden sm:block">
+        <p className="flex items-center justify-end gap-0.5 text-xs font-bold" style={{ color: isLight ? '#16a34a' : '#34d399' }}>
+          <ArrowUpRight size={11} />
           {trend}
         </p>
-        <p className="text-[10px] text-muted">{trendLabel}</p>
+        <p className="text-[10px]" style={{ color: isLight ? '#94a3b8' : 'rgb(var(--color-muted))' }}>{trendLabel}</p>
       </div>
     </div>
   )
 }
 
-function SectionCard({ title, sub, action, onAction, children }: {
+function SectionCard({ title, sub, action, onAction, children, theme }: {
   title: string
   sub: string
   action?: string
   onAction?: () => void
   children: React.ReactNode
+  theme: string
 }) {
+  const isLight = theme === 'light'
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5">
-      <div className="mb-4 flex items-start justify-between">
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: isLight ? '#ffffff' : 'rgb(var(--color-surface))',
+        border: isLight ? '1px solid #e2e8f0' : '1px solid rgb(var(--color-border))',
+        boxShadow: isLight ? '0 1px 4px rgba(0,0,0,0.06)' : undefined,
+      }}
+    >
+      <div className="mb-3 flex items-start justify-between">
         <div>
-          <p className="font-bold text-white">{title}</p>
-          <p className="text-xs text-muted mt-0.5">{sub}</p>
+          <p className="font-bold" style={{ color: isLight ? '#0f172a' : '#fff' }}>{title}</p>
+          <p className="text-xs mt-0.5" style={{ color: isLight ? '#64748b' : 'rgb(var(--color-muted))' }}>{sub}</p>
         </div>
         {action && (
           <button
             onClick={onAction}
-            className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors"
+            className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
+            style={{
+              border: `1px solid ${isLight ? '#cbd5e1' : 'rgb(var(--color-border))'}`,
+              color: isLight ? '#0891b2' : 'rgb(var(--color-primary))',
+              background: 'transparent',
+            }}
           >
             {action}
           </button>
@@ -169,14 +207,19 @@ function SectionCard({ title, sub, action, onAction, children }: {
 }
 
 // Simple bar chart — pure divs
-function BarChart({ data }: { data: { label: string; mins: number }[] }) {
+function BarChart({ data, theme }: { data: { label: string; mins: number }[]; theme: string }) {
   const max = Math.max(...data.map((d) => d.mins), 60) // at least 1h scale
   const gridLines = [0, 1, 2, 3, 4].map((h) => h * 60).filter((m) => m <= max + 60)
+  const isLight = theme === 'light'
+  const barGradient = isLight
+    ? 'linear-gradient(180deg, #0891B2 0%, #2563EB 100%)'
+    : 'linear-gradient(180deg, #22D3EE 0%, #3B82F6 100%)'
+  const emptyBar = isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'
 
   return (
     <div className="relative pt-2">
       {/* Y-axis labels + grid lines */}
-      <div className="relative h-36">
+      <div className="relative h-28">
         {gridLines.map((m) => {
           const pct = (m / (max + 60)) * 100
           return (
@@ -199,14 +242,12 @@ function BarChart({ data }: { data: { label: string; mins: number }[] }) {
             const h = max + 60 > 0 ? (d.mins / (max + 60)) * 100 : 0
             return (
               <div key={d.label} className="flex flex-1 flex-col items-center gap-1">
-                <div className="w-full flex items-end justify-center" style={{ height: 130 }}>
+                <div className="w-full flex items-end justify-center" style={{ height: 100 }}>
                   <div
                     className="w-full max-w-[36px] rounded-t-lg transition-all"
                     style={{
                       height: `${Math.max(h, d.mins > 0 ? 6 : 2)}%`,
-                      background: d.mins > 0
-                        ? 'linear-gradient(180deg, #22D3EE 0%, #3B82F6 100%)'
-                        : 'rgba(255,255,255,0.06)',
+                      background: d.mins > 0 ? barGradient : emptyBar,
                     }}
                   />
                 </div>
@@ -221,26 +262,29 @@ function BarChart({ data }: { data: { label: string; mins: number }[] }) {
 }
 
 // Achievement badge
-function AchievementBadge({ icon: Icon, iconBg, title, status, locked }: {
+function AchievementBadge({ icon: Icon, iconBg, title, status, locked, theme }: {
   icon: React.ElementType
   iconBg: string
   title: string
   status: string
   locked?: boolean
+  theme: string
 }) {
+  const lockedBg = theme === 'light' ? '#E5E7EB' : '#374151'
+  const lockColor = theme === 'light' ? '#9CA3AF' : '#6B7280'
   return (
-    <div className={`flex flex-col items-center gap-2 ${locked ? 'opacity-40' : ''}`}>
+    <div className={`flex flex-col items-center gap-1.5 w-full ${locked ? 'opacity-60' : ''}`}>
       <div
-        className="flex h-14 w-14 items-center justify-center rounded-2xl"
-        style={{ background: locked ? '#374151' : iconBg }}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+        style={{ background: locked ? lockedBg : iconBg }}
       >
         {locked
-          ? <Lock size={20} className="text-gray-400" />
-          : <Icon size={22} className="text-white" />
+          ? <Lock size={15} style={{ color: lockColor }} />
+          : <Icon size={17} className="text-white" />
         }
       </div>
-      <div className="text-center">
-        <p className="text-xs font-semibold text-white leading-tight">{title}</p>
+      <div className="text-center w-full">
+        <p className="text-[11px] font-semibold text-white leading-tight break-words">{title}</p>
         <p className={`text-[10px] mt-0.5 ${locked ? 'text-muted' : 'text-emerald-400'}`}>{status}</p>
       </div>
     </div>
@@ -319,9 +363,9 @@ export default function Progress() {
     {
       icon: Flame,
       iconBg: '#8B5CF6',
-      title: '7 Day Streak',
-      status: sessions.length >= 7 ? 'Achieved' : 'In progress',
-      locked: sessions.length < 7,
+      title: '7-Day Streak',
+      status: hasConsecutiveStreak(sessions, 7) ? 'Achieved' : 'In progress',
+      locked: !hasConsecutiveStreak(sessions, 7),
     },
     {
       icon: Trophy,
@@ -335,56 +379,61 @@ export default function Progress() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="h-full overflow-y-auto">
-      <div className="p-6 space-y-5">
+      <div className="p-4 space-y-4">
 
         {/* ── Hero Banner ── */}
         <div
           className="relative overflow-hidden rounded-2xl border border-border"
           style={{
             background: theme === 'light'
-              ? 'linear-gradient(135deg, #1e3a5f 0%, #0f2440 60%, #0a1628 100%)'
+              ? 'linear-gradient(135deg, #e8f4ff 0%, #dbeafe 60%, #eff6ff 100%)'
               : 'linear-gradient(135deg, #0f2035 0%, #0a1628 60%, #060d1a 100%)',
-            minHeight: 180,
+            minHeight: 130,
           }}
         >
           <img
-            src={theme === 'light' ? '/progressbglight.png' : '/progressbgdark.png'}
-            className="absolute inset-0 w-full h-full object-cover opacity-40"
+            src={`${import.meta.env.BASE_URL}${theme === 'light' ? 'progressbglight.png' : 'progressbgdark.png'}`}
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ opacity: theme === 'light' ? 0.35 : 0.5 }}
             alt=""
           />
+          {/* light-mode tint overlay so text stays readable */}
+          {theme === 'light' && (
+            <div className="absolute inset-0 bg-white/40" />
+          )}
 
-          <div className="relative z-10 flex items-stretch gap-4 p-7">
+          <div className="relative z-10 flex items-stretch gap-4 p-4">
             {/* Left: text */}
             <div className="flex-1">
-              <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
                 Your Progress
               </p>
-              <h1 className="text-3xl font-extrabold leading-tight">
-                <span className="text-white">Keep Going, </span>
+              <h1 className="text-lg lg:text-xl font-extrabold leading-tight">
+                <span className={theme === 'light' ? 'text-gray-800' : 'text-white'}>Keep Going, </span>
                 <span className="text-primary">You're Doing Great!</span>
               </h1>
-              <p className="mt-2 text-sm text-white/60 max-w-md">
+              <p className={`mt-1 text-xs max-w-md hidden sm:block ${theme === 'light' ? 'text-gray-600' : 'text-white/60'}`}>
                 Track your learning journey, identify your strengths, and focus on what matters.
               </p>
 
               {/* Progress bar */}
-              <div className="mt-5 max-w-xs">
-                <div className="h-1.5 w-full rounded-full bg-white/10">
+              <div className="mt-3 max-w-xs">
+                <div className={`h-1 w-full rounded-full ${theme === 'light' ? 'bg-gray-300' : 'bg-white/10'}`}>
                   <div
-                    className="h-1.5 rounded-full bg-primary transition-all"
+                    className="h-1 rounded-full bg-primary transition-all"
                     style={{ width: `${Math.max(overallPct, 5)}%` }}
                   />
                 </div>
-                <p className="mt-2 text-[11px] tracking-[0.25em] text-white/40 uppercase font-semibold">
+                <p className={`mt-1.5 text-[10px] tracking-[0.25em] uppercase font-semibold ${theme === 'light' ? 'text-gray-400' : 'text-white/40'}`}>
                   Learn &nbsp;•&nbsp; Practice &nbsp;•&nbsp; Grow
                 </p>
               </div>
             </div>
 
             {/* Right: decorative placeholder / image slot */}
-            <div className="hidden lg:flex items-center justify-end w-72 shrink-0 relative">
+            <div className="hidden lg:flex items-center justify-end w-56 shrink-0 relative">
               {/* Decorative chart bars as SVG placeholder */}
-              <svg viewBox="0 0 200 120" className="w-48 opacity-30">
+              <svg viewBox="0 0 200 120" className="w-36 opacity-20">
                 <rect x="20" y="80" width="24" height="35" rx="4" fill="#22D3EE" />
                 <rect x="54" y="55" width="24" height="60" rx="4" fill="#3B82F6" />
                 <rect x="88" y="35" width="24" height="80" rx="4" fill="#22D3EE" />
@@ -394,57 +443,49 @@ export default function Progress() {
               </svg>
 
               {/* Quote card */}
-              <div className="absolute top-0 right-0 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-right backdrop-blur-sm">
-                <p className="text-xs font-bold italic leading-snug text-white/80">
+              <div className={`absolute top-0 right-0 rounded-xl border px-3 py-2 text-right backdrop-blur-sm ${theme === 'light' ? 'border-gray-200 bg-white/70' : 'border-white/10 bg-white/5'}`}>
+                <p className={`text-[10px] font-bold italic leading-snug ${theme === 'light' ? 'text-gray-700' : 'text-white/80'}`}>
                   "DISCIPLINE<br />TURNS GOALS<br />INTO RESULTS."
                 </p>
-                <div className="mt-2 ml-auto h-0.5 w-8 bg-primary rounded-full" />
+                <div className="mt-1.5 ml-auto h-0.5 w-6 bg-primary rounded-full" />
               </div>
             </div>
           </div>
         </div>
 
         {/* ── 4 Stat Cards ── */}
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <StatCard
             icon={FileText}
-            iconBg="linear-gradient(135deg,#3B82F6,#2563EB)"
-            value={String(testsTaken)}
-            label="Tests Taken"
-            trend="20%"
-            trendLabel="vs last month"
+            iconBg="linear-gradient(135deg,#3B82F6,#2563EB)" iconColor="#3B82F6"
+            value={String(testsTaken)} label="Tests Taken"
+            trend="20%" trendLabel="vs last month" theme={theme}
           />
           <StatCard
             icon={Star}
-            iconBg="linear-gradient(135deg,#A855F7,#7C3AED)"
-            value={avgScore ? `${Math.round(avgScore)}%` : '—'}
-            label="Avg Score"
-            trend="12%"
-            trendLabel="vs last month"
+            iconBg="linear-gradient(135deg,#A855F7,#7C3AED)" iconColor="#A855F7"
+            value={avgScore ? `${Math.round(avgScore)}%` : '—'} label="Avg Score"
+            trend="12%" trendLabel="vs last month" theme={theme}
           />
           <StatCard
             icon={Clock}
-            iconBg="linear-gradient(135deg,#F97316,#EA580C)"
-            value={fmtStudyTime(totalMins)}
-            label="Study Time"
-            trend="35%"
-            trendLabel="vs last month"
+            iconBg="linear-gradient(135deg,#F97316,#EA580C)" iconColor="#F97316"
+            value={fmtStudyTime(totalMins)} label="Study Time"
+            trend="35%" trendLabel="vs last month" theme={theme}
           />
           <StatCard
             icon={Target}
-            iconBg="linear-gradient(135deg,#22C55E,#16A34A)"
-            value={`${topicsMastered} / ${mastery.length + weakTopics.length}`}
-            label="Topics Mastered"
-            trend="3"
-            trendLabel="new this month"
+            iconBg="linear-gradient(135deg,#22C55E,#16A34A)" iconColor="#22C55E"
+            value={`${topicsMastered} / ${mastery.length + weakTopics.length}`} label="Topics Mastered"
+            trend="3" trendLabel="new this month" theme={theme}
           />
         </div>
 
         {/* ── Row 2: Topic Mastery + Study Activity ── */}
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-3 lg:grid-cols-2">
 
           {/* Topic Mastery */}
-          <SectionCard title="Topic Mastery" sub="Your progress across all subjects">
+          <SectionCard theme={theme} title="Topic Mastery" sub="Your progress across all subjects">
             {mastery.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted">
                 Take tests to build your topic mastery data.
@@ -455,26 +496,29 @@ export default function Progress() {
                   const pct = Math.round(m.confidence * 100)
                   const color = SUBJECT_COLORS[i % SUBJECT_COLORS.length]
                   const letter = m.context_key.charAt(0).toUpperCase()
+                  const isLight = theme === 'light'
+                  const trackBg = isLight ? '#e2e8f0' : 'rgb(var(--color-border))'
+                  const textColor = isLight ? '#1e293b' : '#fff'
                   return (
                     <div key={m.context_key} className="flex items-center gap-3">
                       {/* Letter badge */}
                       <div
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
-                        style={{ background: color + '33', color }}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
+                        style={{ background: color + (isLight ? '22' : '33'), color }}
                       >
                         {letter}
                       </div>
                       {/* Name */}
-                      <p className="w-36 shrink-0 truncate text-sm text-white">{m.context_key}</p>
+                      <p className="w-24 lg:w-36 shrink-0 truncate text-sm" style={{ color: textColor }}>{m.context_key}</p>
                       {/* Bar */}
-                      <div className="flex-1 h-2 rounded-full bg-border overflow-hidden">
+                      <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: trackBg }}>
                         <div
                           className="h-2 rounded-full transition-all"
                           style={{ width: `${pct}%`, background: color }}
                         />
                       </div>
                       {/* Pct */}
-                      <span className="w-9 shrink-0 text-right text-xs font-semibold text-white">
+                      <span className="w-9 shrink-0 text-right text-xs font-semibold" style={{ color: textColor }}>
                         {pct}%
                       </span>
                       <ChevronRight size={13} className="shrink-0 text-muted" />
@@ -486,7 +530,7 @@ export default function Progress() {
           </SectionCard>
 
           {/* Study Activity */}
-          <SectionCard title="Study Activity" sub="Your study time over the last 7 days">
+          <SectionCard theme={theme} title="Study Activity" sub="Your study time over the last 7 days">
             {weekActivity.every((d) => d.mins === 0) ? (
               <div className="py-4">
                 <BarChart data={[
@@ -494,24 +538,25 @@ export default function Progress() {
                   { label: 'Wed', mins: 120 }, { label: 'Thu', mins: 200 },
                   { label: 'Fri', mins: 80 }, { label: 'Sat', mins: 150 },
                   { label: 'Sun', mins: 60 },
-                ]} />
+                ]} theme={theme} />
                 <p className="mt-2 text-center text-[11px] text-muted/50 italic">
                   Sample data — start studying to see real activity
                 </p>
               </div>
             ) : (
               <div className="py-2">
-                <BarChart data={weekActivity} />
+                <BarChart data={weekActivity} theme={theme} />
               </div>
             )}
           </SectionCard>
         </div>
 
         {/* ── Row 3: Needs Revision + Recent Tests + Achievements ── */}
-        <div className="grid gap-5 lg:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-3">
 
           {/* Needs Revision */}
           <SectionCard
+            theme={theme}
             title="Needs Revision"
             sub="Topics where you can improve"
             action="View All"
@@ -525,21 +570,28 @@ export default function Progress() {
               <div className="space-y-3">
                 {revisionItems.map((m) => {
                   const pct = Math.round(m.confidence * 100)
+                  const redColor = theme === 'light' ? '#dc2626' : '#f87171'
+                  const barBg = theme === 'light' ? '#e2e8f0' : 'rgb(var(--color-border))'
                   return (
                     <div key={m.context_key} className="flex items-center gap-2">
-                      <AlertTriangle size={14} className="shrink-0 text-red-400" />
+                      <AlertTriangle size={14} className="shrink-0" style={{ color: redColor }} />
                       <div className="flex-1 min-w-0">
-                        <p className="truncate text-sm text-white">{m.context_key}</p>
-                        <div className="mt-1 h-1.5 w-full rounded-full bg-border overflow-hidden">
+                        <p className="truncate text-sm" style={{ color: theme === 'light' ? '#1e293b' : '#fff' }}>{m.context_key}</p>
+                        <div className="mt-1 h-1.5 w-full rounded-full overflow-hidden" style={{ background: barBg }}>
                           <div
-                            className="h-1.5 rounded-full bg-red-500 transition-all"
-                            style={{ width: `${Math.max(pct, 4)}%` }}
+                            className="h-1.5 rounded-full transition-all"
+                            style={{ width: `${Math.max(pct, 4)}%`, background: redColor }}
                           />
                         </div>
                       </div>
                       <button
-                        onClick={() => navigate('/test/new')}
-                        className="shrink-0 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20 transition-colors"
+                        onClick={() => navigate(`/test/new?topic=${encodeURIComponent(m.context_key)}`)}
+                        className="shrink-0 rounded-lg px-3 py-1 text-[11px] font-semibold transition-colors"
+                        style={{
+                          border: `1px solid ${theme === 'light' ? '#bfdbfe' : 'rgba(8,145,178,0.3)'}`,
+                          background: theme === 'light' ? '#eff6ff' : 'rgba(8,145,178,0.1)',
+                          color: theme === 'light' ? '#1d4ed8' : 'rgb(var(--color-primary))',
+                        }}
                       >
                         Practice
                       </button>
@@ -552,6 +604,7 @@ export default function Progress() {
 
           {/* Recent Tests */}
           <SectionCard
+            theme={theme}
             title="Recent Tests"
             sub="Your latest test attempts"
             action="View All"
@@ -579,12 +632,12 @@ export default function Progress() {
                       className="flex items-center gap-3 rounded-lg px-1 py-1.5 hover:bg-white/5 transition-colors cursor-pointer"
                       onClick={() => navigate(`/tests`)}
                     >
-                      <div className={`h-2 w-2 shrink-0 rounded-full ${scoreDot(p)}`} />
+                      <div className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: scoreDotColor(p, theme) }} />
                       <p className="flex-1 truncate text-sm text-white">
                         {a.topic ?? `${a.type.replace(/_/g, ' ')} Test`}
                       </p>
-                      <span className={`text-sm font-bold shrink-0 ${scoreColor(p)}`}>{p}%</span>
-                      <span className="shrink-0 text-[11px] text-muted">{timeAgo(a.submitted_at)}</span>
+                      <span className="text-sm font-bold shrink-0" style={{ color: scoreColorValue(p, theme) }}>{p}%</span>
+                      <span className="shrink-0 text-[11px] text-muted hidden sm:inline">{timeAgo(a.submitted_at)}</span>
                       <ChevronRight size={13} className="shrink-0 text-muted" />
                     </div>
                   )
@@ -595,6 +648,7 @@ export default function Progress() {
 
           {/* Achievements */}
           <SectionCard
+            theme={theme}
             title="Achievements"
             sub="Keep learning to earn more!"
             action="View All"
@@ -602,7 +656,7 @@ export default function Progress() {
           >
             <div className="grid grid-cols-4 gap-2 pt-1">
               {achievements.map((a) => (
-                <AchievementBadge key={a.title} {...a} />
+                <AchievementBadge key={a.title} {...a} theme={theme} />
               ))}
             </div>
           </SectionCard>

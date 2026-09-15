@@ -6,7 +6,8 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { useAuth } from '@clerk/clerk-react'
-import { Send, Sparkles } from 'lucide-react'
+import { Send, Sparkles, Loader2 } from 'lucide-react'
+import { marked } from 'marked'
 import { makeApi } from '../lib/api.ts'
 import StreamingText from '../components/StreamingText.tsx'
 
@@ -20,6 +21,7 @@ export default function GeneralAI() {
   const [messages, setMessages] = useState<LocalMessage[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
+  const [thinking, setThinking] = useState(false)
   const [streamBuffer, setStreamBuffer] = useState('')
   const [error, setError] = useState<string | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
@@ -36,6 +38,7 @@ export default function GeneralAI() {
     setError(null)
     setMessages((prev) => [...prev, { role: 'user', content }])
     setStreaming(true)
+    setThinking(true)
     setStreamBuffer('')
     setTimeout(scrollToBottom, 50)
 
@@ -68,14 +71,17 @@ export default function GeneralAI() {
           // Skip event: lines (agent-done, done, error events)
           if (line.startsWith('event:')) continue
           if (!line.startsWith('data: ')) continue
-          const data = line.slice(6).trim()
-          if (data === '[DONE]') continue
+          const data = line.slice(6).replace(/\r$/, '')
+          if (data.trim() === '[DONE]') continue
           try {
-            const parsed = JSON.parse(data) as string
-            fullResponse += parsed
+            const parsed = JSON.parse(data)
+            // Only append if it's a plain string token — skip metadata objects
+            if (typeof parsed === 'string') fullResponse += parsed
           } catch {
+            // Not JSON — it's a raw word token from the agent
             fullResponse += data
           }
+          if (fullResponse) setThinking(false)
           setStreamBuffer(fullResponse)
           scrollToBottom()
         }
@@ -91,6 +97,7 @@ export default function GeneralAI() {
       ])
     } finally {
       setStreaming(false)
+      setThinking(false)
       setTimeout(scrollToBottom, 50)
     }
   }, [input, streaming, getToken])
@@ -98,7 +105,7 @@ export default function GeneralAI() {
   return (
     <div className="flex h-full flex-col">
       {/* Header notice */}
-      <div className="border-b border-border bg-surface px-6 py-3">
+      <div className="border-b border-border bg-surface px-4 lg:px-6 py-3">
         <div className="flex items-center gap-2">
           <Sparkles size={14} className="text-primary shrink-0" />
           <p className="text-xs text-muted">
@@ -115,7 +122,7 @@ export default function GeneralAI() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-4 space-y-4">
         {messages.length === 0 && !streamBuffer && (
           <div className="flex h-full items-center justify-center">
             <div className="text-center max-w-sm">
@@ -130,21 +137,44 @@ export default function GeneralAI() {
         )}
 
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          <div key={i} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            {msg.role === 'assistant' && (
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 mt-0.5">
+                <Sparkles size={11} className="text-primary" />
+              </div>
+            )}
             <div
               className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
                 msg.role === 'user'
-                  ? 'bg-primary text-white'
+                  ? 'bg-primary text-bg font-medium'
                   : 'border border-border bg-surface text-white'
               }`}
             >
-              {msg.content}
+              {msg.role === 'assistant' ? (
+                <div className="ai-md" dangerouslySetInnerHTML={{ __html: marked.parse(msg.content, { gfm: true }) as string }} />
+              ) : msg.content}
             </div>
           </div>
         ))}
 
-        {streamBuffer && (
-          <div className="flex justify-start">
+        {/* Thinking loader — shown while agent processes before first token */}
+        {thinking && (
+          <div className="flex gap-2.5 justify-start">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 mt-0.5">
+              <Sparkles size={11} className="text-primary" />
+            </div>
+            <div className="rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-muted flex items-center gap-2">
+              <Loader2 size={13} className="animate-spin text-primary" />
+              On it…
+            </div>
+          </div>
+        )}
+
+        {streamBuffer && !thinking && (
+          <div className="flex gap-2.5 justify-start">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 mt-0.5">
+              <Sparkles size={11} className="text-primary" />
+            </div>
             <div className="max-w-[80%] rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-white">
               <StreamingText text={streamBuffer} />
             </div>

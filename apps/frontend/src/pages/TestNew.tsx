@@ -407,10 +407,23 @@ export default function TestNew() {
       setSubjects(allSubjects)
       setLoading(false)
 
-      // Pre-select from URL param
+      // Pre-select from bookId URL param
       const bookId = searchParams.get('bookId')
       if (bookId && ready.some((b) => b.id === bookId)) {
         setSelectedIds(new Set([bookId]))
+        return
+      }
+
+      // Pre-select from topic URL param (from Needs Revision / Practice button)
+      const topic = searchParams.get('topic')
+      if (topic) {
+        setCustomPrompt(`Practice test focused on: ${topic}`)
+        const keywords = topic.toLowerCase().split(/\s+/).filter((k) => k.length > 2)
+        const matched = ready.filter((b) =>
+          keywords.some((kw) => b.title.toLowerCase().includes(kw))
+        )
+        // If keywords match specific books, select them; otherwise select all books
+        setSelectedIds(new Set(matched.length > 0 ? matched.map((b) => b.id) : ready.map((b) => b.id)))
       }
     }
     load()
@@ -481,8 +494,8 @@ export default function TestNew() {
       )}
 
       {/* ── Main scrollable area ── */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-7 space-y-7">
+      <div className="flex-1 overflow-y-auto pb-24 lg:pb-0">
+        <div className="p-4 lg:p-7 space-y-5 lg:space-y-7">
 
           {/* ── Back button ── */}
           <button
@@ -497,13 +510,12 @@ export default function TestNew() {
           <div className="flex items-start justify-between">
             <div>
               <p className="mb-1 text-xs font-bold uppercase tracking-[0.2em] text-primary">Tests</p>
-              <h1 className="text-3xl font-extrabold">
+              <h1 className="text-2xl lg:text-3xl font-extrabold">
                 <span className="text-white">Create a </span>
                 <span className="text-primary">Practice Test</span>
               </h1>
-              <p className="mt-2 max-w-xl text-sm text-muted">
-                Generate a custom test from your study materials. Choose your materials and set
-                your preferences, or simply describe what you need.
+              <p className="mt-1.5 max-w-xl text-sm text-muted">
+                Generate a custom test from your study materials.
               </p>
             </div>
             <p className="hidden xl:block text-right text-sm font-semibold italic text-primary leading-relaxed">
@@ -511,10 +523,9 @@ export default function TestNew() {
             </p>
           </div>
 
-{/* ── Section 1: Select Study Materials ── */}
+          {/* ── Section 1: Select Study Materials ── */}
           <section>
-            {/* Section header */}
-            <div className="mb-4 flex flex-wrap items-center gap-3">
+            <div className="mb-3 flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2.5">
                 <SectionBadge n={1} />
                 <div>
@@ -522,14 +533,12 @@ export default function TestNew() {
                   <p className="text-xs text-muted">Choose one or more documents from your library.</p>
                 </div>
               </div>
-              <div className="ml-auto flex items-center gap-3">
+              <div className="ml-auto flex items-center gap-2">
                 {selectedIds.size > 0 && (
-                  <span className="text-sm font-semibold text-primary">
-                    {selectedIds.size} selected
-                  </span>
+                  <span className="text-xs font-semibold text-primary">{selectedIds.size} selected</span>
                 )}
-                {/* Search */}
-                <div className="relative">
+                {/* Search — desktop only */}
+                <div className="relative hidden lg:block">
                   <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                   <input
                     value={bookSearch}
@@ -538,18 +547,17 @@ export default function TestNew() {
                     className="h-8 rounded-lg border border-border bg-surface pl-8 pr-3 text-xs text-white placeholder-muted outline-none focus:border-primary w-48"
                   />
                 </div>
-                {/* View All button */}
                 <button
                   onClick={() => setShowModal(true)}
                   className="flex h-8 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 text-xs font-semibold text-primary hover:bg-primary/20"
                 >
-                  View All Materials
+                  <span className="hidden lg:inline">View All Materials</span>
+                  <span className="lg:hidden">Browse All</span>
                   <ArrowRight size={12} />
                 </button>
               </div>
             </div>
 
-            {/* Scrollable book row */}
             {loading ? (
               <div className="flex h-32 items-center justify-center">
                 <Loader2 size={24} className="animate-spin text-primary" />
@@ -562,18 +570,15 @@ export default function TestNew() {
               </div>
             ) : (
               <div className="relative">
-                {/* Left arrow */}
                 <button
                   onClick={() => scrollBooks('left')}
-                  className="absolute -left-3 top-1/2 z-10 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-md hover:text-white"
+                  className="absolute -left-3 top-1/2 z-10 -translate-y-1/2 hidden lg:flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-md hover:text-white"
                 >
                   <ChevronLeft size={14} />
                 </button>
-
-                {/* Card row */}
                 <div
                   ref={scrollRef}
-                  className="flex gap-3 overflow-x-auto scroll-smooth px-1 py-1"
+                  className="flex gap-2.5 overflow-x-auto scroll-smooth px-0.5 py-1"
                   style={{ scrollbarWidth: 'none' }}
                 >
                   {filteredBooks.map((book) => {
@@ -585,60 +590,41 @@ export default function TestNew() {
                         key={book.id}
                         onClick={() => toggleBook(book.id)}
                         className={clsx(
-                          'relative flex w-40 shrink-0 flex-col rounded-xl border p-3 text-left transition-all',
+                          'relative flex w-32 lg:w-40 shrink-0 flex-col rounded-xl border p-2.5 lg:p-3 text-left transition-all',
                           selected
                             ? 'border-primary bg-primary/5'
                             : 'border-border bg-surface hover:border-primary/30',
                         )}
                       >
-                        {/* Checkbox */}
-                        <div
-                          className={clsx(
-                            'absolute right-2.5 top-2.5 flex h-4 w-4 items-center justify-center rounded border transition-colors',
-                            selected
-                              ? 'border-primary bg-primary'
-                              : 'border-border',
-                          )}
-                        >
+                        <div className={clsx(
+                          'absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded border transition-colors',
+                          selected ? 'border-primary bg-primary' : 'border-border',
+                        )}>
                           {selected && (
                             <svg viewBox="0 0 10 8" className="h-2.5 w-2.5 fill-none stroke-bg stroke-2">
                               <polyline points="1,4 4,7 9,1" />
                             </svg>
                           )}
                         </div>
-
-                        {/* File type icon */}
-                        <div
-                          className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg text-[10px] font-black"
-                          style={{ background: info.bg, color: info.fg }}
-                        >
+                        <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg text-[10px] font-black"
+                          style={{ background: info.bg, color: info.fg }}>
                           {info.ext}
                         </div>
-
-                        {/* Title */}
-                        <p className="mb-0.5 truncate text-xs font-semibold text-white leading-tight pr-4">
+                        <p className="mb-0.5 line-clamp-2 text-[11px] font-semibold text-white leading-tight pr-4">
                           {book.title}
                         </p>
-
-                        {/* Subject */}
-                        <p className="mb-3 truncate text-[10px] text-muted">
-                          {subject ?? '—'}
-                        </p>
-
-                        {/* Page count */}
-                        <div className="mt-auto flex items-center gap-1 text-[10px] text-muted">
-                          <FileText size={10} />
+                        <p className="truncate text-[10px] text-muted">{subject ?? '—'}</p>
+                        <div className="mt-2 flex items-center gap-1 text-[10px] text-muted">
+                          <FileText size={9} />
                           <span>{book.page_count ?? '?'} pages</span>
                         </div>
                       </button>
                     )
                   })}
                 </div>
-
-                {/* Right arrow */}
                 <button
                   onClick={() => scrollBooks('right')}
-                  className="absolute -right-3 top-1/2 z-10 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-md hover:text-white"
+                  className="absolute -right-3 top-1/2 z-10 -translate-y-1/2 hidden lg:flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-md hover:text-white"
                 >
                   <ChevronRight size={14} />
                 </button>
@@ -648,34 +634,26 @@ export default function TestNew() {
 
           {/* ── Section 2: Configure ── */}
           <section>
-            <div className="mb-4 flex items-center gap-2.5">
+            <div className="mb-3 flex items-center gap-2.5">
               <SectionBadge n={2} />
               <div>
                 <h2 className="text-base font-bold text-white">
-                  Choose Test Configuration{' '}
-                  <span className="text-primary">or</span>{' '}
-                  Describe Your Needs
+                  Configure <span className="text-primary">or</span> Describe
                 </h2>
-                <p className="text-xs text-muted">
-                  You can either use the options below or describe what kind of test you want.
-                </p>
+                <p className="text-xs text-muted">Set options or just describe what you need.</p>
               </div>
             </div>
 
-            {/* Two-panel layout */}
-            <div className="relative flex gap-0 rounded-xl border border-border bg-surface overflow-hidden">
+            {/* Desktop: side-by-side — Mobile: stacked */}
+            <div className="rounded-xl border border-border bg-surface overflow-hidden">
 
-              {/* ── LEFT: Guided Options ── */}
-              <div className="flex-[3] min-w-0 p-5 space-y-4">
-                {/* Panel header */}
-                <div className="flex items-start gap-2.5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <Layers size={15} className="text-primary" />
+              {/* ── Guided Options ── */}
+              <div className="p-4 lg:p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Layers size={13} className="text-primary" />
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">Use Guided Options</p>
-                    <p className="text-xs text-muted">Set the test type, difficulty, time, marks, and more.</p>
-                  </div>
+                  <p className="text-sm font-bold text-white">Guided Options</p>
                 </div>
 
                 {/* Test Type */}
@@ -683,62 +661,48 @@ export default function TestNew() {
                   <p className="mb-2 text-xs font-semibold text-muted uppercase tracking-wide">Test Type</p>
                   <div className="flex flex-wrap gap-2">
                     {TEST_TYPES.map(({ value, label }) => (
-                      <PillBtn key={value} active={testType === value} onClick={() => setTestType(value)}>
-                        {label}
-                      </PillBtn>
+                      <PillBtn key={value} active={testType === value} onClick={() => setTestType(value)}>{label}</PillBtn>
                     ))}
                   </div>
                 </div>
 
-                {/* Difficulty */}
-                <div>
-                  <p className="mb-2 text-xs font-semibold text-muted uppercase tracking-wide">Difficulty Level</p>
-                  <div className="flex gap-2">
-                    {DIFFICULTIES.map(({ value, label }) => (
-                      <PillBtn key={value} active={difficulty === value} onClick={() => setDifficulty(value)}>
-                        {label}
-                      </PillBtn>
-                    ))}
+                {/* Difficulty + Marks — side by side on mobile */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="mb-2 text-xs font-semibold text-muted uppercase tracking-wide">Difficulty</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {DIFFICULTIES.map(({ value, label }) => (
+                        <PillBtn key={value} active={difficulty === value} onClick={() => setDifficulty(value)}>{label}</PillBtn>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-2 text-xs font-semibold text-muted uppercase tracking-wide">Total Marks</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {MARK_OPTIONS.map((v) => (
+                        <PillBtn key={v} active={totalMarks === v} onClick={() => setTotalMarks(v)}>{v}</PillBtn>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                {/* Total Marks */}
-                <div>
-                  <p className="mb-2 text-xs font-semibold text-muted uppercase tracking-wide">Total Marks</p>
-                  <div className="flex gap-2">
-                    {MARK_OPTIONS.map((v) => (
-                      <PillBtn key={v} active={totalMarks === v} onClick={() => setTotalMarks(v)}>
-                        {v}
-                      </PillBtn>
-                    ))}
+                {/* Questions + Time — side by side on mobile */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="mb-2 text-xs font-semibold text-muted uppercase tracking-wide">Questions</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {COUNT_OPTIONS.map((v) => (
+                        <PillBtn key={v} active={questionCount === v} onClick={() => setQuestionCount(v)}>{v}</PillBtn>
+                      ))}
+                    </div>
                   </div>
-                </div>
-
-                {/* Number of Questions */}
-                <div>
-                  <p className="mb-2 text-xs font-semibold text-muted uppercase tracking-wide">Number of Questions</p>
-                  <div className="flex gap-2">
-                    {COUNT_OPTIONS.map((v) => (
-                      <PillBtn key={v} active={questionCount === v} onClick={() => setQuestionCount(v)}>
-                        {v}
-                      </PillBtn>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Time Limit */}
-                <div>
-                  <p className="mb-2 text-xs font-semibold text-muted uppercase tracking-wide">Time Limit</p>
-                  <div className="flex flex-wrap gap-2">
-                    {TIME_OPTIONS.map(({ label, value }) => (
-                      <PillBtn
-                        key={label}
-                        active={timeLimit === value}
-                        onClick={() => setTimeLimit(value)}
-                      >
-                        {label}
-                      </PillBtn>
-                    ))}
+                  <div>
+                    <p className="mb-2 text-xs font-semibold text-muted uppercase tracking-wide">Time Limit</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {TIME_OPTIONS.map(({ label, value }) => (
+                        <PillBtn key={label} active={timeLimit === value} onClick={() => setTimeLimit(value)}>{label}</PillBtn>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -755,68 +719,67 @@ export default function TestNew() {
               </div>
 
               {/* ── OR Divider ── */}
-              <div className="relative flex flex-col items-center justify-center w-px bg-border">
-                <div className="absolute flex h-8 w-8 items-center justify-center rounded-full border border-border bg-surface text-xs font-bold text-muted z-10">
-                  OR
-                </div>
+              <div className="flex items-center gap-3 px-4 lg:px-5">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs font-bold text-muted">OR</span>
+                <div className="flex-1 h-px bg-border" />
               </div>
 
-              {/* ── RIGHT: Describe ── */}
-              <div className="flex-[2] min-w-0 p-5 space-y-4">
-                {/* Panel header */}
-                <div className="flex items-start gap-2.5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <MessageSquare size={15} className="text-primary" />
+              {/* ── Describe ── */}
+              <div className="p-4 lg:p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <MessageSquare size={13} className="text-primary" />
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">Describe Your Requirements</p>
-                    <p className="text-xs text-muted">Tell the AI what kind of test you want.</p>
-                  </div>
+                  <p className="text-sm font-bold text-white">Describe Your Requirements</p>
                 </div>
-
-                {/* Textarea */}
                 <div className="relative">
                   <textarea
                     value={customPrompt}
-                    onChange={(e) =>
-                      setCustomPrompt(e.target.value.slice(0, 500))
-                    }
-                    rows={6}
-                    placeholder={`Example:\n"Create a 20 mark test with 15 questions (10 MCQs + 5 short questions) on Unit 1 and Unit 2. Keep it medium difficulty and focus on important concepts for semester exam."`}
+                    onChange={(e) => setCustomPrompt(e.target.value.slice(0, 500))}
+                    rows={4}
+                    placeholder={`e.g. "20 mark test, 15 questions, Unit 1 & 2, medium difficulty"`}
                     className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-xs text-white placeholder-muted/60 outline-none focus:border-primary leading-relaxed"
                   />
-                  <span className="absolute bottom-2.5 right-3 text-[10px] text-muted/60">
-                    {customPrompt.length}/500
-                  </span>
+                  <span className="absolute bottom-2.5 right-3 text-[10px] text-muted/60">{customPrompt.length}/500</span>
                 </div>
-
-                {/* Quick examples */}
-                <div>
-                  <p className="mb-2 text-xs font-semibold text-muted">Quick Examples</p>
-                  <div className="flex flex-wrap gap-2">
-                    {QUICK_EXAMPLES.map((ex) => (
-                      <button
-                        key={ex}
-                        onClick={() => setCustomPrompt(ex)}
-                        className="rounded-full border border-border/60 bg-bg px-3 py-1 text-[10px] text-muted transition-colors hover:border-primary/40 hover:text-primary"
-                      >
-                        {ex}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {QUICK_EXAMPLES.map((ex) => (
+                    <button key={ex} onClick={() => setCustomPrompt(ex)}
+                      className="rounded-full border border-border/60 bg-bg px-2.5 py-1 text-[10px] text-muted transition-colors hover:border-primary/40 hover:text-primary">
+                      {ex}
+                    </button>
+                  ))}
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* ── Test Preview (mobile inline) ── */}
+          <section className="lg:hidden">
+            <div className="mb-3 flex items-center gap-2.5">
+              <SectionBadge n={3} />
+              <div>
+                <h2 className="text-base font-bold text-white">Test Preview</h2>
+                <p className="text-xs text-muted">Review your settings before generating.</p>
+              </div>
+            </div>
+            <div className="rounded-xl border border-border bg-surface p-4">
+              <PreviewRow icon={FileText}    label="Documents"    value={selectedIds.size} />
+              <PreviewRow icon={Layers}      label="Test Type"    value={fmtTestType(testType)} />
+              <PreviewRow icon={Hash}        label="Questions"    value={questionCount} />
+              <PreviewRow icon={BarChart2}   label="Total Marks"  value={effectiveMarks} />
+              <PreviewRow icon={Target}      label="Difficulty"   value={difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} />
+              <PreviewRow icon={Clock}       label="Time Limit"   value={timeLimit ? `${timeLimit < 60 ? timeLimit + ' min' : '1 hour'}` : 'No limit'} />
             </div>
           </section>
 
         </div>
       </div>
 
-      {/* ── Right Sidebar: Test Preview ── */}
-      <div className="w-72 shrink-0 border-l border-border overflow-y-auto">
+      {/* ── Right Sidebar: Test Preview (desktop) ── */}
+      <div className="hidden lg:block w-72 shrink-0 border-l border-border overflow-y-auto">
         <div className="sticky top-0 p-5 space-y-5">
-
-          {/* Header */}
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
               <Eye size={15} className="text-primary" />
@@ -826,8 +789,6 @@ export default function TestNew() {
               <p className="text-xs text-muted">Review your test settings.</p>
             </div>
           </div>
-
-          {/* Stats list */}
           <div className="rounded-xl border border-border bg-surface p-4">
             <PreviewRow icon={FileText}   label="Documents"     value={selectedIds.size} />
             <PreviewRow icon={BookMarked} label="Total Pages"   value={totalPages} />
@@ -835,24 +796,10 @@ export default function TestNew() {
             <PreviewRow icon={Hash}       label="Questions"     value={questionCount} />
             <PreviewRow icon={BarChart2}  label="Total Marks"   value={effectiveMarks} />
             <PreviewRow icon={Target}     label="Difficulty"    value={difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} />
-            <PreviewRow
-              icon={Clock}
-              label="Time Limit"
-              value={timeLimit ? `${timeLimit < 60 ? timeLimit + ' min' : '1 hour'}` : 'No limit'}
-            />
-            <PreviewRow
-              icon={BookOpen}
-              label="Focus Area"
-              value={focusArea}
-            />
-            <PreviewRow
-              icon={MessageSquare}
-              label="Additional Instructions"
-              value={customPrompt.trim() ? 'Added' : 'None'}
-            />
+            <PreviewRow icon={Clock}      label="Time Limit"    value={timeLimit ? `${timeLimit < 60 ? timeLimit + ' min' : '1 hour'}` : 'No limit'} />
+            <PreviewRow icon={BookOpen}   label="Focus Area"    value={focusArea} />
+            <PreviewRow icon={MessageSquare} label="Instructions" value={customPrompt.trim() ? 'Added' : 'None'} />
           </div>
-
-          {/* Generate button */}
           <div>
             <button
               onClick={generate}
@@ -864,23 +811,32 @@ export default function TestNew() {
                   : 'bg-primary/30 text-primary/50 cursor-not-allowed',
               )}
             >
-              {generating ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Generating…
-                </>
-              ) : (
-                <>
-                  <Sparkles size={16} />
-                  Generate Test
-                </>
-              )}
+              {generating ? <><Loader2 size={16} className="animate-spin" />Generating…</> : <><Sparkles size={16} />Generate Test</>}
             </button>
             <p className="mt-2 text-center text-[10px] text-muted/70 leading-relaxed">
               Your test will be generated using only your selected study materials.
             </p>
           </div>
         </div>
+      </div>
+
+      {/* ── Sticky Generate button (mobile only) ── */}
+      <div className="lg:hidden fixed bottom-16 left-0 right-0 px-4 pb-2 z-40">
+        <button
+          onClick={generate}
+          disabled={!hasSelection || generating}
+          className={clsx(
+            'flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold shadow-xl transition-all',
+            hasSelection && !generating
+              ? 'bg-primary text-bg'
+              : 'bg-primary/30 text-primary/50 cursor-not-allowed',
+          )}
+        >
+          {generating
+            ? <><Loader2 size={16} className="animate-spin" />Generating…</>
+            : <><Sparkles size={16} />{hasSelection ? `Generate Test (${selectedIds.size} doc${selectedIds.size > 1 ? 's' : ''})` : 'Select documents first'}</>
+          }
+        </button>
       </div>
 
     </div>
