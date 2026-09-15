@@ -27,7 +27,7 @@ const SUBJECT_COLORS = [
 ]
 function subjectColor(i: number) { return SUBJECT_COLORS[i % SUBJECT_COLORS.length] }
 
-function FileIcon({ filename, size = 10 }: { filename: string; size?: number }) {
+function FileIcon({ filename }: { filename: string }) {
   const ext = filename.split('.').pop()?.toLowerCase() ?? ''
   const isPdf = ext === 'pdf'
   return (

@@ -190,24 +190,6 @@ function TestRow({ test, attempts, navigate }: {
   )
 }
 
-// ── Mobile: Sparkline ─────────────────────────────────────────────────────────
-
-function Sparkline() {
-  return (
-    <svg width="64" height="28" viewBox="0 0 64 28" fill="none">
-      <path d="M2 22 C10 20 16 14 24 12 C32 10 36 16 44 10 C52 4 58 8 62 6"
-        stroke="#22C55E" strokeWidth="2" strokeLinecap="round" fill="none" />
-      <path d="M2 22 C10 20 16 14 24 12 C32 10 36 16 44 10 C52 4 58 8 62 6 L62 28 L2 28 Z"
-        fill="url(#sg)" opacity="0.25" />
-      <defs>
-        <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#22C55E" />
-          <stop offset="100%" stopColor="#22C55E" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-    </svg>
-  )
-}
 
 // ── Mobile: Stat Card with sparkline ─────────────────────────────────────────
 
