@@ -21,9 +21,10 @@ import type {
   PlanGoal,
 } from 'shared'
 
-// Compute API base dynamically so it works behind any proxy subpath
-const _pathname = window.location.pathname.replace(/\/$/, '')
-const BASE = `${_pathname}/api`
+// In production use VITE_API_URL (Render backend), otherwise use relative /api
+const BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api'
 
 async function apiFetch<T>(
   path: string,
