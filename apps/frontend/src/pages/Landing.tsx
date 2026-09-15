@@ -459,7 +459,9 @@ export default function Landing() {
         @media (max-width: 540px) {
           .lp-feature-grid { grid-template-columns: 1fr !important; }
           .lp-why-grid { grid-template-columns: 1fr !important; }
-          .lp-footer-grid { grid-template-columns: 1fr !important; gap: 24px !important; }
+          .lp-footer-grid { grid-template-columns: 1fr 1fr !important; gap: 24px !important; }
+          .lp-footer-brand { grid-column: 1 / -1 !important; }
+          .lp-footer-brand img { width: 130px !important; }
           .lp-stats-grid { grid-template-columns: repeat(2,1fr) !important; }
           .lp-hero-pills > div { flex: 1 1 100% !important; }
           .lp-btn-primary, .lp-btn-outline { width: 100% !important; justify-content: center !important; }
@@ -1019,7 +1021,7 @@ export default function Landing() {
             <div className="lp-footer-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: 32, marginBottom: 32 }}>
 
               {/* Brand col */}
-              <div>
+              <div className="lp-footer-brand">
                 <div style={{ marginBottom: 12 }}>
                   <img
                     src={academiqLogoUrl}
