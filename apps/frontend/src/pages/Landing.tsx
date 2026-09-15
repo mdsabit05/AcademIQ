@@ -464,6 +464,14 @@ export default function Landing() {
           .lp-hero-pills > div { flex: 1 1 100% !important; }
           .lp-btn-primary, .lp-btn-outline { width: 100% !important; justify-content: center !important; }
           .lp-hero-btns { flex-direction: column !important; width: 100% !important; }
+          .lp-logo { width: 140px !important; }
+          .lp-nav-gap { display: none !important; }
+          .lp-login-btn { display: none !important; }
+          .lp-nav-actions { gap: 12px !important; }
+          .lp-stats-icon { width: 28px !important; height: 28px !important; }
+          .lp-cta-nowrap { white-space: normal !important; font-size: 20px !important; }
+          .lp-cta-sub-nowrap { white-space: normal !important; }
+          .lp-dash-text { display: none !important; }
         }
       `}</style>
 
@@ -504,6 +512,7 @@ export default function Landing() {
             <img
               src={academiqLogoUrl}
               alt="AcademIQ"
+              className="lp-logo"
               style={{
                 width: 210, height: 'auto', display: 'block', flexShrink: 0,
                 filter: isLight ? 'invert(1) hue-rotate(180deg) brightness(0.2)' : 'none',
@@ -512,7 +521,7 @@ export default function Landing() {
             />
 
             {/* Gap: logo → nav links ~110px */}
-            <div style={{ width: 110, flexShrink: 0 }} />
+            <div className="lp-nav-gap" style={{ width: 110, flexShrink: 0 }} />
 
             {/* Nav links */}
             <div className="lp-nav-links" style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
@@ -525,7 +534,7 @@ export default function Landing() {
             <div style={{ flex: 1 }} />
 
             {/* Right actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+            <div className="lp-nav-actions" style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
               {/* Theme toggle switch */}
               <div
                 onClick={toggleTheme}
@@ -563,6 +572,7 @@ export default function Landing() {
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                   <button
+                    className="lp-login-btn"
                     onClick={() => isSignedIn ? navigate('/dashboard') : openSignIn()}
                     style={{
                       background: 'transparent',
@@ -825,7 +835,7 @@ export default function Landing() {
                         transition: 'background 0.35s',
                       }} />
                     )}
-                    <Icon size={44} style={{ color: CYAN, flexShrink: 0 }} />
+                    <Icon size={44} className="lp-stats-icon" style={{ color: CYAN, flexShrink: 0 }} />
                     <div>
                       <div style={{ fontSize: 24, fontWeight: 800, color: T.text, lineHeight: 1, transition: 'color 0.35s' }}>{value}</div>
                       <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4, transition: 'color 0.35s' }}>{label}</div>
@@ -846,7 +856,7 @@ export default function Landing() {
               <div className="lp-dash-grid" style={{ display: 'grid', gridTemplateColumns: '3fr 7fr', gap: 48, alignItems: 'center' }}>
 
                 {/* Left text */}
-                <div>
+                <div className="lp-dash-text">
                   <div style={{
                     display: 'inline-flex', alignItems: 'center', gap: 7,
                     borderRadius: 999,
@@ -980,10 +990,10 @@ export default function Landing() {
               }}>
 
                 <div style={{ position: 'relative', zIndex: 1 }}>
-                  <h2 style={{ fontSize: 'clamp(18px, 2vw, 30px)', fontWeight: 800, color: isLight ? '#0f172a' : '#fff', margin: '0 0 10px', lineHeight: 1.2, whiteSpace: 'nowrap', transition: 'color 0.35s' }}>
+                  <h2 className="lp-cta-nowrap" style={{ fontSize: 'clamp(18px, 2vw, 30px)', fontWeight: 800, color: isLight ? '#0f172a' : '#fff', margin: '0 0 10px', lineHeight: 1.2, whiteSpace: 'nowrap', transition: 'color 0.35s' }}>
                     Ready to Start Your Learning Journey?
                   </h2>
-                  <p style={{ fontSize: 13, color: isLight ? 'rgba(15,23,42,0.7)' : 'rgba(255,255,255,0.75)', marginBottom: 22, lineHeight: 1.65, whiteSpace: 'nowrap', transition: 'color 0.35s' }}>
+                  <p className="lp-cta-sub-nowrap" style={{ fontSize: 13, color: isLight ? 'rgba(15,23,42,0.7)' : 'rgba(255,255,255,0.75)', marginBottom: 22, lineHeight: 1.65, whiteSpace: 'nowrap', transition: 'color 0.35s' }}>
                     Join thousands of learners and make your studies smarter, simpler, and more effective.
                   </p>
                   <button onClick={go} className="lp-btn-primary" style={{ fontSize: 14, padding: '12px 26px' }}>
