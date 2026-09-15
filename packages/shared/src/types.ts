@@ -55,6 +55,7 @@ export interface Book {
   status: BookStatus
   ocr_applied: boolean
   error_msg: string | null
+  context: 'student' | 'teacher'
   created_at: string
   updated_at: string
 }
@@ -227,6 +228,37 @@ export interface SyllabusTopic {
   topic: string
   subtopic: string | null
   order_index: number
+  completed: boolean
+}
+
+// ─── Study Plan ───────────────────────────────────────────────────────────────
+
+export interface PlanExam {
+  id: string
+  user_id: string
+  name: string
+  subject: string | null
+  exam_date: string
+  created_at: string
+}
+
+export interface PlanTask {
+  id: string
+  user_id: string
+  text: string
+  subject: string | null
+  completed: boolean
+  created_at: string
+}
+
+export interface PlanGoal {
+  id: string
+  user_id: string
+  subject: string
+  description: string
+  due_date: string | null
+  progress: number
+  created_at: string
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────

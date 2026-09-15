@@ -23,6 +23,7 @@ import syllabusRoute from './routes/syllabus.js'
 import papersRoute from './routes/papers.js'
 import adminRoute from './routes/admin.js'
 import agentRoute from './routes/agent.js'
+import studyplanRoute from './routes/studyplan.js'
 
 const app = new Hono()
 
@@ -58,6 +59,7 @@ api.route('/syllabus', syllabusRoute)
 api.route('/papers', papersRoute)
 api.route('/admin', adminRoute)
 api.route('/agent', agentRoute)
+api.route('/studyplan', studyplanRoute)
 
 app.route('/api', api)
 

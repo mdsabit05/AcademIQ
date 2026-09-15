@@ -10,12 +10,12 @@
 
 import { Hono } from 'hono'
 import sql from '../db/client.js'
-import { requireRole, requireOwnership } from '../middleware/rbac.js'
+import { requireOwnership } from '../middleware/rbac.js'
 import type { AuthEnv } from '../middleware/auth.js'
 
 const subjects = new Hono<AuthEnv>()
 
-subjects.post('/', requireRole('teacher', 'admin'), async (c) => {
+subjects.post('/', async (c) => {
   const dbUserId = c.get('dbUserId')
   const body = await c.req.json<{
     name: string
@@ -54,7 +54,7 @@ subjects.get('/:id', requireOwnership('subjects', 'id'), async (c) => {
   return c.json({ subject })
 })
 
-subjects.patch('/:id', requireRole('teacher', 'admin'), requireOwnership('subjects', 'id'), async (c) => {
+subjects.patch('/:id', requireOwnership('subjects', 'id'), async (c) => {
   const id = c.req.param('id')
   const body = await c.req.json<{
     name?: string
@@ -74,7 +74,7 @@ subjects.patch('/:id', requireRole('teacher', 'admin'), requireOwnership('subjec
   return c.json({ subject })
 })
 
-subjects.delete('/:id', requireRole('teacher', 'admin'), requireOwnership('subjects', 'id'), async (c) => {
+subjects.delete('/:id', requireOwnership('subjects', 'id'), async (c) => {
   await sql`DELETE FROM subjects WHERE id = ${c.req.param('id')}`
   return c.json({ success: true })
 })

@@ -35,15 +35,29 @@ chat.post('/:sessionId/message', requireOwnership('chat_sessions', 'sessionId'),
   const sessionId = c.req.param('sessionId')
   const dbUserId = c.get('dbUserId')
 
-  const body = await c.req.json<{ content: string }>()
+  const body = await c.req.json<{ content: string; webSearch?: boolean; deepReason?: boolean }>()
   const userContent = body.content?.trim()
   if (!userContent) return c.json({ error: 'Message content is required' }, 400)
+  const webSearch = body.webSearch === true
+  const deepReason = body.deepReason === true
 
-  // Load session + book IDs
-  const [session] = await sql<[{ mode: string; topic: string | null }?]>`
-    SELECT s.mode, s.topic FROM chat_sessions s WHERE s.id = ${sessionId}
-  `
+  // Load session + book IDs + user learning prefs (language, explanation style)
+  const [[session], [userRow]] = await Promise.all([
+    sql<[{ mode: string; topic: string | null }?]>`
+      SELECT s.mode, s.topic FROM chat_sessions s WHERE s.id = ${sessionId}
+    `,
+    sql<[{ learning_prefs: Record<string, unknown> }?]>`
+      SELECT learning_prefs FROM users WHERE id = ${dbUserId}
+    `,
+  ])
   if (!session) return c.json({ error: 'Session not found' }, 404)
+
+  const lp = (userRow?.learning_prefs ?? {}) as Record<string, unknown>
+  const userPrefs = {
+    explanationStyle: ['simple', 'balanced', 'detailed'].includes(lp.explanationStyle as string)
+      ? (lp.explanationStyle as 'simple' | 'balanced' | 'detailed')
+      : undefined,
+  }
 
   const bookRows = await sql<Array<{ book_id: string }>>`
     SELECT book_id FROM chat_session_books WHERE session_id = ${sessionId}
@@ -75,14 +89,14 @@ chat.post('/:sessionId/message', requireOwnership('chat_sessions', 'sessionId'),
   // ── Build context ─────────────────────────────────────────────────────────
   const { contextText, citations } = buildContext(reranked, memory)
 
-  // ── Build system prompt ───────────────────────────────────────────────────
+  // ── Build system prompt (with user language + style prefs) ───────────────
   let systemContent: string
   if (session.mode === 'learn') {
-    systemContent = learnSystemPrompt(contextText, session.topic ?? undefined)
+    systemContent = learnSystemPrompt(contextText, session.topic ?? undefined, userPrefs)
   } else if (session.mode === 'ask') {
-    systemContent = askSystemPrompt(contextText)
+    systemContent = askSystemPrompt(contextText, userPrefs)
   } else {
-    systemContent = generalSystemPrompt(contextText)
+    systemContent = generalSystemPrompt(contextText, userPrefs)
   }
 
   const messages: Message[] = [
@@ -98,13 +112,17 @@ chat.post('/:sessionId/message', requireOwnership('chat_sessions', 'sessionId'),
   `
 
   // ── Auto-title: set from first user message if not already titled ─────────
-  if (conversationHistory.length === 0) {
+  // Skip context-priming messages (test review sessions)
+  if (conversationHistory.length === 0 && !userContent.startsWith('[CONTEXT')) {
     const autoTitle = userContent.slice(0, 55).replace(/\s+/g, ' ').trim()
     await sql`UPDATE chat_sessions SET title = ${autoTitle} WHERE id = ${sessionId} AND title IS NULL`
   }
 
   // ── Stream AI response ────────────────────────────────────────────────────
-  const rawStream = await aiStream(messages, MODELS.default)
+  // webSearch uses Perplexity's online model (built-in real-time web search via OpenRouter)
+  // deepReason + webSearch: use web search model (it's already strong enough)
+  const model = webSearch ? MODELS.webSearch : deepReason ? MODELS.strong : MODELS.default
+  const rawStream = await aiStream(messages, model)
 
   let fullResponse = ''
 
@@ -124,7 +142,7 @@ chat.post('/:sessionId/message', requireOwnership('chat_sessions', 'sessionId'),
     // ── Save assistant message ──────────────────────────────────────────────
     const metadata = {
       citations,
-      model: MODELS.default,
+      model,
       guardrailFlags: guardrail.flags,
     }
     await sql`

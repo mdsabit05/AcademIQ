@@ -1,5 +1,4 @@
 import { useSidebar } from '../../lib/sidebarContext.tsx'
-import quoteImg from '../../assets/quote.png'
 import { NavLink } from 'react-router-dom'
 import {
   Home,
@@ -10,18 +9,19 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Brain,
   ScrollText,
   Shield,
   BookMarked,
   CalendarDays,
   Sparkles,
+  LayoutDashboard,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { clsx } from 'clsx'
 import Logo from '../Logo.tsx'
 import { useCurrentUser } from '../../lib/useCurrentUser.ts'
-import { canTeach, isAdmin } from '../../lib/rbac.ts'
+import { isAdmin } from '../../lib/rbac.ts'
+import { useMode } from '../../lib/modeContext.tsx'
 
 interface NavItem {
   to: string
@@ -80,9 +80,10 @@ function NavItem({
 export default function Sidebar() {
   const { collapsed, setCollapsed } = useSidebar()
   const { user } = useCurrentUser()
+  const { mode } = useMode()
   const role = user?.role
 
-  const MAIN_ITEMS: NavItem[] = [
+  const STUDENT_ITEMS: NavItem[] = [
     { to: '/dashboard',  icon: Home,         label: 'Dashboard'   },
     { to: '/books',      icon: BookOpen,      label: 'My Books'    },
     { to: '/tutor',      icon: MessageSquare, label: 'AI Tutor'    },
@@ -90,13 +91,18 @@ export default function Sidebar() {
     { to: '/progress',   icon: BarChart2,     label: 'Progress'    },
     { to: '/study-plan', icon: CalendarDays,  label: 'Study Plan'  },
     { to: '/syllabus',   icon: BookMarked,    label: 'Syllabus'    },
-    { to: '/memory',     icon: Brain,         label: 'Memory'      },
     { to: '/general-ai', icon: Sparkles,      label: 'General AI'  },
   ]
 
-  const TEACHER_ITEMS: NavItem[] = [
-    { to: '/question-papers', icon: ScrollText, label: 'Question Papers' },
+  const TEACHER_MAIN_ITEMS: NavItem[] = [
+    { to: '/dashboard',           icon: LayoutDashboard, label: 'Dashboard'       },
+    { to: '/teacher/materials',   icon: BookOpen,        label: 'My Materials'    },
+    { to: '/question-papers',     icon: ScrollText,      label: 'Question Papers' },
+    { to: '/general-ai',          icon: Sparkles,        label: 'AI Assistant'    },
   ]
+
+  const isTeacher = mode === 'teacher'
+  const navItems = isTeacher ? TEACHER_MAIN_ITEMS : STUDENT_ITEMS
 
   return (
     <aside
@@ -110,37 +116,22 @@ export default function Sidebar() {
         <Logo size={collapsed ? 'sm' : 'md'} showWordmark={!collapsed} />
         {!collapsed && (
           <p className="mt-1 px-1 text-[10px] font-semibold tracking-[0.12em] text-muted/70 uppercase select-none">
-            Learn · Practice · Grow
+            {isTeacher ? 'Teach · Create · Inspire' : 'Learn · Practice · Grow'}
           </p>
         )}
       </div>
 
-      {/* ── Nav — flex-col so quote sticks to bottom via mt-auto ── */}
+      {/* ── Nav ── */}
       <nav className="flex-1 px-2 flex flex-col overflow-y-auto min-h-0">
-
-        {/* MAIN */}
-        <SectionLabel label="Main" collapsed={collapsed} />
+        <SectionLabel label={isTeacher ? 'Teacher' : 'Main'} collapsed={collapsed} />
         <div>
-          {MAIN_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <NavItem key={item.to} {...item} collapsed={collapsed} />
           ))}
         </div>
-
-        {/* TEACHER */}
-        {canTeach(role) && (
-          <>
-            <SectionLabel label="Teacher" collapsed={collapsed} />
-            <div>
-              {TEACHER_ITEMS.map((item) => (
-                <NavItem key={item.to} {...item} collapsed={collapsed} />
-              ))}
-            </div>
-          </>
-        )}
-
       </nav>
 
-      {/* ── Fixed bottom (order top→bottom): Admin → Settings → Quote ── */}
+      {/* ── Fixed bottom: Admin → Settings ── */}
       <div className="shrink-0 px-2">
         {/* ADMIN section — invisible for non-admin (space preserved) */}
         <div className={clsx(!isAdmin(role) && 'invisible')}>
@@ -151,18 +142,6 @@ export default function Sidebar() {
         {/* Settings — always visible */}
         <NavItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed} />
       </div>
-
-      {/* Quote — absolute bottom */}
-      {!collapsed && (
-        <div className="shrink-0 mx-2 mb-2 overflow-hidden rounded-lg" style={{ height: 147, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <img
-            src={quoteImg}
-            alt=""
-            className="w-full h-full"
-            style={{ objectFit: 'cover', objectPosition: 'center' }}
-          />
-        </div>
-      )}
 
       {/* ── Collapse toggle ── */}
       <button

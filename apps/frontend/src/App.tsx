@@ -3,6 +3,8 @@ import { SignIn, SignUp, useAuth } from '@clerk/clerk-react'
 import AppLayout from './components/layout/AppLayout.tsx'
 import Landing from './pages/Landing.tsx'
 import Dashboard from './pages/Dashboard.tsx'
+import TeacherDashboard from './pages/TeacherDashboard.tsx'
+import TeacherMaterials from './pages/TeacherMaterials.tsx'
 import Books from './pages/Books.tsx'
 import LearnSession from './pages/LearnSession.tsx'
 import AskAI from './pages/AskAI.tsx'
@@ -15,12 +17,12 @@ import Progress from './pages/Progress.tsx'
 import StudyPlan from './pages/StudyPlan.tsx'
 import GeneralAI from './pages/GeneralAI.tsx'
 import Settings from './pages/Settings.tsx'
-import Subjects from './pages/Subjects.tsx'
+import SyllabusPage from './pages/Syllabus.tsx'
 import Papers from './pages/Papers.tsx'
 import AdminDashboard from './pages/AdminDashboard.tsx'
-import MemoryView from './pages/MemoryView.tsx'
 import { useCurrentUser } from './lib/useCurrentUser.ts'
 import { canTeach, isAdmin } from './lib/rbac.ts'
+import { useMode } from './lib/modeContext.tsx'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth()
@@ -48,7 +50,15 @@ function LandingOrDashboard() {
   return <Landing />
 }
 
-/** Route guard — redirects to /dashboard if user lacks required role */
+/** Renders student or teacher dashboard based on current mode */
+function DashboardRoute() {
+  const { mode } = useMode()
+  if (mode === 'teacher') return <TeacherDashboard />
+  return <Dashboard />
+}
+
+/** Route guard — redirects to /dashboard if user lacks required role.
+ *  Teacher mode override: if the app is in teacher mode, teacher routes are accessible. */
 function RoleRoute({
   children,
   require,
@@ -57,6 +67,7 @@ function RoleRoute({
   require: 'teacher' | 'admin'
 }) {
   const { user, loading } = useCurrentUser()
+  const { mode } = useMode()
   const role = user?.role
 
   // Show spinner while the user profile is loading
@@ -68,7 +79,8 @@ function RoleRoute({
     )
   }
 
-  if (require === 'teacher' && !canTeach(role)) {
+  // Allow teacher routes when mode is 'teacher' (mode toggle is available to all users)
+  if (require === 'teacher' && !canTeach(role) && mode !== 'teacher') {
     return <Navigate to="/dashboard" replace />
   }
   if (require === 'admin' && !isAdmin(role)) {
@@ -108,7 +120,7 @@ export default function App() {
         }
       >
         {/* ── Core routes ─────────────────────────────────────────── */}
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<DashboardRoute />} />
         <Route path="/books" element={<Books />} />
         <Route path="/learn/:sessionId" element={<LearnSession />} />
 
@@ -129,14 +141,14 @@ export default function App() {
         <Route path="/progress" element={<Progress />} />
         <Route path="/study-plan" element={<StudyPlan />} />
 
-        {/* Memory */}
-        <Route path="/memory" element={<MemoryView />} />
-
         {/* Settings */}
         <Route path="/settings" element={<Settings />} />
 
-        {/* Syllabus (was /subjects) */}
-        <Route path="/syllabus" element={<Subjects />} />
+        {/* Syllabus workspace */}
+        <Route path="/syllabus" element={<SyllabusPage />} />
+
+        {/* Teacher: Materials */}
+        <Route path="/teacher/materials" element={<TeacherMaterials />} />
 
         {/* Teacher: Question Papers */}
         <Route

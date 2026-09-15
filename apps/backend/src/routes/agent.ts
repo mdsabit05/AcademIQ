@@ -69,7 +69,7 @@ agent.post('/message', async (c) => {
       // matching how OpenRouter natively streams tokens.
       const tokens = result.finalResponse.match(/\S+\s*/g) ?? [result.finalResponse]
       for (const token of tokens) {
-        await sseStream.writeSSE({ data: token })
+        await sseStream.writeSSE({ data: JSON.stringify(token) })
       }
 
       // Metadata event (tools used, iterations) — clients can use this for UI decoration

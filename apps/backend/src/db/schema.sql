@@ -58,9 +58,23 @@ CREATE TABLE IF NOT EXISTS books (
                   'CHUNKING','EMBEDDING','INDEXING','READY','FAILED')),
   ocr_applied BOOLEAN NOT NULL DEFAULT false,
   error_msg   TEXT,
+  context     TEXT NOT NULL DEFAULT 'student'
+                CHECK (context IN ('student','teacher')),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Idempotent: add context column if it doesn't exist yet (for existing DBs)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'books' AND column_name = 'context'
+  ) THEN
+    ALTER TABLE books
+      ADD COLUMN context TEXT NOT NULL DEFAULT 'student'
+      CHECK (context IN ('student','teacher'));
+  END IF;
+END $$;
 
 -- ─────────────────────────────────────────────────────────
 -- CHUNKS  (RAG vectors — 1536 dimensions)
@@ -108,6 +122,38 @@ CREATE TABLE IF NOT EXISTS syllabus_topics (
   subtopic    TEXT,
   parent_id   UUID REFERENCES syllabus_topics(id),
   order_index INT NOT NULL DEFAULT 0,
+  completed   BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ─────────────────────────────────────────────────────────
+-- STUDY PLAN (exams, daily tasks, subject goals)
+-- ─────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS plan_exams (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  subject    TEXT,
+  exam_date  DATE NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS plan_tasks (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  text       TEXT NOT NULL,
+  subject    TEXT,
+  completed  BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS plan_goals (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  subject     TEXT NOT NULL,
+  description TEXT NOT NULL,
+  due_date    DATE,
+  progress    INT NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

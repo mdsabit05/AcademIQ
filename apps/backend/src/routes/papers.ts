@@ -18,7 +18,7 @@
 
 import { Hono } from 'hono'
 import sql from '../db/client.js'
-import { requireRole, requireOwnership } from '../middleware/rbac.js'
+import { requireOwnership } from '../middleware/rbac.js'
 import { verifyBookAccess } from '../middleware/rbac.js'
 import { retrieve } from '../services/retrieval.service.js'
 import { rerank } from '../services/reranker.service.js'
@@ -34,7 +34,7 @@ const papers = new Hono<AuthEnv>()
 
 // ── Blueprints ──────────────────────────────────────────────────────────────
 
-papers.post('/blueprints', requireRole('teacher', 'admin'), async (c) => {
+papers.post('/blueprints', async (c) => {
   const dbUserId = c.get('dbUserId')
   const body = await c.req.json<{
     title: string
@@ -55,7 +55,7 @@ papers.post('/blueprints', requireRole('teacher', 'admin'), async (c) => {
   return c.json({ blueprint }, 201)
 })
 
-papers.get('/blueprints', requireRole('teacher', 'admin'), async (c) => {
+papers.get('/blueprints', async (c) => {
   const dbUserId = c.get('dbUserId')
   const rows = await sql`
     SELECT id, title, subject_id, created_at, updated_at
@@ -65,13 +65,13 @@ papers.get('/blueprints', requireRole('teacher', 'admin'), async (c) => {
   return c.json({ blueprints: rows })
 })
 
-papers.get('/blueprints/:id', requireRole('teacher', 'admin'), requireOwnership('paper_blueprints', 'id'), async (c) => {
+papers.get('/blueprints/:id', requireOwnership('paper_blueprints', 'id'), async (c) => {
   const [bp] = await sql`SELECT * FROM paper_blueprints WHERE id = ${c.req.param('id')}`
   if (!bp) return c.json({ error: 'Not found' }, 404)
   return c.json({ blueprint: bp })
 })
 
-papers.patch('/blueprints/:id', requireRole('teacher', 'admin'), requireOwnership('paper_blueprints', 'id'), async (c) => {
+papers.patch('/blueprints/:id', requireOwnership('paper_blueprints', 'id'), async (c) => {
   const id = c.req.param('id')
   const body = await c.req.json<{ title?: string; config?: BlueprintConfig }>()
 
@@ -94,14 +94,14 @@ papers.patch('/blueprints/:id', requireRole('teacher', 'admin'), requireOwnershi
   return c.json({ blueprint: bp })
 })
 
-papers.delete('/blueprints/:id', requireRole('teacher', 'admin'), requireOwnership('paper_blueprints', 'id'), async (c) => {
+papers.delete('/blueprints/:id', requireOwnership('paper_blueprints', 'id'), async (c) => {
   await sql`DELETE FROM paper_blueprints WHERE id = ${c.req.param('id')}`
   return c.json({ success: true })
 })
 
 // ── Generate paper ──────────────────────────────────────────────────────────
 
-papers.post('/blueprints/:id/generate', requireRole('teacher', 'admin'), requireOwnership('paper_blueprints', 'id'), async (c) => {
+papers.post('/blueprints/:id/generate', requireOwnership('paper_blueprints', 'id'), async (c) => {
   const blueprintId = c.req.param('id')
   const dbUserId = c.get('dbUserId')
   const body = await c.req.json<{ title?: string }>()
@@ -111,16 +111,22 @@ papers.post('/blueprints/:id/generate', requireRole('teacher', 'admin'), require
   `
   if (!bp) return c.json({ error: 'Blueprint not found' }, 404)
 
-  const config = bp.config
+  // postgres.js auto-parses JSONB, but guard against string in case of driver quirk
+  const config: BlueprintConfig = typeof bp.config === 'string'
+    ? JSON.parse(bp.config)
+    : bp.config
+  const sections: BlueprintSection[] = config.sections ?? []
   const paperTitle = body.title ?? `${bp.title} — ${new Date().toLocaleDateString()}`
 
-  // Collect all bookIds across all sections
-  const allBookIds = [...new Set(config.sections.flatMap((s) => s.bookIds))]
-  try {
-    await verifyBookAccess(allBookIds, dbUserId)
-  } catch (err: unknown) {
-    const status = (err as { status?: number }).status ?? 400
-    return c.json({ error: (err as Error).message }, status as 400 | 403)
+  // Verify book access only when books are actually specified
+  const allBookIds = [...new Set(sections.flatMap((s) => s.bookIds ?? []))]
+  if (allBookIds.length > 0) {
+    try {
+      await verifyBookAccess(allBookIds, dbUserId)
+    } catch (err: unknown) {
+      const status = (err as { status?: number }).status ?? 400
+      return c.json({ error: (err as Error).message }, status as 400 | 403)
+    }
   }
 
   // Generate questions per section
@@ -137,7 +143,7 @@ papers.post('/blueprints/:id/generate', requireRole('teacher', 'admin'), require
 
   let globalIndex = 0
 
-  for (const section of config.sections) {
+  for (const section of sections) {
     const candidates = await retrieve(
       section.topics?.join(' ') ?? 'general',
       section.bookIds,
@@ -215,16 +221,22 @@ papers.post('/blueprints/:id/generate', requireRole('teacher', 'admin'), require
   }
 
   const [fullPaper] = await sql`SELECT * FROM question_papers WHERE id = ${paper.id}`
-  const questions = await sql`
+  const rawQuestions = await sql`
     SELECT * FROM paper_questions WHERE paper_id = ${paper.id} ORDER BY order_index
   `
+  const questions = rawQuestions.map((q) => ({
+    ...q,
+    options: typeof q.options === 'string'
+      ? (() => { try { return JSON.parse(q.options) } catch { return null } })()
+      : q.options,
+  }))
 
   return c.json({ paper: fullPaper, questions, validation }, 201)
 })
 
 // ── Papers ──────────────────────────────────────────────────────────────────
 
-papers.get('/', requireRole('teacher', 'admin'), async (c) => {
+papers.get('/', async (c) => {
   const dbUserId = c.get('dbUserId')
   const rows = await sql`
     SELECT id, title, status, blueprint_id, created_at, updated_at
@@ -234,18 +246,24 @@ papers.get('/', requireRole('teacher', 'admin'), async (c) => {
   return c.json({ papers: rows })
 })
 
-papers.get('/:id', requireRole('teacher', 'admin'), requireOwnership('question_papers', 'id'), async (c) => {
+papers.get('/:id', requireOwnership('question_papers', 'id'), async (c) => {
   const id = c.req.param('id')
   const [paper] = await sql`SELECT * FROM question_papers WHERE id = ${id}`
   if (!paper) return c.json({ error: 'Not found' }, 404)
 
-  const questions = await sql`
+  const rawQs = await sql`
     SELECT * FROM paper_questions WHERE paper_id = ${id} ORDER BY order_index
   `
+  const questions = rawQs.map((q) => ({
+    ...q,
+    options: typeof q.options === 'string'
+      ? (() => { try { return JSON.parse(q.options) } catch { return null } })()
+      : q.options,
+  }))
   return c.json({ paper, questions })
 })
 
-papers.patch('/:id/finalize', requireRole('teacher', 'admin'), requireOwnership('question_papers', 'id'), async (c) => {
+papers.patch('/:id/finalize', requireOwnership('question_papers', 'id'), async (c) => {
   const id = c.req.param('id')
   await sql`
     UPDATE question_papers SET status = 'finalized', updated_at = now()
@@ -255,7 +273,7 @@ papers.patch('/:id/finalize', requireRole('teacher', 'admin'), requireOwnership(
   return c.json({ paper })
 })
 
-papers.delete('/:id', requireRole('teacher', 'admin'), requireOwnership('question_papers', 'id'), async (c) => {
+papers.delete('/:id', requireOwnership('question_papers', 'id'), async (c) => {
   await sql`DELETE FROM question_papers WHERE id = ${c.req.param('id')}`
   return c.json({ success: true })
 })

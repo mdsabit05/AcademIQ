@@ -131,6 +131,17 @@ html.light {
   }
 }
 
+/* ── Light-mode colour corrections (outside any layer so they win) ─────────── */
+html.light .text-emerald-400 { color: #059669 !important; }
+html.light .text-yellow-400  { color: #d97706 !important; }
+html.light .text-orange-400  { color: #ea580c !important; }
+html.light .text-red-400     { color: #dc2626 !important; }
+html.light .bg-emerald-400   { background-color: #059669 !important; }
+html.light .bg-yellow-400    { background-color: #d97706 !important; }
+html.light .bg-orange-400    { background-color: #ea580c !important; }
+html.light .bg-red-400       { background-color: #dc2626 !important; }
+html.light .bg-red-500       { background-color: #dc2626 !important; }
+
 /* ── AI Markdown renderer (StreamingText) ─────────────────────────────────── */
 .ai-md {
   color: rgba(255, 255, 255, 0.9);

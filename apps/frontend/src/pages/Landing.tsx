@@ -450,6 +450,20 @@ export default function Landing() {
           .lp-why-grid { grid-template-columns: repeat(2,1fr) !important; }
           .lp-footer-grid { grid-template-columns: 1fr 1fr 1fr !important; }
           .lp-cta-deco { display: none !important; }
+          .lp-nav-links { display: none !important; }
+          .lp-hero-grid { grid-template-columns: 1fr !important; padding: 28px 5% !important; }
+          .lp-hero-pills { flex-wrap: wrap !important; gap: 8px !important; }
+          .lp-hero-pills > div { flex: 1 1 calc(50% - 8px) !important; min-width: 0 !important; }
+          .lp-hero-pills > div span { font-size: 12px !important; white-space: normal !important; }
+        }
+        @media (max-width: 540px) {
+          .lp-feature-grid { grid-template-columns: 1fr !important; }
+          .lp-why-grid { grid-template-columns: 1fr !important; }
+          .lp-footer-grid { grid-template-columns: 1fr !important; gap: 24px !important; }
+          .lp-stats-grid { grid-template-columns: repeat(2,1fr) !important; }
+          .lp-hero-pills > div { flex: 1 1 100% !important; }
+          .lp-btn-primary, .lp-btn-outline { width: 100% !important; justify-content: center !important; }
+          .lp-hero-btns { flex-direction: column !important; width: 100% !important; }
         }
       `}</style>
 
@@ -501,7 +515,7 @@ export default function Landing() {
             <div style={{ width: 110, flexShrink: 0 }} />
 
             {/* Nav links */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+            <div className="lp-nav-links" style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
               {NAV_LINKS.map((l, i) => (
                 <a key={l} href="#" className={`lp-nav-link${i === 0 ? ' lp-nav-active' : ''}`}>{l}</a>
               ))}
@@ -611,7 +625,7 @@ export default function Landing() {
             transition: 'background 0.35s',
           }} />
 
-          <div style={{
+          <div className="lp-hero-grid" style={{
             width: '100%',
             padding: '40px 5%',
             position: 'relative',
@@ -660,13 +674,13 @@ export default function Landing() {
                 Turn your study materials into knowledge, practice with real tests, and track your progress — all in one place.
               </p>
 
-              <div style={{ display: 'flex', gap: 12, marginBottom: 32, flexWrap: 'wrap' }}>
+              <div className="lp-hero-btns" style={{ display: 'flex', gap: 12, marginBottom: 32, flexWrap: 'wrap' }}>
                 <button onClick={go} className="lp-btn-primary" style={{ padding: '12px 22px', fontSize: 14 }}>
                   Get Started Free <ArrowRight size={15} />
                 </button>
               </div>
 
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'nowrap' }}>
+              <div className="lp-hero-pills" style={{ display: 'flex', gap: 10, flexWrap: 'nowrap' }}>
                 {[
                   { icon: BookOpen,   label: 'Upload Your Books', color: '#22C55E' },
                   { icon: Sparkles,  label: 'Learn with AI',     color: '#38BDF8' },

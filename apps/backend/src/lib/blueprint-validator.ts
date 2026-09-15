@@ -62,8 +62,8 @@ export function validateBlueprint(config: unknown): ValidationResult {
     if (s.difficulty && !VALID_DIFFICULTIES.has(s.difficulty as string)) {
       errors.push(`${prefix}.difficulty must be easy|medium|hard`)
     }
-    if (!Array.isArray(s.bookIds) || s.bookIds.length === 0) {
-      errors.push(`${prefix}.bookIds must be a non-empty array of UUIDs`)
+    if (!Array.isArray(s.bookIds)) {
+      errors.push(`${prefix}.bookIds must be an array`)
     }
 
     if (typeof s.count === 'number' && typeof s.marksEach === 'number') {
@@ -71,7 +71,8 @@ export function validateBlueprint(config: unknown): ValidationResult {
     }
   }
 
-  if (errors.length === 0 && computedMarks !== (c.totalMarks as number)) {
+  // Allow up to 5 marks tolerance to handle rounding from percentage-based configs
+  if (errors.length === 0 && Math.abs(computedMarks - (c.totalMarks as number)) > 5) {
     errors.push(
       `Sections add up to ${computedMarks} marks but totalMarks is ${c.totalMarks}`,
     )

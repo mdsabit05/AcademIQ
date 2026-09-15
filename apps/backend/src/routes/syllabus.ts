@@ -16,7 +16,15 @@ import { requireOwnership } from '../middleware/rbac.js'
 import { completeJson } from '../services/ai.service.js'
 import { MODELS } from '../config/models.js'
 import { extractPages } from '../services/chunker.service.js'
+import { recognizePath } from '../services/ocr.service.js'
 import type { AuthEnv } from '../middleware/auth.js'
+
+const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.tiff', '.tif'])
+const IMAGE_MIMES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/bmp', 'image/tiff'])
+const MIME_TO_EXT: Record<string, string> = {
+  'image/jpeg': '.jpg', 'image/jpg': '.jpg', 'image/png': '.png',
+  'image/webp': '.webp', 'image/bmp': '.bmp', 'image/tiff': '.tiff',
+}
 
 type SyllabusEnv = AuthEnv & {
   Bindings: {
@@ -58,8 +66,17 @@ syllabus.post('/', async (c) => {
     bb.on('file', async (fieldname, fileStream, info) => {
       if (fieldname !== 'file') { fileStream.resume(); return }
 
-      const filename = info.filename || 'syllabus.pdf'
-      if (!title) title = filename.replace(/\.pdf$/i, '').trim() || 'Syllabus'
+      const filename = info.filename || 'syllabus'
+      const mime = (info.mimeType || '').toLowerCase().split(';')[0].trim()
+      // Prefer MIME type for detection — filename extensions on phone uploads can be unreliable
+      let ext: string
+      if (IMAGE_MIMES.has(mime)) {
+        ext = MIME_TO_EXT[mime] ?? '.jpg'
+      } else {
+        const rawExt = filename.includes('.') ? filename.slice(filename.lastIndexOf('.')).toLowerCase() : ''
+        ext = IMAGE_EXTS.has(rawExt) ? rawExt : '.pdf'
+      }
+      if (!title) title = filename.replace(/\.\w+$/i, '').trim() || 'Syllabus'
 
       try {
         const [row] = await sql<[{ id: string }]>`
@@ -68,7 +85,7 @@ syllabus.post('/', async (c) => {
           RETURNING id
         `
         syllabusId = row.id
-        const key = `${dbUserId}/syllabus/${syllabusId}/original.pdf`
+        const key = `${dbUserId}/syllabus/${syllabusId}/original${ext}`
         filePath = key
 
         await sql`UPDATE syllabi SET file_path = ${key} WHERE id = ${syllabusId}`
@@ -111,8 +128,16 @@ async function parseSyllabus(syllabusId: string, _userId: string, fileKey: strin
   const localPath = storage.getLocalPath(fileKey)
   if (!localPath) return
 
-  const { pages } = await extractPages(localPath)
-  const text = pages.map((p) => p.text).join('\n').slice(0, 6000)
+  const ext = localPath.slice(localPath.lastIndexOf('.')).toLowerCase()
+  let text: string
+  if (IMAGE_EXTS.has(ext)) {
+    console.log(`[syllabus] OCR processing image: ${ext}`)
+    text = (await recognizePath(localPath)).slice(0, 8000)
+    console.log(`[syllabus] OCR extracted ${text.length} chars`)
+  } else {
+    const { pages } = await extractPages(localPath)
+    text = pages.map((p) => p.text).join('\n').slice(0, 8000)
+  }
 
   const prompt = `Extract the syllabus structure from this text as a flat JSON array of topics.
 
@@ -161,11 +186,26 @@ syllabus.get('/:id', requireOwnership('syllabi', 'id'), async (c) => {
   if (!s) return c.json({ error: 'Not found' }, 404)
 
   const topics = await sql`
-    SELECT id, unit, topic, subtopic, order_index
+    SELECT id, unit, topic, subtopic, order_index, completed
     FROM syllabus_topics WHERE syllabus_id = ${id}
     ORDER BY order_index
   `
   return c.json({ syllabus: s, topics })
+})
+
+syllabus.patch('/:id/topics/:topicId', requireOwnership('syllabi', 'id'), async (c) => {
+  const id = c.req.param('id')
+  const topicId = c.req.param('topicId')
+  const body = await c.req.json<{ completed: boolean }>()
+  if (typeof body.completed !== 'boolean') return c.json({ error: 'completed must be boolean' }, 400)
+
+  const [topic] = await sql`
+    UPDATE syllabus_topics SET completed = ${body.completed}
+    WHERE id = ${topicId} AND syllabus_id = ${id}
+    RETURNING id, completed
+  `
+  if (!topic) return c.json({ error: 'Not found' }, 404)
+  return c.json({ topic })
 })
 
 syllabus.delete('/:id', requireOwnership('syllabi', 'id'), async (c) => {

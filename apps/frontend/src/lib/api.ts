@@ -16,6 +16,9 @@ import type {
   BlueprintConfig,
   User,
   LearningPrefs,
+  PlanExam,
+  PlanTask,
+  PlanGoal,
 } from 'shared'
 
 // Compute API base dynamically so it works behind any proxy subpath
@@ -47,21 +50,27 @@ export function makeApi(token: string) {
   return {
     // ── Books ──────────────────────────────────────────────────────────────
     books: {
-      list: (subjectId?: string) =>
-        apiFetch<{ books: Book[] }>(
-          `/books${subjectId ? `?subject_id=${subjectId}` : ''}`,
-          token,
-        ),
+      list: (subjectId?: string, context?: 'student' | 'teacher') => {
+        const params = new URLSearchParams()
+        if (subjectId) params.set('subject_id', subjectId)
+        if (context) params.set('context', context)
+        const qs = params.toString()
+        return apiFetch<{ books: Book[] }>(`/books${qs ? `?${qs}` : ''}`, token)
+      },
 
       get: (id: string) =>
         apiFetch<{ book: Book }>(`/books/${id}`, token),
 
-      upload: (file: File, title: string, subjectId?: string, author?: string) => {
+      upload: (file: File, title: string, subjectId?: string, author?: string, context?: 'student' | 'teacher') => {
         const form = new FormData()
-        form.append('file', file)
+        // Fields MUST come before the file — busboy parses them in order and the
+        // INSERT fires inside the file handler, so any field appended after the
+        // file would arrive too late and be ignored (context would default to 'student').
         form.append('title', title)
         if (subjectId) form.append('subject_id', subjectId)
         if (author) form.append('author', author)
+        if (context) form.append('context', context)
+        form.append('file', file)
         return fetch(`${BASE}/books`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
@@ -83,6 +92,16 @@ export function makeApi(token: string) {
 
       delete: (id: string) =>
         apiFetch<{ success: boolean }>(`/books/${id}`, token, { method: 'DELETE' }),
+
+      openFile: async (id: string) => {
+        const res = await fetch(`${BASE}/books/${id}/file`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) throw new Error('Failed to load file')
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        window.open(url, '_blank')
+      },
     },
 
     // ── Sessions ───────────────────────────────────────────────────────────
@@ -277,9 +296,9 @@ export function makeApi(token: string) {
 
       upload: (file: File, title: string, subjectId?: string) => {
         const form = new FormData()
-        form.append('file', file)
         form.append('title', title)
         if (subjectId) form.append('subject_id', subjectId)
+        form.append('file', file)
         return fetch(`${BASE}/syllabus`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
@@ -293,6 +312,13 @@ export function makeApi(token: string) {
 
       delete: (id: string) =>
         apiFetch<{ success: boolean }>(`/syllabus/${id}`, token, { method: 'DELETE' }),
+
+      updateTopic: (syllabusId: string, topicId: string, completed: boolean) =>
+        apiFetch<{ topic: { id: string; completed: boolean } }>(
+          `/syllabus/${syllabusId}/topics/${topicId}`,
+          token,
+          { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ completed }) },
+        ),
     },
 
     // ── Papers (teacher) ───────────────────────────────────────────────────
@@ -394,6 +420,37 @@ export function makeApi(token: string) {
           users: { total_users: number; total_students: number; total_teachers: number; total_admins: number }
           content: { total_books: number; total_tests: number; total_attempts: number; total_papers: number }
         }>('/admin/stats', token),
+    },
+
+    // ── Study Plan ────────────────────────────────────────────────────────────
+    studyplan: {
+      // Exams
+      listExams: () =>
+        apiFetch<{ exams: PlanExam[] }>('/studyplan/exams', token),
+      addExam: (body: { name: string; subject?: string; exam_date: string }) =>
+        apiFetch<{ exam: PlanExam }>('/studyplan/exams', token, { method: 'POST', body: JSON.stringify(body) }),
+      deleteExam: (id: string) =>
+        apiFetch<{ success: boolean }>(`/studyplan/exams/${id}`, token, { method: 'DELETE' }),
+
+      // Tasks
+      listTasks: () =>
+        apiFetch<{ tasks: PlanTask[] }>('/studyplan/tasks', token),
+      addTask: (body: { text: string; subject?: string }) =>
+        apiFetch<{ task: PlanTask }>('/studyplan/tasks', token, { method: 'POST', body: JSON.stringify(body) }),
+      toggleTask: (id: string, completed: boolean) =>
+        apiFetch<{ task: PlanTask }>(`/studyplan/tasks/${id}`, token, { method: 'PATCH', body: JSON.stringify({ completed }) }),
+      deleteTask: (id: string) =>
+        apiFetch<{ success: boolean }>(`/studyplan/tasks/${id}`, token, { method: 'DELETE' }),
+
+      // Goals
+      listGoals: () =>
+        apiFetch<{ goals: PlanGoal[] }>('/studyplan/goals', token),
+      addGoal: (body: { subject: string; description: string; due_date?: string; progress?: number }) =>
+        apiFetch<{ goal: PlanGoal }>('/studyplan/goals', token, { method: 'POST', body: JSON.stringify(body) }),
+      updateGoalProgress: (id: string, progress: number) =>
+        apiFetch<{ goal: PlanGoal }>(`/studyplan/goals/${id}`, token, { method: 'PATCH', body: JSON.stringify({ progress }) }),
+      deleteGoal: (id: string) =>
+        apiFetch<{ success: boolean }>(`/studyplan/goals/${id}`, token, { method: 'DELETE' }),
     },
   }
 }

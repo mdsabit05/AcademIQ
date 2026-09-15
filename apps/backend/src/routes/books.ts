@@ -49,6 +49,7 @@ books.post('/', async (c) => {
     let title = ''
     let subjectId: string | null = null
     let author: string | null = null
+    let context: 'student' | 'teacher' = 'student'
     let originalFilename = ''
     let fileReceived = false
     let fileSizeBytes = 0
@@ -69,6 +70,7 @@ books.post('/', async (c) => {
       if (name === 'title') title = value.trim().slice(0, 500)
       if (name === 'author') author = value.trim().slice(0, 200) || null
       if (name === 'subject_id') subjectId = value.trim() || null
+      if (name === 'context' && value === 'teacher') context = 'teacher'
     })
 
     // ── File handler ────────────────────────────────────────────────────
@@ -89,7 +91,7 @@ books.post('/', async (c) => {
       fileHandlerDone = (async () => {
         try {
           const [row] = await sql<[{ id: string }]>`
-            INSERT INTO books (owner_id, subject_id, title, author, filename, file_path, status)
+            INSERT INTO books (owner_id, subject_id, title, author, filename, file_path, status, context)
             VALUES (
               ${dbUserId},
               ${subjectId},
@@ -97,7 +99,8 @@ books.post('/', async (c) => {
               ${author},
               ${originalFilename},
               'placeholder',
-              'UPLOADING'
+              'UPLOADING',
+              ${context}
             )
             RETURNING id
           `
@@ -181,22 +184,40 @@ books.post('/', async (c) => {
 books.get('/', async (c) => {
   const dbUserId = c.get('dbUserId')
   const subjectId = c.req.query('subject_id')
+  const ctx = c.req.query('context') // 'student' | 'teacher' | undefined
 
-  const rows = subjectId
-    ? await sql`
-        SELECT id, title, author, filename, file_size, page_count,
-               status, ocr_applied, subject_id, created_at, updated_at
-        FROM books
-        WHERE owner_id = ${dbUserId} AND subject_id = ${subjectId}
-        ORDER BY created_at DESC
-      `
-    : await sql`
-        SELECT id, title, author, filename, file_size, page_count,
-               status, ocr_applied, subject_id, created_at, updated_at
-        FROM books
-        WHERE owner_id = ${dbUserId}
-        ORDER BY created_at DESC
-      `
+  // Build query conditionally to avoid 42P18 indeterminate-type error from
+  // passing null into `IS NULL` — postgres can't infer the param type.
+  let rows
+  if (subjectId && ctx) {
+    rows = await sql`
+      SELECT id, title, author, filename, file_size, page_count,
+             status, ocr_applied, subject_id, context, created_at, updated_at
+      FROM books
+      WHERE owner_id = ${dbUserId} AND subject_id = ${subjectId} AND context = ${ctx}
+      ORDER BY created_at DESC`
+  } else if (subjectId) {
+    rows = await sql`
+      SELECT id, title, author, filename, file_size, page_count,
+             status, ocr_applied, subject_id, context, created_at, updated_at
+      FROM books
+      WHERE owner_id = ${dbUserId} AND subject_id = ${subjectId}
+      ORDER BY created_at DESC`
+  } else if (ctx) {
+    rows = await sql`
+      SELECT id, title, author, filename, file_size, page_count,
+             status, ocr_applied, subject_id, context, created_at, updated_at
+      FROM books
+      WHERE owner_id = ${dbUserId} AND context = ${ctx}
+      ORDER BY created_at DESC`
+  } else {
+    rows = await sql`
+      SELECT id, title, author, filename, file_size, page_count,
+             status, ocr_applied, subject_id, context, created_at, updated_at
+      FROM books
+      WHERE owner_id = ${dbUserId}
+      ORDER BY created_at DESC`
+  }
 
   return c.json({ books: rows })
 })
@@ -232,6 +253,31 @@ books.patch('/:id', requireOwnership('books', 'id'), async (c) => {
 
   const [book] = await sql`SELECT * FROM books WHERE id = ${id}`
   return c.json({ book })
+})
+
+// ── Stream file (PDF viewer) ────────────────────────────────────────────────
+
+books.get('/:id/file', requireOwnership('books', 'id'), async (c) => {
+  const id = c.req.param('id')
+
+  const [book] = await sql<[{ file_path: string; filename: string; status: string }?]>`
+    SELECT file_path, filename, status FROM books WHERE id = ${id}
+  `
+  if (!book) return c.json({ error: 'Not found' }, 404)
+  if (book.status !== 'READY') return c.json({ error: 'File not ready' }, 400)
+
+  const exists = await storage.exists(book.file_path)
+  if (!exists) return c.json({ error: 'File not found in storage' }, 404)
+
+  const stream = storage.createReadStream(book.file_path)
+
+  return new Response(stream as unknown as ReadableStream, {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="${encodeURIComponent(book.filename)}"`,
+      'Cache-Control': 'private, max-age=3600',
+    },
+  })
 })
 
 // ── Delete ──────────────────────────────────────────────────────────────────

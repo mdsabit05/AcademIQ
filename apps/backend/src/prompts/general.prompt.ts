@@ -3,8 +3,22 @@
  * Open academic discussion — less strict grounding than Ask mode.
  */
 
-export function generalSystemPrompt(context: string): string {
+import type { UserPrefs } from './learn.prompt.js'
+
+function styleInstruction(style?: string): string {
+  if (style === 'simple') {
+    return 'Keep explanations short and plain. Use simple words and short sentences.'
+  }
+  if (style === 'detailed') {
+    return 'Give thorough, detailed explanations with examples and full coverage of the topic.'
+  }
+  return 'Give balanced explanations — clear and reasonably complete.'
+}
+
+export function generalSystemPrompt(context: string, prefs?: UserPrefs): string {
   return `You are a knowledgeable academic assistant ready for open academic discussion.
+
+Explanation style: ${styleInstruction(prefs?.explanationStyle)}
 
 Guidelines:
 - Engage naturally with academic questions

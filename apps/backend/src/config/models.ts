@@ -18,6 +18,9 @@ export const MODELS = {
 
   /** Reranker — configurable independently; defaults to strong model */
   reranker: process.env.MODEL_RERANKER ?? 'openai/gpt-5.6-sol',
+
+  /** Web search — Perplexity online model with built-in real-time search */
+  webSearch: process.env.MODEL_WEB_SEARCH ?? 'perplexity/sonar',
 } as const
 
 export type ModelKey = keyof typeof MODELS

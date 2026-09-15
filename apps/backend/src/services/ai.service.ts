@@ -57,7 +57,7 @@ export async function complete(
   const res = await fetch(`${BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ model, messages, stream: false }),
+    body: JSON.stringify({ model, messages, stream: false, max_tokens: 4096 }),
   })
 
   if (!res.ok) {
@@ -183,7 +183,7 @@ export async function completeWithTools(
   tools: OpenAIToolDef[],
   model: string = MODELS.default,
 ): Promise<AgentCompletion> {
-  const body: Record<string, unknown> = { model, messages, stream: false }
+  const body: Record<string, unknown> = { model, messages, stream: false, max_tokens: 4096 }
   if (tools.length > 0) {
     body.tools = tools
     body.tool_choice = 'auto'
