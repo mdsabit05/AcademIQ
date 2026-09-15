@@ -70,7 +70,7 @@ export default function MobileBottomNav() {
       )}
 
       {/* Bottom Nav Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-[199] lg:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-[199] md:hidden">
         <div className="mx-2 mb-2 rounded-2xl border border-border bg-surface/95 backdrop-blur-md shadow-2xl">
           <div className="flex items-center px-2 py-1">
             {NAV.map(({ to, icon: Icon, label }) => (

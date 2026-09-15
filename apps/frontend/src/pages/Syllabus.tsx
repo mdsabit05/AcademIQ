@@ -464,7 +464,7 @@ export default function SyllabusPage() {
       </div>
 
       {/* Mobile tab bar */}
-      <div className="lg:hidden flex-shrink-0 flex border-b" style={{ borderColor: 'rgb(var(--color-border))' }}>
+      <div className="md:hidden flex-shrink-0 flex border-b" style={{ borderColor: 'rgb(var(--color-border))' }}>
         {(['list', 'topics', 'progress'] as const).map((tab) => {
           const labels = { list: 'Syllabi', topics: 'Topics', progress: 'Progress' }
           return (
@@ -487,7 +487,7 @@ export default function SyllabusPage() {
       <div className="flex flex-1 min-h-0">
         {/* Column 1 — Syllabi list */}
         <div
-          className={`${mobileTab === 'list' ? 'flex' : 'hidden'} lg:flex w-full lg:w-64 flex-shrink-0 flex-col overflow-y-auto`}
+          className={`${mobileTab === 'list' ? 'flex' : 'hidden'} md:flex w-full md:w-64 flex-shrink-0 flex-col overflow-y-auto`}
           style={{ borderRight: surfaceBorder, background: isLight ? '#f8fafc' : 'rgba(13,18,32,0.5)' }}
         >
           <div className="px-3 py-3">
@@ -566,7 +566,7 @@ export default function SyllabusPage() {
         </div>
 
         {/* Column 2 — Topics */}
-        <div className={`${mobileTab === 'topics' ? 'block' : 'hidden'} lg:block flex-1 min-w-0 overflow-y-auto px-4 py-4`}>
+        <div className={`${mobileTab === 'topics' ? 'block' : 'hidden'} md:block flex-1 min-w-0 overflow-y-auto px-4 py-4`}>
           {!selectedId ? (
             <div className="flex flex-col items-center justify-center h-full gap-3">
               <BookOpen size={40} style={{ color: textMuted, opacity: 0.3 }} />
@@ -706,7 +706,7 @@ export default function SyllabusPage() {
 
         {/* Column 3 — Progress panel */}
         <div
-          className={`${mobileTab === 'progress' ? 'flex' : 'hidden'} lg:flex w-full lg:w-64 flex-shrink-0 overflow-y-auto px-4 py-4 flex-col gap-4`}
+          className={`${mobileTab === 'progress' ? 'flex' : 'hidden'} md:flex w-full md:w-64 flex-shrink-0 overflow-y-auto px-4 py-4 flex-col gap-4`}
           style={{ borderLeft: surfaceBorder, background: isLight ? '#f8fafc' : 'rgba(13,18,32,0.5)' }}
         >
           {selectedId && !loadingTopics && topics.length > 0 ? (

@@ -232,7 +232,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Table — desktop */}
-            <div className="hidden sm:block rounded-xl border border-border overflow-hidden">
+            <div className="hidden md:block rounded-xl border border-border overflow-hidden">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-border bg-bg/60">
@@ -298,7 +298,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Card list — mobile */}
-            <div className="sm:hidden space-y-2">
+            <div className="md:hidden space-y-2">
               {users.length === 0 ? (
                 <p className="text-center text-muted py-8 text-sm">No users found</p>
               ) : users.map((u) => (

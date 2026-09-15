@@ -431,7 +431,7 @@ export default function Progress() {
             </div>
 
             {/* Right: decorative placeholder / image slot */}
-            <div className="hidden lg:flex items-center justify-end w-56 shrink-0 relative">
+            <div className="hidden md:flex items-center justify-end w-56 shrink-0 relative">
               {/* Decorative chart bars as SVG placeholder */}
               <svg viewBox="0 0 200 120" className="w-36 opacity-20">
                 <rect x="20" y="80" width="24" height="35" rx="4" fill="#22D3EE" />
@@ -454,7 +454,7 @@ export default function Progress() {
         </div>
 
         {/* ── 4 Stat Cards ── */}
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatCard
             icon={FileText}
             iconBg="linear-gradient(135deg,#3B82F6,#2563EB)" iconColor="#3B82F6"
@@ -482,7 +482,7 @@ export default function Progress() {
         </div>
 
         {/* ── Row 2: Topic Mastery + Study Activity ── */}
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
 
           {/* Topic Mastery */}
           <SectionCard theme={theme} title="Topic Mastery" sub="Your progress across all subjects">
@@ -552,7 +552,7 @@ export default function Progress() {
         </div>
 
         {/* ── Row 3: Needs Revision + Recent Tests + Achievements ── */}
-        <div className="grid gap-3 lg:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3">
 
           {/* Needs Revision */}
           <SectionCard

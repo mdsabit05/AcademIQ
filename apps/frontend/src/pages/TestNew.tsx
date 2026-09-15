@@ -538,7 +538,7 @@ export default function TestNew() {
                   <span className="text-xs font-semibold text-primary">{selectedIds.size} selected</span>
                 )}
                 {/* Search — desktop only */}
-                <div className="relative hidden lg:block">
+                <div className="relative hidden md:block">
                   <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                   <input
                     value={bookSearch}
@@ -551,8 +551,8 @@ export default function TestNew() {
                   onClick={() => setShowModal(true)}
                   className="flex h-8 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 text-xs font-semibold text-primary hover:bg-primary/20"
                 >
-                  <span className="hidden lg:inline">View All Materials</span>
-                  <span className="lg:hidden">Browse All</span>
+                  <span className="hidden md:inline">View All Materials</span>
+                  <span className="md:hidden">Browse All</span>
                   <ArrowRight size={12} />
                 </button>
               </div>
@@ -572,7 +572,7 @@ export default function TestNew() {
               <div className="relative">
                 <button
                   onClick={() => scrollBooks('left')}
-                  className="absolute -left-3 top-1/2 z-10 -translate-y-1/2 hidden lg:flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-md hover:text-white"
+                  className="absolute -left-3 top-1/2 z-10 -translate-y-1/2 hidden md:flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-md hover:text-white"
                 >
                   <ChevronLeft size={14} />
                 </button>
@@ -624,7 +624,7 @@ export default function TestNew() {
                 </div>
                 <button
                   onClick={() => scrollBooks('right')}
-                  className="absolute -right-3 top-1/2 z-10 -translate-y-1/2 hidden lg:flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-md hover:text-white"
+                  className="absolute -right-3 top-1/2 z-10 -translate-y-1/2 hidden md:flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-md hover:text-white"
                 >
                   <ChevronRight size={14} />
                 </button>
@@ -756,7 +756,7 @@ export default function TestNew() {
           </section>
 
           {/* ── Test Preview (mobile inline) ── */}
-          <section className="lg:hidden">
+          <section className="md:hidden">
             <div className="mb-3 flex items-center gap-2.5">
               <SectionBadge n={3} />
               <div>
@@ -778,7 +778,7 @@ export default function TestNew() {
       </div>
 
       {/* ── Right Sidebar: Test Preview (desktop) ── */}
-      <div className="hidden lg:block w-72 shrink-0 border-l border-border overflow-y-auto">
+      <div className="hidden md:block w-72 shrink-0 border-l border-border overflow-y-auto">
         <div className="sticky top-0 p-5 space-y-5">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -821,7 +821,7 @@ export default function TestNew() {
       </div>
 
       {/* ── Sticky Generate button (mobile only) ── */}
-      <div className="lg:hidden fixed bottom-16 left-0 right-0 px-4 pb-2 z-40">
+      <div className="md:hidden fixed bottom-16 left-0 right-0 px-4 pb-2 z-40">
         <button
           onClick={generate}
           disabled={!hasSelection || generating}

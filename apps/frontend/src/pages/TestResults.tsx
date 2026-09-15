@@ -286,7 +286,7 @@ export default function TestResults() {
       {/* Ask AI button — mobile only, switches to chat tab */}
       <button
         onClick={() => setMobileTab('chat')}
-        className="lg:hidden w-full flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 py-2.5 text-sm font-semibold text-primary"
+        className="md:hidden w-full flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 py-2.5 text-sm font-semibold text-primary"
       >
         <Bot size={15} /> Ask AI Tutor about this test
       </button>
@@ -430,10 +430,10 @@ export default function TestResults() {
   }
 
   return (
-    <div className="flex h-full overflow-hidden flex-col lg:flex-row">
+    <div className="flex h-full overflow-hidden flex-col md:flex-row">
 
       {/* ── Mobile tab bar ── */}
-      <div className="lg:hidden shrink-0 flex border-b border-border">
+      <div className="md:hidden shrink-0 flex border-b border-border">
         <button
           onClick={() => setMobileTab('results')}
           className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors border-b-2 ${
@@ -460,14 +460,14 @@ export default function TestResults() {
 
       {/* ── Mobile: Results tab ── */}
       {mobileTab === 'results' && (
-        <div className="lg:hidden flex-1 overflow-y-auto">
+        <div className="md:hidden flex-1 overflow-y-auto">
           {ResultsPanel}
         </div>
       )}
 
       {/* ── Mobile: Chat tab — fullscreen fixed overlay ── */}
       {mobileTab === 'chat' && (
-        <div className="lg:hidden fixed inset-x-0 top-0 bottom-16 z-50 flex flex-col bg-bg">
+        <div className="md:hidden fixed inset-x-0 top-0 bottom-16 z-50 flex flex-col bg-bg">
           {/* Tab bar — top */}
           <div className="shrink-0 flex border-b border-border">
             <button
@@ -490,12 +490,12 @@ export default function TestResults() {
       )}
 
       {/* ── Desktop: Results (left) ── */}
-      <div className="hidden lg:block flex-1 overflow-y-auto">
+      <div className="hidden md:block flex-1 overflow-y-auto">
         {ResultsPanel}
       </div>
 
       {/* ── Desktop: AI Chat (right) ── */}
-      <div className="hidden lg:flex w-[360px] shrink-0 flex-col border-l border-border">
+      <div className="hidden md:flex w-[360px] shrink-0 flex-col border-l border-border">
         <div className="flex items-center gap-2.5 border-b border-border px-4 py-3.5 shrink-0">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
             <Bot size={15} className="text-primary" />

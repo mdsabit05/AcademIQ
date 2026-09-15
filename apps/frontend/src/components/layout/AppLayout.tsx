@@ -25,7 +25,7 @@ function MobileTopBar() {
   return (
     <>
       <SearchSpotlight open={spotlightOpen} onClose={() => setSpotlightOpen(false)} />
-      <header className="lg:hidden shrink-0 px-4 pt-3 pb-2 bg-bg border-b border-border space-y-2.5">
+      <header className="md:hidden shrink-0 px-4 pt-3 pb-2 bg-bg border-b border-border space-y-2.5">
 
         {/* Row 1: Logo + controls + avatar */}
         <div className="flex items-center justify-between gap-2">
@@ -90,22 +90,22 @@ function AppLayoutInner() {
   return (
         <div className="flex h-screen overflow-hidden bg-bg">
 
-          {/* Sidebar — desktop only */}
-          <div className="hidden lg:flex">
+          {/* Sidebar — tablet + desktop */}
+          <div className="hidden md:flex">
             <Sidebar />
           </div>
 
           <div className="flex flex-col flex-1 min-w-0">
-            {/* TopBar — desktop only */}
-            <div className="hidden lg:block">
+            {/* TopBar — tablet + desktop */}
+            <div className="hidden md:block">
               <TopBar />
             </div>
 
-            {/* Mobile top bar — hidden when a page requests it */}
+            {/* Mobile top bar — mobile only */}
             {!topBarHidden && <MobileTopBar />}
 
             {/* Main content — extra bottom padding on mobile for bottom nav */}
-            <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
+            <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
               <Outlet />
             </main>
           </div>

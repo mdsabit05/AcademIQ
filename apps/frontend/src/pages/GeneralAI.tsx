@@ -105,7 +105,7 @@ export default function GeneralAI() {
   return (
     <div className="flex h-full flex-col">
       {/* Header notice */}
-      <div className="border-b border-border bg-surface px-4 lg:px-6 py-3">
+      <div className="border-b border-border bg-surface px-4 md:px-6 py-3">
         <div className="flex items-center gap-2">
           <Sparkles size={14} className="text-primary shrink-0" />
           <p className="text-xs text-muted">
@@ -122,7 +122,7 @@ export default function GeneralAI() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4 space-y-4">
         {messages.length === 0 && !streamBuffer && (
           <div className="flex h-full items-center justify-center">
             <div className="text-center max-w-sm">

@@ -95,40 +95,37 @@ function Skeleton({ className }: { className?: string }) {
 
 function FileTypeIcon({ filename, large = false }: { filename: string; large?: boolean }) {
   const ext = filename.split('.').pop()?.toLowerCase() ?? ''
-  const size = large ? 28 : 18
+  const size = large ? 26 : 18
 
   if (ext === 'pdf') {
     return (
       <div
-        className={clsx('flex items-center justify-center rounded-lg', large ? 'w-14 h-14' : 'w-9 h-9')}
+        className={clsx('relative flex flex-col items-center justify-center rounded-xl gap-0.5', large ? 'w-14 h-14' : 'w-9 h-9 rounded-lg')}
         style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)' }}
       >
         <FileText size={size} style={{ color: '#EF4444' }} />
-        {large && (
-          <span className="absolute text-[8px] font-black text-red-400 mt-8">PDF</span>
-        )}
+        {large && <span className="text-[7px] font-black leading-none" style={{ color: '#EF4444' }}>PDF</span>}
       </div>
     )
   }
   if (ext === 'docx' || ext === 'doc') {
     return (
       <div
-        className={clsx('flex items-center justify-center rounded-lg', large ? 'w-14 h-14' : 'w-9 h-9')}
+        className={clsx('relative flex flex-col items-center justify-center rounded-xl gap-0.5', large ? 'w-14 h-14' : 'w-9 h-9 rounded-lg')}
         style={{ background: 'rgba(96,165,250,0.15)', border: '1px solid rgba(96,165,250,0.3)' }}
       >
         <FileText size={size} style={{ color: '#60A5FA' }} />
-        {large && (
-          <span className="absolute text-[8px] font-black text-blue-400 mt-8">DOCX</span>
-        )}
+        {large && <span className="text-[7px] font-black leading-none" style={{ color: '#60A5FA' }}>DOCX</span>}
       </div>
     )
   }
   return (
     <div
-      className={clsx('flex items-center justify-center rounded-lg', large ? 'w-14 h-14' : 'w-9 h-9')}
+      className={clsx('relative flex flex-col items-center justify-center rounded-xl gap-0.5', large ? 'w-14 h-14' : 'w-9 h-9 rounded-lg')}
       style={{ background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.2)' }}
     >
       <FileText size={size} className="text-muted" />
+      {large && <span className="text-[7px] font-black leading-none text-muted">FILE</span>}
     </div>
   )
 }
@@ -321,9 +318,10 @@ interface CardProps {
   onDelete: (book: Book) => void
   onAskAI: (book: Book) => void
   onCreateTest: (book: Book) => void
+  onView: (book: Book) => void
 }
 
-function DocumentCard({ book, subject, subjectIndex, onDelete, onAskAI, onCreateTest }: CardProps) {
+function DocumentCard({ book, subject, subjectIndex, onDelete, onAskAI, onCreateTest, onView }: CardProps) {
   const isReady = book.status === 'READY'
   const isFailed = book.status === 'FAILED'
   const isProcessing = PROCESSING_STATUSES.has(book.status)
@@ -427,6 +425,12 @@ function DocumentCard({ book, subject, subjectIndex, onDelete, onAskAI, onCreate
             >
               <ClipboardList size={11} /> Create Test
             </button>
+            <button
+              onClick={() => onView(book)}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-bold text-muted hover:text-white hover:bg-white/5 transition-colors border border-border"
+            >
+              <Eye size={11} /> View
+            </button>
           </div>
         )}
         {isProcessing && (
@@ -454,61 +458,118 @@ function DocumentCard({ book, subject, subjectIndex, onDelete, onAskAI, onCreate
   )
 }
 
-// ── Document Row (List view) ───────────────────────────────────────────────────
+// ── Document Row (List view — card style) ─────────────────────────────────────
 
-function DocumentRow({ book, subject, subjectIndex, onDelete, onAskAI, onCreateTest }: CardProps) {
+function DocumentRow({ book, subject, subjectIndex, onDelete, onAskAI, onCreateTest, onView }: CardProps) {
   const isReady = book.status === 'READY'
   const isFailed = book.status === 'FAILED'
+  const isProcessing = PROCESSING_STATUSES.has(book.status)
   const sColor = subject ? subjectColor(subjectIndex) : '#94A3B8'
 
   return (
-    <div className="group flex items-center gap-4 border-b border-border px-5 py-3 hover:bg-white/[0.02] transition-colors last:border-b-0">
-      <div className="relative shrink-0">
-        <FileTypeIcon filename={book.filename} />
-        <span className="absolute -bottom-1 -right-1 rounded text-[6px] font-black px-0.5"
-          style={{ background: book.filename.endsWith('.pdf') ? '#EF4444' : '#60A5FA', color: '#fff' }}>
-          {book.filename.split('.').pop()?.toUpperCase()}
-        </span>
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-white">{book.title}</p>
-        <p className="text-[10px] text-muted truncate">{book.filename}{book.author ? ` · ${book.author}` : ''}</p>
-      </div>
-      {subject && (
-        <span className="hidden sm:inline shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold"
-          style={{ background: `${sColor}18`, color: sColor, border: `1px solid ${sColor}40` }}>
-          {subject.name}
-        </span>
-      )}
-      <div className="hidden md:flex items-center gap-3 shrink-0 text-[11px] text-muted">
-        {book.page_count && <span>{book.page_count}p</span>}
-        <span>{formatDate(book.created_at)}</span>
-      </div>
-      <StatusBadge status={book.status} />
-      <div className="flex shrink-0 items-center gap-1.5">
-        {isReady && (
-          <>
-            <button onClick={() => onAskAI(book)}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-colors"
-              style={{ background: 'rgba(34,211,238,0.1)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.25)' }}>
-              <Sparkles size={10} /> Ask AI
+    <div className="rounded-xl border border-border bg-surface overflow-hidden">
+      {/* Card body */}
+      <div className="flex items-start gap-3 p-3.5">
+        {/* Large file icon */}
+        <div className="shrink-0">
+          <FileTypeIcon filename={book.filename} large />
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-sm font-bold text-white leading-tight line-clamp-2 flex-1">
+              {book.title}
+            </h3>
+            {/* Delete button */}
+            <button
+              onClick={() => onDelete(book)}
+              className="shrink-0 rounded-lg p-1 text-muted hover:text-red-400 hover:bg-red-950/30 transition-all"
+            >
+              <Trash2 size={13} />
             </button>
-            <button onClick={() => onCreateTest(book)}
-              className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-bold text-muted hover:text-white hover:bg-white/5 transition-colors">
-              <ClipboardList size={10} /> Test
+          </div>
+
+          {/* Meta row */}
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-1 text-[11px] text-muted">
+            {book.page_count && <span>{book.page_count} pages</span>}
+            {book.page_count && <span>·</span>}
+            <span>{formatDate(book.created_at)}</span>
+            {book.file_size && <><span>·</span><span>{formatBytes(book.file_size)}</span></>}
+          </div>
+
+          {/* Subject badge */}
+          {subject && (
+            <span
+              className="inline-block mt-1.5 rounded-md px-2 py-0.5 text-[10px] font-bold"
+              style={{ background: `${sColor}18`, color: sColor, border: `1px solid ${sColor}40` }}
+            >
+              {subject.name}
+            </span>
+          )}
+
+          {/* Status + processing bar */}
+          <div className="mt-2">
+            <StatusBadge status={book.status} />
+            {isProcessing && (
+              <div className="mt-1.5">
+                <div className="h-1 w-full rounded-full bg-border overflow-hidden">
+                  <div className="h-full rounded-full bg-amber-400/70 animate-pulse" style={{ width: '65%' }} />
+                </div>
+                <p className="mt-0.5 text-[10px] text-muted">{PROCESSING_LABEL[book.status] ?? 'Processing…'}</p>
+              </div>
+            )}
+            {isFailed && book.error_msg && (
+              <p className="mt-1 text-[11px] text-red-400/80 leading-relaxed">{book.error_msg}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Action buttons row */}
+      <div className="border-t border-border px-3.5 py-2.5 flex gap-2">
+        {isReady ? (
+          <>
+            <button
+              onClick={() => onAskAI(book)}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-colors"
+              style={{ background: 'rgba(34,211,238,0.1)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.25)' }}
+            >
+              <Sparkles size={11} /> Ask AI
+            </button>
+            <button
+              onClick={() => onCreateTest(book)}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold text-muted hover:text-white hover:bg-white/5 transition-colors border border-border"
+            >
+              <ClipboardList size={11} /> Create Test
+            </button>
+            <button
+              onClick={() => onView(book)}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold text-muted hover:text-white hover:bg-white/5 transition-colors border border-border"
+            >
+              <Eye size={11} /> View
+            </button>
+          </>
+        ) : isFailed ? (
+          <button
+            onClick={() => onDelete(book)}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold text-red-400 hover:bg-red-950/30 transition-colors border border-red-900/40"
+          >
+            <Trash2 size={11} /> Delete
+          </button>
+        ) : (
+          <>
+            <button disabled className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold text-muted/30 cursor-not-allowed border border-border/30">
+              <Sparkles size={11} /> Ask AI
+            </button>
+            <button disabled className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold text-muted/30 cursor-not-allowed border border-border/30">
+              <ClipboardList size={11} /> Create Test
+            </button>
+            <button disabled className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold text-muted/30 cursor-not-allowed border border-border/30">
+              <Eye size={11} /> View
             </button>
           </>
         )}
-        {isFailed && (
-          <button onClick={() => onDelete(book)}
-            className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold text-red-400 hover:bg-red-950/30 border border-red-900/40 transition-colors">
-            <Trash2 size={10} /> Delete
-          </button>
-        )}
-        <button onClick={() => onDelete(book)}
-          className="rounded-lg p-1.5 text-muted opacity-0 group-hover:opacity-100 hover:text-red-400 hover:bg-red-950/30 transition-all">
-          <Trash2 size={13} />
-        </button>
       </div>
     </div>
   )
@@ -518,7 +579,7 @@ function DocumentRow({ book, subject, subjectIndex, onDelete, onAskAI, onCreateT
 
 function StatCard({ icon, value, label, color }: { icon: React.ReactNode; value: number; label: string; color: string }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-xl border border-border bg-surface/80 px-3 py-2 flex-1">
+    <div className="flex items-center gap-2.5 rounded-xl border border-border bg-surface/80 px-3 py-2 shrink-0 min-w-[120px] flex-1">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: `${color}15`, border: `1px solid ${color}30` }}>
         {icon}
       </div>
@@ -547,7 +608,7 @@ export default function Books() {
   const [filterSubject, setFilterSubject] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [sortBy, setSortBy] = useState('newest')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const dropRef = useRef<HTMLDivElement>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -557,7 +618,7 @@ export default function Books() {
       if (!token) return
       const api = makeApi(token)
       const [booksRes, subjectsRes] = await Promise.allSettled([
-        api.books.list(),
+        api.books.list(undefined, 'student'),
         api.subjects.list(),
       ])
       if (booksRes.status === 'fulfilled') setBooks(booksRes.value.books)
@@ -604,7 +665,7 @@ export default function Books() {
       }
     }
 
-    const { book } = await api.books.upload(file, title, resolvedSubjectId, author)
+    const { book } = await api.books.upload(file, title, resolvedSubjectId, author, 'student')
     setBooks((prev) => [book, ...prev])
   }
 
@@ -619,6 +680,15 @@ export default function Books() {
 
   function handleAskAI(book: Book) { navigate(`/tutor?bookId=${book.id}`) }
   function handleCreateTest(book: Book) { navigate(`/test/new?bookId=${book.id}`) }
+  async function handleView(book: Book) {
+    const token = await getToken()
+    if (!token) return
+    try {
+      await makeApi(token).books.openFile(book.id)
+    } catch (e) {
+      console.error('[Books] view error:', e)
+    }
+  }
 
   // Derived
   const subjectMap = Object.fromEntries(subjects.map((s) => [s.id, s]))
@@ -651,60 +721,64 @@ export default function Books() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
 
-      {/* ── Hero Header ─────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden shrink-0" style={{ height: 130 }}>
-        {/* Background image — visible in center-right like reference */}
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url(${isLight ? mybookLightImg : mybookImg})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center center',
-          backgroundRepeat: 'no-repeat',
-          opacity: 0.7,
-        }} />
-        {/* Left solid fade so text is readable */}
-        <div className="absolute inset-0 books-hero-left" />
-        {/* Bottom fade to merge with page */}
-        <div className="absolute bottom-0 left-0 right-0 h-1/3 books-hero-bottom" />
+      {/* Single scroll container — hero + stats scroll away, toolbar sticks */}
+      <div className="flex-1 overflow-y-auto min-h-0">
 
-        {/* Content */}
-        <div className="relative flex items-center gap-6 px-6 h-full">
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-0.5">My Books</p>
-            <h1 className="text-2xl font-black text-white leading-tight">
-              Your Study{' '}
-              <span className="text-primary" style={{ textShadow: '0 0 30px rgba(34,211,238,0.4)' }}>
-                Materials
-              </span>
-            </h1>
-            <p className="mt-1 text-xs text-muted max-w-md leading-relaxed">
-              Upload your lecture notes, PDFs, assignments, or any study material. We'll organise them and help you learn better.
-            </p>
+        {/* ── Hero Header ───────────────────────────────────────────────────── */}
+        <div className="relative overflow-hidden" style={{ height: 130 }}>
+          <div className="absolute inset-0" style={{
+            backgroundImage: `url(${isLight ? mybookLightImg : mybookImg})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center center',
+            backgroundRepeat: 'no-repeat',
+            opacity: 0.7,
+          }} />
+          <div className="absolute inset-0 books-hero-left" />
+          <div className="absolute bottom-0 left-0 right-0 h-1/3 books-hero-bottom" />
+          <div className="relative flex items-center gap-6 px-4 md:px-6 h-full">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-0.5">My Books</p>
+              <h1 className="text-2xl font-black text-white leading-tight">
+                Your Study{' '}
+                <span className="text-primary" style={{ textShadow: '0 0 30px rgba(34,211,238,0.4)' }}>
+                  Materials
+                </span>
+              </h1>
+              <p className="mt-1 text-xs text-muted max-w-md leading-relaxed hidden sm:block">
+                Upload your lecture notes, PDFs, assignments, or any study material. We'll organise them and help you learn better.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowUpload(true)}
+              className="shrink-0 flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-bg hover:bg-primary-hover transition-colors"
+            >
+              <Upload size={13} /> Upload
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* ── Stats Row ───────────────────────────────────────────────────────── */}
-      {!loading && (
-        <div className="grid grid-cols-4 gap-3 px-6 py-2 shrink-0">
-          <StatCard icon={<FileText size={16} style={{ color: '#22D3EE' }} />}   value={stats.total}      label="Total Documents" color="#22D3EE" />
-          <StatCard icon={<CheckCircle size={16} style={{ color: '#22C55E' }} />} value={stats.ready}      label="Ready"           color="#22C55E" />
-          <StatCard icon={<div className="w-[16px] h-[16px] rounded-full" style={{ border: '2.5px solid #F97316' }} />} value={stats.processing} label="Processing" color="#F97316" />
-          <StatCard icon={<AlertCircle size={16} style={{ color: '#EF4444' }} />} value={stats.failed}     label="Failed"          color="#EF4444" />
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-3 min-h-0">
-
-        {/* ── Toolbar ───────────────────────────────────────────────────────── */}
+        {/* ── Stats Row (scrollable on mobile, scrolls away with hero) ──────── */}
         {!loading && (
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <div className="flex gap-2.5 px-3 md:px-6 py-2 overflow-x-auto scrollbar-none">
+            <StatCard icon={<FileText size={16} style={{ color: '#22D3EE' }} />}   value={stats.total}      label="Total Documents" color="#22D3EE" />
+            <StatCard icon={<CheckCircle size={16} style={{ color: '#22C55E' }} />} value={stats.ready}      label="Ready"           color="#22C55E" />
+            <StatCard icon={<div className="w-[16px] h-[16px] rounded-full" style={{ border: '2.5px solid #F97316' }} />} value={stats.processing} label="Processing" color="#F97316" />
+            <StatCard icon={<AlertCircle size={16} style={{ color: '#EF4444' }} />} value={stats.failed}     label="Failed"          color="#EF4444" />
+          </div>
+        )}
+
+        {/* ── Toolbar — sticks to top when hero scrolls away ──────────────── */}
+        <div className="sticky top-0 z-10 bg-bg border-b border-border px-3 md:px-6 py-2 space-y-2">
+        {!loading && (
+          <div className="space-y-2">
+            {/* Search bar — full width */}
+            <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search documents by title, subject, or keywords…"
-                className="w-full rounded-lg border border-border bg-surface pl-9 pr-3 py-2 text-sm text-white placeholder:text-muted/50 focus:border-primary focus:outline-none transition-colors"
+                placeholder="Search documents…"
+                className="w-full rounded-lg border border-border bg-surface pl-9 pr-8 py-2.5 text-sm text-white placeholder:text-muted/50 focus:border-primary focus:outline-none transition-colors"
               />
               {search && (
                 <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-white">
@@ -713,51 +787,56 @@ export default function Books() {
               )}
             </div>
 
-            {subjects.length > 0 && (
-              <div className="relative">
-                <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}
-                  className="appearance-none rounded-lg border border-border bg-surface pl-3 pr-7 py-2 text-sm text-white focus:border-primary focus:outline-none transition-colors">
-                  <option value="">All Subjects</option>
-                  {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            {/* Filters + view toggle row — scrollable on mobile */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
+              {subjects.length > 0 && (
+                <div className="relative shrink-0">
+                  <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}
+                    className="appearance-none rounded-lg border border-border bg-surface pl-3 pr-6 py-2 text-xs text-white focus:border-primary focus:outline-none transition-colors">
+                    <option value="">All Subjects</option>
+                    {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                  <ChevronDown size={11} className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-muted" />
+                </div>
+              )}
+
+              <div className="relative shrink-0">
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
+                  className="appearance-none rounded-lg border border-border bg-surface pl-3 pr-6 py-2 text-xs text-white focus:border-primary focus:outline-none transition-colors">
+                  <option value="">All Status</option>
+                  {Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
-                <ChevronDown size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted" />
+                <ChevronDown size={11} className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-muted" />
               </div>
-            )}
 
-            <div className="relative">
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-                className="appearance-none rounded-lg border border-border bg-surface pl-3 pr-7 py-2 text-sm text-white focus:border-primary focus:outline-none transition-colors">
-                <option value="">All Status</option>
-                {Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-              <ChevronDown size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted" />
-            </div>
+              <div className="relative shrink-0">
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
+                  className="appearance-none rounded-lg border border-border bg-surface pl-3 pr-6 py-2 text-xs text-white focus:border-primary focus:outline-none transition-colors">
+                  {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+                <ChevronDown size={11} className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-muted" />
+              </div>
 
-            <div className="relative">
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
-                className="appearance-none rounded-lg border border-border bg-surface pl-3 pr-7 py-2 text-sm text-white focus:border-primary focus:outline-none transition-colors">
-                {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-              <ChevronDown size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted" />
-            </div>
-
-            <div className="ml-auto flex items-center rounded-lg border border-border overflow-hidden">
-              <button onClick={() => setViewMode('grid')}
-                className={clsx('p-2 transition-colors', viewMode === 'grid' ? 'bg-primary/15 text-primary' : 'text-muted hover:text-white hover:bg-white/5')}>
-                <LayoutGrid size={15} />
-              </button>
-              <button onClick={() => setViewMode('list')}
-                className={clsx('p-2 transition-colors', viewMode === 'list' ? 'bg-primary/15 text-primary' : 'text-muted hover:text-white hover:bg-white/5')}>
-                <List size={15} />
-              </button>
+              <div className="ml-auto shrink-0 flex items-center rounded-lg border border-border overflow-hidden">
+                <button onClick={() => setViewMode('grid')}
+                  className={clsx('p-2 transition-colors', viewMode === 'grid' ? 'bg-primary/15 text-primary' : 'text-muted hover:text-white hover:bg-white/5')}>
+                  <LayoutGrid size={14} />
+                </button>
+                <button onClick={() => setViewMode('list')}
+                  className={clsx('p-2 transition-colors', viewMode === 'list' ? 'bg-primary/15 text-primary' : 'text-muted hover:text-white hover:bg-white/5')}>
+                  <List size={14} />
+                </button>
+              </div>
             </div>
           </div>
         )}
+        </div>{/* end sticky toolbar */}
 
         {/* ── Content ───────────────────────────────────────────────────────── */}
+        <div className="px-3 md:px-6 pb-6 pt-3 space-y-2.5">
 
         {loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="rounded-xl border border-border bg-surface p-4 space-y-3">
                 <div className="flex items-start justify-between">
@@ -773,7 +852,6 @@ export default function Books() {
           </div>
 
         ) : books.length === 0 ? (
-          /* Empty state */
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-surface">
               <FolderOpen size={28} className="text-muted/50" />
@@ -799,7 +877,7 @@ export default function Books() {
           </div>
 
         ) : viewMode === 'grid' ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map((book) => (
               <DocumentCard
                 key={book.id}
@@ -809,9 +887,9 @@ export default function Books() {
                 onDelete={setDeleteTarget}
                 onAskAI={handleAskAI}
                 onCreateTest={handleCreateTest}
+                onView={handleView}
               />
             ))}
-
             {/* Upload More card */}
             <div
               ref={dropRef}
@@ -824,7 +902,7 @@ export default function Books() {
                 <p className="text-xs text-muted mt-1">
                   Drag & drop files here or <span className="text-primary">click to browse</span>
                 </p>
-                <p className="text-[10px] text-muted/60 mt-1">PDF, DOC, DOCX up to 50MB</p>
+                <p className="text-[10px] text-muted/60 mt-1">PDF, DOC, DOCX up to 200MB</p>
               </div>
               <div className="border-t border-border/40 px-4 py-3 space-y-1.5">
                 {[
@@ -842,7 +920,25 @@ export default function Books() {
           </div>
 
         ) : (
-          <div className="rounded-xl border border-border bg-surface overflow-hidden">
+          /* List view — stacked cards with upload card at top */
+          <div className="space-y-2.5">
+            {/* Upload card */}
+            <button
+              onClick={() => setShowUpload(true)}
+              className="w-full flex items-center gap-3 rounded-xl border-2 border-dashed border-border hover:border-primary/40 bg-surface/40 px-4 py-3.5 transition-colors text-left"
+            >
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20">
+                <CloudUpload size={20} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Upload Document</p>
+                <p className="text-xs text-muted">PDF, DOC, DOCX · up to 200 MB</p>
+              </div>
+              <div className="ml-auto shrink-0 rounded-lg bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-bold text-primary">
+                + Add
+              </div>
+            </button>
+
             {filtered.map((book) => (
               <DocumentRow
                 key={book.id}
@@ -852,6 +948,7 @@ export default function Books() {
                 onDelete={setDeleteTarget}
                 onAskAI={handleAskAI}
                 onCreateTest={handleCreateTest}
+                onView={handleView}
               />
             ))}
           </div>
@@ -874,7 +971,9 @@ export default function Books() {
             </button>
           </div>
         )}
-      </div>
+
+        </div>{/* end content px wrapper */}
+      </div>{/* end outer scroll container */}
 
       {/* ── Modals ─────────────────────────────────────────────────────────── */}
       {showUpload && (

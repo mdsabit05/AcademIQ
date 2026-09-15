@@ -312,16 +312,16 @@ export default function AskAI() {
   if (isChatMode) {
     return (
       <div className="flex h-full overflow-hidden">
-        {historyVisible && <div className="hidden lg:flex">{sidebar}</div>}
+        {historyVisible && <div className="hidden md:flex">{sidebar}</div>}
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Slim top bar */}
           <div className="shrink-0 flex items-center gap-3 px-4 lg:px-5 py-2.5 border-b border-border">
             <button onClick={() => setHistoryVisible((v) => !v)}
-              className="hidden lg:flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors">
+              className="hidden md:flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors">
               {historyVisible ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
               <span>{historyVisible ? 'Hide' : 'History'}</span>
             </button>
-            <div className="hidden lg:block w-px h-4 bg-border" />
+            <div className="hidden md:block w-px h-4 bg-border" />
             <button onClick={backToSelection}
               className="flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors">
               <ArrowLeft size={13} /> Back
@@ -412,14 +412,14 @@ export default function AskAI() {
   // ── SELECTION MODE ────────────────────────────────────────────────────────────
   return (
     <div className="flex h-full overflow-hidden">
-      {historyVisible && <div className="hidden lg:flex">{sidebar}</div>}
+      {historyVisible && <div className="hidden md:flex">{sidebar}</div>}
 
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
 
         {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
         <div className="shrink-0 border-b border-border px-4 lg:px-5 py-2.5 lg:py-3">
           {/* Desktop toolbar */}
-          <div className="hidden lg:flex items-center gap-2 flex-wrap">
+          <div className="hidden md:flex items-center gap-2 flex-wrap">
             <button onClick={() => setHistoryVisible((v) => !v)}
               className="flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors mr-1">
               {historyVisible ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
@@ -468,7 +468,7 @@ export default function AskAI() {
           </div>
 
           {/* Mobile toolbar */}
-          <div className="flex lg:hidden items-center gap-2">
+          <div className="flex md:hidden items-center gap-2">
             <span className="text-sm font-black text-white">AI Tutor</span>
             {selectedBookIds.length > 0 && (
               <span className="text-[10px] font-black px-2 py-0.5 rounded"
@@ -485,7 +485,7 @@ export default function AskAI() {
         </div>
 
         {/* ── Desktop: Book cards ──────────────────────────────────────────────── */}
-        <div className="hidden lg:block shrink-0 px-5 py-3 border-b border-border">
+        <div className="hidden md:block shrink-0 px-5 py-3 border-b border-border">
           <div className="relative">
             <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
               {filteredBooks.length === 0 ? (
@@ -538,7 +538,7 @@ export default function AskAI() {
         <div className="flex-1 overflow-y-auto min-h-0">
 
           {/* ── MOBILE layout ───────────────────────────────────────────────────── */}
-          <div className="lg:hidden flex flex-col px-4 py-4 gap-4">
+          <div className="md:hidden flex flex-col px-4 py-4 gap-4">
 
             {/* Recent Chats */}
             {sessions.length > 0 && (
@@ -622,7 +622,7 @@ export default function AskAI() {
           </div>
 
           {/* ── DESKTOP layout ───────────────────────────────────────────────────── */}
-          <div className="hidden lg:flex gap-5 h-full px-5 py-4">
+          <div className="hidden md:flex gap-5 h-full px-5 py-4">
             {/* Centre: empty state + quick actions */}
             <div className="flex-1 flex flex-col items-center justify-center text-center">
               <div className="w-20 h-20 rounded-full flex items-center justify-center mb-5 border-2 border-dashed border-border">

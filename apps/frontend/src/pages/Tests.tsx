@@ -413,7 +413,7 @@ export default function Tests() {
       {/* ════════════════════════════════════════════════════════════════════
           DESKTOP LAYOUT (hidden on mobile)
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="hidden lg:block space-y-6">
+      <div className="hidden md:block space-y-6">
 
         {/* Hero Banner */}
         <div
@@ -498,7 +498,7 @@ export default function Tests() {
       {/* ════════════════════════════════════════════════════════════════════
           MOBILE LAYOUT (hidden on desktop)
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="lg:hidden flex flex-col min-h-full">
+      <div className="md:hidden flex flex-col min-h-full">
 
         {/* Hero */}
         <div className="relative overflow-hidden" style={{ minHeight: 140 }}>

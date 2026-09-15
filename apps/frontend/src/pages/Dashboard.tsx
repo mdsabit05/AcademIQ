@@ -16,7 +16,7 @@ import {
   Calendar,
 } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
-import type { Book, Subject } from 'shared'
+import type { Book, Subject, Syllabus } from 'shared'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -132,6 +132,7 @@ export default function Dashboard() {
 
   const [books, setBooks] = useState<Book[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
+  const [syllabi, setSyllabi] = useState<Syllabus[]>([])
   const [topicMastery, setTopicMastery] = useState<TopicMastery[]>([])
   const [attempts, setAttempts] = useState<HistoryAttempt[]>([])
   const [sessions, setSessions] = useState<HistorySession[]>([])
@@ -143,14 +144,16 @@ export default function Dashboard() {
       if (!token) return
       const api = makeApi(token)
       try {
-        const [booksRes, subjectsRes, progressRes, historyRes] = await Promise.all([
+        const [booksRes, subjectsRes, syllabiRes, progressRes, historyRes] = await Promise.all([
           api.books.list(),
           api.subjects.list(),
+          api.syllabus.list(),
           api.progress.summary(),
           api.progress.history(6, 0),
         ])
         setBooks(booksRes.books.filter((b) => b.status === 'READY'))
         setSubjects(subjectsRes.subjects)
+        setSyllabi(syllabiRes.syllabi.filter((s) => s.status === 'ready'))
         setTopicMastery(progressRes.topicMastery)
         setAttempts(historyRes.attempts as HistoryAttempt[])
         setSessions(historyRes.sessions as HistorySession[])
@@ -203,8 +206,7 @@ export default function Dashboard() {
     <div className="space-y-3 min-h-full pb-6">
 
       {/* ── Hero ──────────────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl">
-        {/* Hero background image */}
+      <div className="relative overflow-hidden rounded-none lg:rounded-2xl">
         <div className="absolute inset-0 pointer-events-none" style={{
           backgroundImage: `url(${isLight ? lightLandingUrl : heroBgUrl})`,
           backgroundSize: 'cover',
@@ -212,13 +214,11 @@ export default function Dashboard() {
           backgroundRepeat: 'no-repeat',
           opacity: 0.9,
         }} />
-        {/* Gradient blend */}
         <div className="absolute inset-0 pointer-events-none" style={{
           background: isLight
             ? 'linear-gradient(to right, rgba(243,247,251,0.97) 0%, rgba(243,247,251,0.92) 30%, rgba(243,247,251,0.65) 50%, rgba(243,247,251,0.15) 72%, rgba(243,247,251,0.0) 88%)'
             : 'linear-gradient(to right, rgba(8,12,20,0.97) 0%, rgba(8,12,20,0.92) 30%, rgba(8,12,20,0.65) 50%, rgba(8,12,20,0.15) 72%, rgba(8,12,20,0.0) 88%)',
         }} />
-        {/* Bottom fade */}
         <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{
           height: '28%',
           background: isLight
@@ -226,38 +226,29 @@ export default function Dashboard() {
             : 'linear-gradient(to top, rgba(8,12,20,0.85) 0%, transparent 100%)',
         }} />
 
-        <div className="relative flex items-center justify-between gap-8 px-8 pt-10 pb-2">
-          {/* Left */}
+        <div className="relative flex items-center justify-between gap-8 px-4 lg:px-8 pt-6 lg:pt-10 pb-2">
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-muted mb-2">
-              {greeting()}{firstName ? `, ${firstName}` : ''}
+            <p className="text-sm text-muted mb-1.5">
+              {greeting()}{firstName ? `, ${firstName} 👋` : ''}
             </p>
-            <h1 className="text-4xl xl:text-5xl font-black leading-tight text-white mb-3 tracking-tight">
+            <h1 className="text-3xl lg:text-4xl xl:text-5xl font-black leading-tight text-white mb-2 lg:mb-3 tracking-tight">
               Learn Today.<br />
               Build{' '}
-              <span
-                className="text-primary"
-                style={{ textShadow: '0 0 40px rgba(34,211,238,0.4)' }}
-              >
+              <span className="text-primary" style={{ textShadow: '0 0 40px rgba(34,211,238,0.4)' }}>
                 Tomorrow.
               </span>
             </h1>
-            <p className="text-sm text-muted leading-relaxed max-w-md">
+            <p className="text-xs lg:text-sm text-muted leading-relaxed max-w-md">
               Your AI-powered study companion. Turn your books into knowledge,
               practice with real tests, and track your progress — all in one place.
             </p>
           </div>
 
-          {/* Quote — absolutely placed at center of hero (same as landing page) */}
-          <div className="hidden lg:block absolute" style={{ left: '42%', top: '50%', transform: 'translateY(-50%)' }}>
+          <div className="hidden md:block absolute" style={{ left: '42%', top: '50%', transform: 'translateY(-50%)' }}>
             <p style={{
-              fontFamily: 'monospace',
-              fontSize: 12,
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              color: isLight ? 'rgba(15,23,42,0.78)' : 'rgba(255,255,255,0.72)',
-              lineHeight: 2,
-              textShadow: isLight ? 'none' : '0 2px 12px rgba(0,0,0,0.8)',
+              fontFamily: 'monospace', fontSize: 12, textTransform: 'uppercase',
+              letterSpacing: '0.1em', color: isLight ? 'rgba(15,23,42,0.78)' : 'rgba(255,255,255,0.72)',
+              lineHeight: 2, textShadow: isLight ? 'none' : '0 2px 12px rgba(0,0,0,0.8)',
             }}>
               "DISCIPLINE<br />TURNS KNOWLEDGE<br />INTO FREEDOM."
             </p>
@@ -267,7 +258,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Action Cards ──────────────────────────────────────────────────────── */}
-      <div className="px-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="px-3 lg:px-6 grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-3">
         {ACTION_CARDS.map(({ icon: Icon, label, sub, to, color }) => (
           <button
             key={label}
@@ -294,10 +285,10 @@ export default function Dashboard() {
       </div>
 
       {/* ── Middle Row: Learning Progress + Continue Learning ─────────────────── */}
-      <div className="px-6 grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div className="px-3 lg:px-6 grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4">
 
         {/* Learning Progress */}
-        <div className="lg:col-span-7 rounded-xl border border-border bg-surface p-5">
+        <div className="md:col-span-7 rounded-xl border border-border bg-surface p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-white">Your Learning Progress</h2>
             <span className="text-xs text-muted bg-bg border border-border rounded-lg px-3 py-1 select-none">
@@ -372,7 +363,7 @@ export default function Dashboard() {
         </div>
 
         {/* Continue Learning */}
-        <div className="lg:col-span-5 rounded-xl border border-border bg-surface p-5 flex flex-col">
+        <div className="md:col-span-5 rounded-xl border border-border bg-surface p-5 flex flex-col min-w-0 overflow-hidden">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-white">Continue Learning</h2>
             <button
@@ -397,7 +388,7 @@ export default function Dashboard() {
             </div>
           ) : latestBook ? (
             <div className="flex-1 flex flex-col">
-              <div className="flex gap-4 mb-5">
+              <div className="flex gap-4 mb-5 min-w-0">
                 {/* Book cover */}
                 <div
                   className="w-20 h-24 rounded-lg flex items-center justify-center shrink-0 relative overflow-hidden"
@@ -408,7 +399,7 @@ export default function Dashboard() {
                   <div className="absolute left-3 top-2 bottom-2 w-px bg-white/10" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-white text-sm leading-tight mb-1">
+                  <h3 className="font-semibold text-white text-sm leading-tight mb-1 break-all line-clamp-2">
                     {latestBook.title}
                   </h3>
                   {latestBook.author && (
@@ -446,7 +437,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Bottom Row: Tests + Subjects + Activity ────────────────────────────── */}
-      <div className="px-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="px-3 lg:px-6 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
 
         {/* Recent Tests */}
         <div className="rounded-xl border border-border bg-surface p-5">
@@ -509,83 +500,90 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Your Subjects */}
-        <div className="rounded-xl border border-border bg-surface p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-white">Your Subjects</h2>
-            <button
-              onClick={() => navigate('/syllabus')}
-              className="text-xs text-primary hover:underline"
-            >
-              Manage
-            </button>
-          </div>
+        {/* Your Syllabi */}
+        {(() => {
+          // Show subjects if they exist, otherwise fall back to syllabi
+          const hasSubjects = subjects.length > 0
+          const items = hasSubjects
+            ? subjects.slice(0, 4).map((s) => ({ id: s.id, name: s.name }))
+            : syllabi.slice(0, 4).map((s) => ({ id: s.id, name: s.title }))
+          const cardTitle = hasSubjects ? 'Your Subjects' : 'Your Syllabi'
 
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <Skeleton className="w-7 h-7 shrink-0" />
-                  <div className="flex-1 space-y-1.5">
-                    <Skeleton className="h-3 w-3/4" />
-                    <Skeleton className="h-1" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : subjects.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-muted mb-2">No subjects yet</p>
-              <button
-                onClick={() => navigate('/syllabus')}
-                className="text-xs text-primary hover:underline"
-              >
-                Add your first subject →
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {subjects.slice(0, 4).map((s, i) => {
-                const color = PALETTE[i % PALETTE.length]
-                // Match topicMastery entries that reference this subject name
-                const firstWord = s.name.toLowerCase().split(/\s+/)[0]
-                const matched = topicMastery.filter((t) =>
-                  String(t.context_key).toLowerCase().includes(firstWord),
-                )
-                const pct =
-                  matched.length > 0
-                    ? Math.round(
-                        (matched.reduce((sum, t) => sum + t.confidence, 0) / matched.length) * 100,
-                      )
-                    : 0
+          return (
+            <div className="rounded-xl border border-border bg-surface p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-semibold text-white">{cardTitle}</h2>
+                <button
+                  onClick={() => navigate('/syllabus')}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Manage
+                </button>
+              </div>
 
-                return (
-                  <div key={s.id} className="flex items-center gap-3 group">
-                    <div
-                      className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
-                      style={{ backgroundColor: `${color}20` }}
-                    >
-                      <BookOpen size={13} style={{ color }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-white truncate">{s.name}</span>
-                        <span
-                          className="text-xs font-semibold ml-2 shrink-0"
-                          style={{ color }}
-                        >
-                          {pct}%
-                        </span>
+              {loading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <Skeleton className="w-7 h-7 shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <Skeleton className="h-3 w-3/4" />
+                        <Skeleton className="h-1" />
                       </div>
-                      <ProgressBar pct={pct} color={color} />
                     </div>
-                    <ChevronRight size={13} className="text-muted shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                )
-              })}
+                  ))}
+                </div>
+              ) : items.length === 0 ? (
+                <div className="py-8 text-center">
+                  <p className="text-sm text-muted mb-2">No syllabi yet</p>
+                  <button
+                    onClick={() => navigate('/syllabus')}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Upload your first syllabus →
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {items.map((s, i) => {
+                    const color = PALETTE[i % PALETTE.length]
+                    const firstWord = s.name.toLowerCase().split(/\s+/)[0]
+                    const matched = topicMastery.filter((t) =>
+                      String(t.context_key).toLowerCase().includes(firstWord),
+                    )
+                    const pct =
+                      matched.length > 0
+                        ? Math.round(
+                            (matched.reduce((sum, t) => sum + t.confidence, 0) / matched.length) * 100,
+                          )
+                        : 0
+
+                    return (
+                      <div key={s.id} className="flex items-center gap-3 group">
+                        <div
+                          className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+                          style={{ backgroundColor: `${color}20` }}
+                        >
+                          <BookOpen size={13} style={{ color }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-white truncate">{s.name}</span>
+                            <span className="text-xs font-semibold ml-2 shrink-0" style={{ color }}>
+                              {pct}%
+                            </span>
+                          </div>
+                          <ProgressBar pct={pct} color={color} />
+                        </div>
+                        <ChevronRight size={13} className="text-muted shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          )
+        })()}
 
         {/* Recent Activity */}
         <div className="rounded-xl border border-border bg-surface p-5">
@@ -646,9 +644,9 @@ export default function Dashboard() {
       </div>
 
       {/* ── Quick Actions ──────────────────────────────────────────────────────── */}
-      <div className="mx-6 rounded-xl border border-border bg-surface p-5">
+      <div className="mx-3 lg:mx-6 rounded-xl border border-border bg-surface p-4 lg:p-5">
         <h2 className="font-semibold text-white mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {QUICK_ACTIONS.map(({ icon: Icon, label, sub, to, color }) => (
             <button
               key={label}

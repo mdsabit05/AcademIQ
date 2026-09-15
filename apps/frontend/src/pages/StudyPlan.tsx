@@ -590,10 +590,10 @@ export default function StudyPlan() {
         </div>
 
         {/* ── Tasks + Goals ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-5 items-start pb-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-5 items-start pb-4">
 
           {/* Today's Tasks — full width on mobile, 3/5 on desktop */}
-          <div className="lg:col-span-3">
+          <div className="md:col-span-3">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-sm font-semibold" style={{ color: textPrimary }}>Today's tasks</h2>
               {tasks.length > 0 && (
@@ -674,7 +674,7 @@ export default function StudyPlan() {
           </div>
 
           {/* Subject Goals — full width on mobile, 2/5 on desktop */}
-          <div className="lg:col-span-2">
+          <div className="md:col-span-2">
             <div
               className="rounded-xl overflow-hidden"
               style={{
