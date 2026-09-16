@@ -95,19 +95,21 @@ export default function AdminDashboard() {
     setTotal(t)
   }
 
-  async function setRole(userId: string, role: string) {
-    const token = await getToken()
-    if (!token) return
-    const { user } = await makeApi(token).admin.setRole(userId, role)
-    setUsers((prev) => prev.map((u) => (u.id === userId ? user : u)))
-    setOpenMenu(null)
-  }
-
   async function setStatus(userId: string, status: string) {
     const token = await getToken()
     if (!token) return
     const { user } = await makeApi(token).admin.setStatus(userId, status)
     setUsers((prev) => prev.map((u) => (u.id === userId ? user : u)))
+    setOpenMenu(null)
+  }
+
+  async function deleteUser(userId: string) {
+    if (!confirm('Delete this user permanently? This cannot be undone.')) return
+    const token = await getToken()
+    if (!token) return
+    await makeApi(token).admin.deleteUser(userId)
+    setUsers((prev) => prev.filter((u) => u.id !== userId))
+    setTotal((prev) => prev - 1)
     setOpenMenu(null)
   }
 
@@ -276,16 +278,14 @@ export default function AdminDashboard() {
                           </button>
                           {openMenu === u.id && (
                             <div className="absolute right-0 top-7 z-50 w-36 rounded-xl border border-border bg-surface shadow-xl py-1">
-                              {['student', 'teacher', 'admin'].filter((r) => r !== u.role).map((r) => (
-                                <button key={r} onClick={() => setRole(u.id, r)}
-                                  className="w-full text-left px-3 py-1.5 text-xs text-muted hover:text-white hover:bg-white/5 capitalize transition-colors">
-                                  Make {r}
-                                </button>
-                              ))}
-                              <div className="h-px bg-border mx-2 my-1" />
                               <button onClick={() => setStatus(u.id, u.status === 'active' ? 'suspended' : 'active')}
-                                className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${u.status === 'active' ? 'text-red-400 hover:bg-red-500/10' : 'text-emerald-400 hover:bg-emerald-500/10'}`}>
+                                className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${u.status === 'active' ? 'text-amber-400 hover:bg-amber-500/10' : 'text-emerald-400 hover:bg-emerald-500/10'}`}>
                                 {u.status === 'active' ? 'Suspend' : 'Activate'}
+                              </button>
+                              <div className="h-px bg-border mx-2 my-1" />
+                              <button onClick={() => deleteUser(u.id)}
+                                className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10 transition-colors">
+                                Delete
                               </button>
                             </div>
                           )}
@@ -324,16 +324,14 @@ export default function AdminDashboard() {
                     </button>
                     {openMenu === u.id && (
                       <div className="absolute right-0 top-9 z-50 w-36 rounded-xl border border-border bg-surface shadow-xl py-1">
-                        {['student', 'teacher', 'admin'].filter((r) => r !== u.role).map((r) => (
-                          <button key={r} onClick={() => setRole(u.id, r)}
-                            className="w-full text-left px-3 py-2 text-xs text-muted hover:text-white hover:bg-white/5 capitalize transition-colors">
-                            Make {r}
-                          </button>
-                        ))}
-                        <div className="h-px bg-border mx-2 my-1" />
                         <button onClick={() => setStatus(u.id, u.status === 'active' ? 'suspended' : 'active')}
-                          className={`w-full text-left px-3 py-2 text-xs transition-colors ${u.status === 'active' ? 'text-red-400 hover:bg-red-500/10' : 'text-emerald-400 hover:bg-emerald-500/10'}`}>
+                          className={`w-full text-left px-3 py-2 text-xs transition-colors ${u.status === 'active' ? 'text-amber-400 hover:bg-amber-500/10' : 'text-emerald-400 hover:bg-emerald-500/10'}`}>
                           {u.status === 'active' ? 'Suspend' : 'Activate'}
+                        </button>
+                        <div className="h-px bg-border mx-2 my-1" />
+                        <button onClick={() => deleteUser(u.id)}
+                          className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors">
+                          Delete
                         </button>
                       </div>
                     )}

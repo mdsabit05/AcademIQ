@@ -416,6 +416,9 @@ export function makeApi(token: string) {
           body: JSON.stringify({ status }),
         }),
 
+      deleteUser: (id: string) =>
+        apiFetch<{ success: boolean }>(`/admin/users/${id}`, token, { method: 'DELETE' }),
+
       stats: () =>
         apiFetch<{
           users: { total_users: number; total_students: number; total_teachers: number; total_admins: number }

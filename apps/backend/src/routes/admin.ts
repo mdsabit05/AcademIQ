@@ -111,4 +111,12 @@ admin.get('/stats', async (c) => {
   return c.json({ users: userStats, content: contentStats })
 })
 
+admin.delete('/users/:id', async (c) => {
+  const id = c.req.param('id')
+  const adminId = c.get('dbUserId')
+  if (id === adminId) return c.json({ error: 'Cannot delete your own account' }, 400)
+  await sql`DELETE FROM users WHERE id = ${id}`
+  return c.json({ success: true })
+})
+
 export default admin
