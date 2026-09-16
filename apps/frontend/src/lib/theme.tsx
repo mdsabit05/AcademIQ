@@ -18,18 +18,18 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'dark',
-  resolvedTheme: 'dark',
+  theme: 'light',
+  resolvedTheme: 'light',
   setTheme: () => {},
   toggle: () => {},
 })
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(
-    () => (localStorage.getItem('note2test_theme') as Theme) ?? 'dark',
+    () => (localStorage.getItem('note2test_theme') as Theme) ?? 'light',
   )
   const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>(() => {
-    const stored = (localStorage.getItem('note2test_theme') as Theme) ?? 'dark'
+    const stored = (localStorage.getItem('note2test_theme') as Theme) ?? 'light'
     return stored === 'system' ? getSystemResolved() : (stored as 'dark' | 'light')
   })
 
