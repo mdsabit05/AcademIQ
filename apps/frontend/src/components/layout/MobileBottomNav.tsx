@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Home, BookOpen, FileText, BarChart2, Menu, X, Sparkles, CalendarDays, ScrollText, Shield, Settings } from 'lucide-react'
+import { Home, BookOpen, FileText, BarChart2, Menu, X, Sparkles, CalendarDays, ScrollText, Shield, Settings, Zap } from 'lucide-react'
 import { useState } from 'react'
 import { useCurrentUser } from '../../lib/useCurrentUser.ts'
 import { isAdmin } from '../../lib/rbac.ts'
@@ -15,6 +15,7 @@ const MENU_ITEMS = [
   { to: '/progress',   icon: BarChart2,    label: 'Progress'    },
   { to: '/study-plan', icon: CalendarDays, label: 'Study Plan'  },
   { to: '/syllabus',   icon: ScrollText,   label: 'Syllabus'    },
+  { to: '/general-ai', icon: Zap,          label: 'General AI'  },
   { to: '/settings',   icon: Settings,     label: 'Settings'    },
 ]
 
