@@ -14,6 +14,7 @@ import {
   PlayCircle, ExternalLink, ChevronDown, ChevronUp, Layers, ArrowUpDown,
 } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
+import { useTheme } from '../lib/theme.tsx'
 import type { Test, TestAttempt } from 'shared'
 import heroBg from '../assets/hero-bg.png'
 
@@ -312,6 +313,8 @@ function TestCard({ test, attempts, colorIdx, navigate }: {
 export default function Tests() {
   const { getToken } = useAuth()
   const navigate = useNavigate()
+  const { theme } = useTheme()
+  const isLight = theme === 'light'
 
   const [tests, setTests] = useState<Test[]>([])
   const [attempts, setAttempts] = useState<Record<string, TestAttempt[]>>({})
@@ -402,11 +405,15 @@ export default function Tests() {
           className="relative overflow-hidden px-8 py-10"
           style={{ backgroundImage: `url(${heroBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
         >
-          <div className="absolute inset-0 bg-bg/60" />
+          <div className="absolute inset-0 pointer-events-none" style={{
+            background: isLight
+              ? 'linear-gradient(to right, rgba(241,243,247,0.97) 0%, rgba(241,243,247,0.88) 40%, rgba(241,243,247,0.5) 65%, rgba(241,243,247,0.0) 90%)'
+              : 'linear-gradient(to right, rgba(8,12,20,0.95) 0%, rgba(8,12,20,0.80) 40%, rgba(8,12,20,0.4) 65%, rgba(8,12,20,0.0) 90%)',
+          }} />
           <div className="relative flex items-center justify-between">
             <div>
               <p className="mb-1 text-xs font-bold uppercase tracking-[0.2em] text-primary">Tests</p>
-              <h1 className="text-3xl font-extrabold text-white">Test History</h1>
+              <h1 className="text-3xl font-extrabold" style={{ color: isLight ? '#1e293b' : '#fff' }}>Test History</h1>
               <p className="mt-1 text-sm text-muted">All your generated tests and attempt scores.</p>
             </div>
             <button onClick={() => navigate('/test/new')}
