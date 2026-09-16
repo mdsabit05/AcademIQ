@@ -69,7 +69,7 @@ const port = Number(process.env.PORT ?? 2001)
 async function main() {
   await startWorker()
   console.log(`Backend running on http://localhost:${port}`)
-  serve({ fetch: app.fetch, port, hostname: '0.0.0.0' })
+  serve({ fetch: app.fetch, port, hostname: '0.0.0.0', overrideGlobalObjects: false })
 }
 
 // ── Graceful shutdown ───────────────────────────────────────────────────────
