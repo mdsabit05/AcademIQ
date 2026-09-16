@@ -1,29 +1,46 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Home, BookOpen, FileText, BarChart2, Menu, X, Sparkles, CalendarDays, ScrollText, Shield, Settings, Zap } from 'lucide-react'
+import { Home, BookOpen, FileText, BarChart2, Menu, X, Sparkles, CalendarDays, ScrollText, Shield, Settings, Zap, LayoutDashboard, BookMarked, MessageSquare } from 'lucide-react'
 import { useState } from 'react'
 import { useCurrentUser } from '../../lib/useCurrentUser.ts'
 import { isAdmin } from '../../lib/rbac.ts'
+import { useMode } from '../../lib/modeContext.tsx'
 
-const NAV = [
-  { to: '/dashboard', icon: Home,     label: 'Home'     },
-  { to: '/books',     icon: BookOpen, label: 'My Books'  },
-  { to: '/tutor',     icon: Sparkles, label: 'AI Tutor'  },
-  { to: '/tests',     icon: FileText, label: 'Tests'     },
+const STUDENT_NAV = [
+  { to: '/dashboard', icon: Home,          label: 'Home'     },
+  { to: '/books',     icon: BookOpen,      label: 'My Books'  },
+  { to: '/tutor',     icon: MessageSquare, label: 'AI Tutor'  },
+  { to: '/tests',     icon: FileText,      label: 'Tests'     },
 ]
 
-const MENU_ITEMS = [
-  { to: '/progress',   icon: BarChart2,    label: 'Progress'    },
-  { to: '/study-plan', icon: CalendarDays, label: 'Study Plan'  },
-  { to: '/syllabus',   icon: ScrollText,   label: 'Syllabus'    },
-  { to: '/general-ai', icon: Zap,          label: 'General AI'  },
-  { to: '/settings',   icon: Settings,     label: 'Settings'    },
+const STUDENT_MENU = [
+  { to: '/progress',   icon: BarChart2,    label: 'Progress'   },
+  { to: '/study-plan', icon: CalendarDays, label: 'Study Plan' },
+  { to: '/syllabus',   icon: BookMarked,   label: 'Syllabus'   },
+  { to: '/general-ai', icon: Zap,          label: 'General AI' },
+  { to: '/settings',   icon: Settings,     label: 'Settings'   },
+]
+
+const TEACHER_NAV = [
+  { to: '/dashboard',         icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/teacher/materials', icon: BookOpen,        label: 'Materials' },
+  { to: '/question-papers',   icon: ScrollText,      label: 'Papers'    },
+  { to: '/general-ai',        icon: Sparkles,        label: 'AI'        },
+]
+
+const TEACHER_MENU = [
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
 export default function MobileBottomNav() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { user } = useCurrentUser()
+  const { mode } = useMode()
   const navigate = useNavigate()
   const admin = isAdmin(user?.role)
+  const isTeacher = mode === 'teacher'
+
+  const navItems = isTeacher ? TEACHER_NAV : STUDENT_NAV
+  const menuItems = isTeacher ? TEACHER_MENU : STUDENT_MENU
 
   return (
     <>
@@ -42,7 +59,7 @@ export default function MobileBottomNav() {
               </button>
             </div>
             <div className="p-3 grid grid-cols-2 gap-2">
-              {MENU_ITEMS.map(({ to, icon: Icon, label }) => (
+              {menuItems.map(({ to, icon: Icon, label }) => (
                 <button
                   key={to}
                   onClick={() => { navigate(to); setMenuOpen(false) }}
@@ -74,7 +91,7 @@ export default function MobileBottomNav() {
       <nav className="fixed bottom-0 left-0 right-0 z-[199] md:hidden">
         <div className="mx-2 mb-2 rounded-2xl border border-border bg-surface/95 backdrop-blur-md shadow-2xl">
           <div className="flex items-center px-2 py-1">
-            {NAV.map(({ to, icon: Icon, label }) => (
+            {navItems.map(({ to, icon: Icon, label }) => (
               <NavLink
                 key={to}
                 to={to}
