@@ -351,7 +351,7 @@ function MaterialCard({ book, subject, subjectIndex, onDelete, onCreatePaper }: 
           </span>
         )}
 
-        <div className="flex items-center gap-3 text-[11px] text-muted mb-3">
+        <div className="flex items-center gap-3 text-xs text-muted mb-3">
           {book.page_count && <span>{book.page_count} pages</span>}
           {book.page_count && <span>·</span>}
           <span>📅 {formatDate(book.created_at)}</span>
@@ -431,7 +431,7 @@ function MaterialRow({ book, subject, subjectIndex, onDelete, onCreatePaper }: C
           {subject.name}
         </span>
       )}
-      <div className="hidden md:flex items-center gap-3 shrink-0 text-[11px] text-muted">
+      <div className="hidden md:flex items-center gap-3 shrink-0 text-xs text-muted">
         {book.page_count && <span>{book.page_count}p</span>}
         <span>{formatDate(book.created_at)}</span>
       </div>

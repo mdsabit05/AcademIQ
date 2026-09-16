@@ -663,7 +663,7 @@ export default function AskAI() {
             </div>
 
             {/* Right: How It Works */}
-            <div className="w-48 shrink-0 rounded-xl border border-border bg-surface p-4 self-start">
+            <div className="w-48 shrink-0 rounded-xl border border-border/50 bg-surface/50 p-4 self-start">
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted mb-4">How It Works</p>
               <div className="space-y-4">
                 {HOW_IT_WORKS.map(({ step, title, desc, color }) => (

@@ -181,7 +181,7 @@ function UploadModal({ onClose, onUploaded, token, theme }: UploadModalProps) {
             <label
               className="flex flex-col items-center justify-center gap-2 p-6 rounded-lg cursor-pointer transition-colors"
               style={{
-                border: `2px dashed ${file ? 'rgb(var(--color-primary))' : 'rgb(var(--color-border))'}`,
+                border: `2px dashed ${file ? 'rgb(var(--color-primary))' : (isLight ? '#94a3b8' : 'rgb(var(--color-border))')}`,
                 background: isLight ? '#f8fafc' : 'rgba(255,255,255,0.02)',
               }}
             >
@@ -482,7 +482,7 @@ export default function SyllabusPage() {
               className="flex-1 py-2.5 text-sm font-semibold transition-colors border-b-2"
               style={{
                 borderColor: mobileTab === tab ? primaryColor : 'transparent',
-                color: mobileTab === tab ? primaryColor : 'rgb(var(--color-muted))',
+                color: mobileTab === tab ? primaryColor : (isLight ? '#475569' : 'rgb(var(--color-muted))'),
               }}
             >
               {labels[tab]}
@@ -495,7 +495,7 @@ export default function SyllabusPage() {
       <div className="flex flex-1 min-h-0">
         {/* Column 1 — Syllabi list */}
         <div
-          className={`${mobileTab === 'list' ? 'flex' : 'hidden'} md:flex w-full md:w-64 flex-shrink-0 flex-col overflow-y-auto`}
+          className={`${mobileTab === 'list' ? 'flex' : 'hidden'} md:flex w-full md:w-52 lg:w-64 flex-shrink-0 flex-col overflow-y-auto`}
           style={{ borderRight: surfaceBorder, background: isLight ? '#f8fafc' : 'rgba(13,18,32,0.5)' }}
         >
           <div className="px-3 py-3">
@@ -526,7 +526,7 @@ export default function SyllabusPage() {
                   return (
                     <div
                       key={s.id}
-                      className="group relative flex items-start gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
+                      className="group relative flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors"
                       style={{
                         background: isSelected
                           ? (isLight ? 'rgba(8,145,178,0.1)' : 'rgba(34,211,238,0.1)')
@@ -714,7 +714,7 @@ export default function SyllabusPage() {
 
         {/* Column 3 — Progress panel */}
         <div
-          className={`${mobileTab === 'progress' ? 'flex' : 'hidden'} md:flex w-full md:w-64 flex-shrink-0 overflow-y-auto px-4 py-4 flex-col gap-4`}
+          className={`${mobileTab === 'progress' ? 'flex' : 'hidden'} md:flex w-full md:w-52 lg:w-64 flex-shrink-0 overflow-y-auto px-4 py-4 flex-col gap-4`}
           style={{ borderLeft: surfaceBorder, background: isLight ? '#f8fafc' : 'rgba(13,18,32,0.5)' }}
         >
           {selectedId && !loadingTopics && topics.length > 0 ? (

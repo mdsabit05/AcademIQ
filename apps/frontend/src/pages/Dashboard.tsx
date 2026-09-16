@@ -220,7 +220,7 @@ export default function Dashboard() {
             <p className="text-sm text-muted mb-1.5">
               {greeting()}{firstName ? `, ${firstName} 👋` : ''}
             </p>
-            <h1 className="text-3xl lg:text-4xl xl:text-5xl font-black leading-tight text-white mb-2 lg:mb-3 tracking-tight">
+            <h1 className="text-3xl lg:text-4xl xl:text-5xl font-black leading-tight mb-2 lg:mb-3 tracking-tight" style={{ color: isLight ? '#1e293b' : '#fff' }}>
               Learn Today.<br />
               Build{' '}
               <span className="text-primary" style={{ textShadow: '0 0 40px rgba(34,211,238,0.4)' }}>

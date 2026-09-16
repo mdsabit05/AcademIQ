@@ -343,3 +343,9 @@ html.light .books-hero-bottom {
   border-bottom: 1px solid rgba(30, 42, 68, 0.6);
   color: rgba(255, 255, 255, 0.85);
 }
+
+/* ── Utility keyframes ───────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

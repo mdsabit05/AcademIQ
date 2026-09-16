@@ -127,7 +127,7 @@ function TestRow({ test, attempts, navigate }: {
               {bestPct !== null && (
                 <div className="text-center">
                   <p className={`text-sm font-bold ${scoreColor(bestPct)}`}>{bestPct}%</p>
-                  <p className="text-[10px] text-muted">Best</p>
+                  <p className="text-xs text-muted">Best</p>
                 </div>
               )}
             </>
@@ -157,7 +157,7 @@ function TestRow({ test, attempts, navigate }: {
 
       {expanded && attempts.length > 0 && (
         <div className="border-t border-border bg-bg/50 px-4 py-2">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted">All Attempts ({attempts.length})</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">All Attempts ({attempts.length})</p>
           <div className="space-y-1">
             {[...attempts]
               .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
@@ -170,16 +170,16 @@ function TestRow({ test, attempts, navigate }: {
                     <div className="flex-1">
                       <div className="mb-1 flex items-center justify-between">
                         <span className={`text-xs font-bold ${scoreColor(p)}`}>{p}%</span>
-                        <span className="text-[11px] text-muted">{a.score}/{a.total_marks} marks</span>
+                        <span className="text-xs text-muted">{a.score}/{a.total_marks} marks</span>
                       </div>
                       <div className="h-1.5 w-full rounded-full bg-border">
                         <div className={`h-1.5 rounded-full ${p >= 80 ? 'bg-emerald-400' : p >= 60 ? 'bg-primary' : p >= 40 ? 'bg-yellow-400' : 'bg-red-400'}`}
                           style={{ width: `${p}%` }} />
                       </div>
                     </div>
-                    <span className="hidden sm:block w-24 text-right text-[11px] text-muted">{fmtDate(a.submitted_at)}</span>
-                    {isBest && <span className="rounded-full bg-yellow-400/10 px-2 py-0.5 text-[10px] font-bold text-yellow-400">Best</span>}
-                    <button onClick={() => navigate(`/test/${test.id}/results/${a.id}`)} className="text-[11px] text-primary hover:underline">View</button>
+                    <span className="hidden sm:block w-24 text-right text-xs text-muted">{fmtDate(a.submitted_at)}</span>
+                    {isBest && <span className="rounded-full bg-yellow-400/10 px-2 py-0.5 text-xs font-bold text-yellow-400">Best</span>}
+                    <button onClick={() => navigate(`/test/${test.id}/results/${a.id}`)} className="text-xs text-primary hover:underline">View</button>
                   </div>
                 )
               })}
@@ -204,7 +204,7 @@ function MobileStatCard({ icon: Icon, label, value, iconColor = '#22D3EE' }: {
       </div>
       <div className="min-w-0">
         <p className="text-base font-black text-white leading-none">{value}</p>
-        <p className="text-[10px] text-muted mt-0.5 truncate">{label}</p>
+        <p className="text-xs text-muted mt-0.5 truncate">{label}</p>
       </div>
     </div>
   )
@@ -483,7 +483,8 @@ export default function Tests() {
       <div className="md:hidden flex flex-col min-h-full">
 
         {/* Hero */}
-        <div className="relative overflow-hidden" style={{ minHeight: 140 }}>
+        <div className="relative overflow-hidden" style={{ minHeight: 140, background: 'linear-gradient(135deg, rgba(34,211,238,0.08) 0%, transparent 70%)' }}>
+          <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: `url(${heroBg})`, backgroundSize: 'cover', backgroundPosition: 'center right', opacity: 0.06 }} />
           <div className="relative px-4 py-6 max-w-xl">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1">Tests</p>
             <h1 className="text-xl font-black text-white leading-tight">

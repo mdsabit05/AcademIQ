@@ -151,7 +151,7 @@ function StatCard({
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-base font-black leading-tight" style={{ color: isLight ? '#0f172a' : '#fff' }}>{value}</p>
-        <p className="text-[10px] mt-0.5 truncate" style={{ color: isLight ? '#64748b' : 'rgb(var(--color-muted))' }}>{label}</p>
+        <p className="text-xs mt-0.5 truncate" style={{ color: isLight ? '#64748b' : 'rgb(var(--color-muted))' }}>{label}</p>
       </div>
       <div className="text-right shrink-0 hidden sm:block">
         <p className="flex items-center justify-end gap-0.5 text-xs font-bold" style={{ color: isLight ? '#16a34a' : '#34d399' }}>
@@ -219,7 +219,7 @@ function BarChart({ data, theme }: { data: { label: string; mins: number }[]; th
   return (
     <div className="relative pt-2">
       {/* Y-axis labels + grid lines */}
-      <div className="relative h-28">
+      <div className="relative h-40">
         {gridLines.map((m) => {
           const pct = (m / (max + 60)) * 100
           return (
@@ -284,7 +284,7 @@ function AchievementBadge({ icon: Icon, iconBg, title, status, locked, theme }: 
         }
       </div>
       <div className="text-center w-full">
-        <p className="text-[11px] font-semibold text-white leading-tight break-words">{title}</p>
+        <p className="text-[11px] font-semibold leading-tight break-words" style={{ color: theme === 'light' ? '#1e293b' : '#fff' }}>{title}</p>
         <p className={`text-[10px] mt-0.5 ${locked ? 'text-muted' : 'text-emerald-400'}`}>{status}</p>
       </div>
     </div>
@@ -509,7 +509,7 @@ export default function Progress() {
                         {letter}
                       </div>
                       {/* Name */}
-                      <p className="w-24 lg:w-36 shrink-0 truncate text-sm" style={{ color: textColor }}>{m.context_key}</p>
+                      <p className="w-24 sm:w-28 lg:w-36 shrink-0 truncate text-sm" style={{ color: textColor }}>{m.context_key}</p>
                       {/* Bar */}
                       <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: trackBg }}>
                         <div
@@ -539,7 +539,7 @@ export default function Progress() {
                   { label: 'Fri', mins: 80 }, { label: 'Sat', mins: 150 },
                   { label: 'Sun', mins: 60 },
                 ]} theme={theme} />
-                <p className="mt-2 text-center text-[11px] text-muted/50 italic">
+                <p className="mt-2 text-center text-xs text-muted/60 italic">
                   Sample data — start studying to see real activity
                 </p>
               </div>

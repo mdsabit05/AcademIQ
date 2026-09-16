@@ -22,7 +22,6 @@ import {
   Lightbulb,
   ArrowRight,
   FolderOpen,
-  Brain,
   Eye,
   Tag,
 } from 'lucide-react'
@@ -380,7 +379,7 @@ function DocumentCard({ book, subject, subjectIndex, onDelete, onAskAI, onCreate
         )}
 
         {/* Meta: pages + date */}
-        <div className="flex items-center gap-3 text-[11px] text-muted mb-3">
+        <div className="flex items-center gap-3 text-xs text-muted mb-3">
           {book.page_count && <span>{book.page_count} pages</span>}
           {book.page_count && <span>·</span>}
           <span className="flex items-center gap-1">
@@ -396,7 +395,7 @@ function DocumentCard({ book, subject, subjectIndex, onDelete, onAskAI, onCreate
         {isProcessing && (
           <div className="mt-2">
             <div className="h-1 w-full rounded-full bg-border overflow-hidden">
-              <div className="h-full rounded-full bg-amber-400/70 animate-pulse" style={{ width: '65%' }} />
+              <div className="h-full rounded-full bg-amber-400/70 animate-pulse" />
             </div>
             <p className="mt-1 text-[10px] text-muted">{PROCESSING_LABEL[book.status] ?? 'Processing…'}</p>
           </div>
@@ -427,7 +426,7 @@ function DocumentCard({ book, subject, subjectIndex, onDelete, onAskAI, onCreate
             </button>
             <button
               onClick={() => onView(book)}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-bold text-muted hover:text-white hover:bg-white/5 transition-colors border border-border"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-bold text-muted/50 hover:text-muted transition-colors"
             >
               <Eye size={11} /> View
             </button>
@@ -514,7 +513,7 @@ function DocumentRow({ book, subject, subjectIndex, onDelete, onAskAI, onCreateT
             {isProcessing && (
               <div className="mt-1.5">
                 <div className="h-1 w-full rounded-full bg-border overflow-hidden">
-                  <div className="h-full rounded-full bg-amber-400/70 animate-pulse" style={{ width: '65%' }} />
+                  <div className="h-full rounded-full bg-amber-400/70 animate-pulse" />
                 </div>
                 <p className="mt-0.5 text-[10px] text-muted">{PROCESSING_LABEL[book.status] ?? 'Processing…'}</p>
               </div>
@@ -545,7 +544,7 @@ function DocumentRow({ book, subject, subjectIndex, onDelete, onAskAI, onCreateT
             </button>
             <button
               onClick={() => onView(book)}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold text-muted hover:text-white hover:bg-white/5 transition-colors border border-border"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold text-muted/50 hover:text-muted transition-colors"
             >
               <Eye size={11} /> View
             </button>
@@ -911,19 +910,7 @@ export default function Books() {
                 <p className="text-xs text-muted mt-1">
                   Drag & drop files here or <span className="text-primary">click to browse</span>
                 </p>
-                <p className="text-[10px] text-muted/60 mt-1">PDF, DOC, DOCX up to 200MB</p>
-              </div>
-              <div className="border-t border-border/40 px-4 py-3 space-y-1.5">
-                {[
-                  { icon: <Tag size={11} />, text: 'Auto-organize by subject' },
-                  { icon: <Brain size={11} />, text: 'Extract key concepts' },
-                  { icon: <Search size={11} />, text: 'Make it searchable' },
-                  { icon: <Sparkles size={11} />, text: 'Use in AI Tutor & Tests' },
-                ].map(({ icon, text }) => (
-                  <div key={text} className="flex items-center gap-2 text-[11px] text-muted">
-                    <span className="text-muted/60">{icon}</span> {text}
-                  </div>
-                ))}
+                <p className="text-xs text-muted mt-1">PDF, DOC, DOCX up to 200MB</p>
               </div>
             </div>
           </div>

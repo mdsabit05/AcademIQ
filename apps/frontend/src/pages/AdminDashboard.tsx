@@ -161,7 +161,7 @@ export default function AdminDashboard() {
               <p className="text-[11px] text-muted mt-0.5">Key metrics from across the platform.</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {statCards.map((s) => (
               <div key={s.label} className="rounded-xl border border-border bg-bg p-3 space-y-2">
                 <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center`}>

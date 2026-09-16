@@ -100,7 +100,7 @@ const STEP_LABELS: { label: string; sub: string }[] = [
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-[11px] font-medium text-muted mb-1 uppercase tracking-wider">
+      <label className="block text-xs font-medium text-muted mb-1 uppercase tracking-wider">
         {label}{required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
       {children}
@@ -365,7 +365,7 @@ ${currentQuestions.map((q, i) => `
             <p className="text-xs text-muted mt-1">Create your first question paper using the wizard.</p>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 items-start">
             {papers.map((paper) => (
               <div key={paper.id} className="flex flex-col rounded-xl border border-border bg-surface p-4">
                 <div className="flex items-start justify-between mb-2">
@@ -440,7 +440,7 @@ ${currentQuestions.map((q, i) => `
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {/* Mobile step indicator */}
-          <div className="flex md:hidden items-center gap-1 text-[11px] text-muted">
+          <div className="flex md:hidden items-center gap-1 text-xs text-muted">
             <span className="text-primary font-bold">{step}</span>
             <span>/4</span>
             <span className="text-white font-medium">{STEP_LABELS[step - 1]?.label}</span>
@@ -468,7 +468,7 @@ ${currentQuestions.map((q, i) => `
 
       {/* Mobile AI Chat overlay */}
       {showMobileChat && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-bg md:hidden">
+        <div className="fixed inset-0 z-50 flex flex-col bg-bg md:hidden animate-[fadeIn_0.15s_ease-in]">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
               <Sparkles size={14} className="text-primary" />
@@ -659,7 +659,7 @@ ${currentQuestions.map((q, i) => `
                   { label: 'Topic', value: form.topic || 'All topics' },
                 ].map((item) => (
                   <div key={item.label}>
-                    <p className="text-[10px] text-muted uppercase tracking-wider mb-0.5">{item.label}</p>
+                    <p className="text-xs text-muted uppercase tracking-wider mb-0.5">{item.label}</p>
                     <p className="text-xs font-semibold text-white truncate">{item.value}</p>
                   </div>
                 ))}
@@ -673,7 +673,7 @@ ${currentQuestions.map((q, i) => `
                     <span className={`text-xs font-bold ${sections.reduce((a, s) => a + s.count * s.marksEach, 0) === form.totalMarks ? 'text-emerald-400' : 'text-amber-400'}`}>
                       {sections.reduce((a, s) => a + s.count * s.marksEach, 0)} / {form.totalMarks} marks
                     </span>
-                    <button onClick={() => setSections(defaultSections(form.totalMarks))} className="text-[11px] text-muted hover:text-white transition-colors">Reset</button>
+                    <button onClick={() => setSections(defaultSections(form.totalMarks))} className="text-xs text-muted hover:text-white transition-colors">Reset</button>
                   </div>
                 </div>
                 {sections.map((sec, i) => (
@@ -789,9 +789,9 @@ ${currentQuestions.map((q, i) => `
                       <div key={g.section}>
                         {/* Section header */}
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[11px] font-bold text-primary uppercase tracking-widest">{g.section}</span>
+                          <span className="text-xs font-bold text-primary uppercase tracking-widest">{g.section}</span>
                           <div className="flex-1 h-px bg-primary/20" />
-                          <span className="text-[10px] text-muted">{g.questions.length} Q · {g.questions.reduce((a, q) => a + q.marks, 0)} marks</span>
+                          <span className="text-xs text-muted">{g.questions.length} Q · {g.questions.reduce((a, q) => a + q.marks, 0)} marks</span>
                         </div>
                         <div className="space-y-2">
                           {g.questions.map((q) => {
@@ -806,7 +806,7 @@ ${currentQuestions.map((q, i) => `
                               <div key={q.id} className="rounded-xl border border-border bg-surface/60 px-4 py-3">
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="flex gap-2.5 flex-1 min-w-0">
-                                    <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-[11px] font-bold text-primary mt-0.5">{idx}</span>
+                                    <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary mt-0.5">{idx}</span>
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-medium text-white leading-snug">{q.question_text}</p>
                                       {hasOpts && (
@@ -940,7 +940,7 @@ ${currentQuestions.map((q, i) => `
               <Send size={12} />
             </button>
           </div>
-          <p className="text-[10px] text-muted text-center mt-1.5">AI can make mistakes. Please review the generated questions.</p>
+          <p className="text-xs text-muted text-center mt-1.5">AI can make mistakes. Please review the generated questions.</p>
         </div>
       </div>
     </div>

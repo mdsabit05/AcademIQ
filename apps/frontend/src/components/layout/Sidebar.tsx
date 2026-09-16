@@ -30,11 +30,11 @@ interface NavItem {
 }
 
 function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean }) {
-  if (collapsed) return <div className="mx-auto w-4 h-px bg-border my-2" />
+  if (collapsed) return <div className="mx-auto w-6 h-px bg-border my-2" />
   return (
     <div className="pb-1">
       {label && (
-        <p className="px-3 text-[13px] font-bold uppercase tracking-[0.2em] text-muted select-none mb-1">
+        <p className="px-3 text-[11px] font-bold uppercase tracking-[0.2em] text-muted select-none mb-1">
           {label}
         </p>
       )}
@@ -134,7 +134,7 @@ export default function Sidebar() {
       {/* ── Fixed bottom: Admin → Settings ── */}
       <div className="shrink-0 px-2">
         {/* ADMIN section — invisible for non-admin (space preserved) */}
-        <div className={clsx(!isAdmin(role) && 'invisible')}>
+        <div className={clsx(!isAdmin(role) && 'hidden')}>
           <SectionLabel label="Admin" collapsed={collapsed} />
           <NavItem to="/admin/users" icon={Shield} label="User Management" collapsed={collapsed} />
         </div>

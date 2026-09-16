@@ -115,7 +115,7 @@ export default function TeacherDashboard() {
       </div>
 
       {/* ── Quick actions ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
         <button
           onClick={() => navigate('/question-papers')}
           className="flex items-center gap-3 rounded-xl border border-border bg-surface p-4 hover:border-primary/40 hover:bg-primary/5 transition-all group text-left"

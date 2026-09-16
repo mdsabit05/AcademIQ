@@ -144,7 +144,7 @@ function AddExamModal({ onClose, onAdded, subjects, theme }: {
           {/* Type chips */}
           <div>
             <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgb(var(--color-muted))' }}>Type</label>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="grid grid-cols-3 gap-1.5">
               {TYPES.map(t => (
                 <button
                   key={t}
@@ -276,7 +276,7 @@ function AddGoalModal({ onClose, onAdded, subjects, theme }: {
           <div>
             <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgb(var(--color-muted))' }}>Starting Progress: <span style={{ color: 'rgb(var(--color-primary))' }}>{progress}%</span></label>
             <input type="range" min={0} max={100} value={progress} onChange={e => setProgress(Number(e.target.value))}
-              className="w-full accent-cyan-400" />
+              className="w-full cursor-pointer accent-cyan-400" />
           </div>
           {error && <p className="text-xs" style={{ color: '#f87171' }}>{error}</p>}
           <div className="flex gap-2 pt-1">
