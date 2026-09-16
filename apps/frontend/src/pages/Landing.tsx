@@ -457,26 +457,37 @@ export default function Landing() {
           .lp-hero-pills > div span { font-size: 12px !important; white-space: normal !important; }
         }
         @media (max-width: 540px) {
-          .lp-feature-grid { grid-template-columns: 1fr !important; }
-          .lp-why-grid { grid-template-columns: 1fr !important; }
-          .lp-footer-grid { grid-template-columns: 1fr 1fr !important; gap: 24px !important; }
+          .lp-feature-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+          .lp-feature-card { padding: 14px !important; gap: 10px !important; }
+          .lp-why-grid { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+          .lp-why-card-inner { padding: 18px 12px 20px !important; }
+          .lp-why-icon { width: 56px !important; height: 56px !important; margin-bottom: 12px !important; }
+          .lp-footer-grid { grid-template-columns: 1fr 1fr !important; gap: 20px !important; }
           .lp-footer-brand { grid-column: 1 / -1 !important; }
           .lp-footer-brand img { width: 130px !important; }
           .lp-stats-grid { grid-template-columns: repeat(2,1fr) !important; }
           .lp-stats-cell { padding: 14px 16px !important; gap: 10px !important; }
           .lp-stats-icon { display: none !important; }
           .lp-stats-val { font-size: 20px !important; }
-          .lp-hero-pills > div { flex: 1 1 100% !important; }
+          .lp-hero-pills { flex-direction: column !important; gap: 8px !important; }
+          .lp-hero-pills > div { flex: none !important; width: 100% !important; }
           .lp-btn-primary, .lp-btn-outline { width: 100% !important; justify-content: center !important; }
           .lp-hero-btns { flex-direction: column !important; width: 100% !important; }
-          .lp-logo { width: 140px !important; }
+          .lp-logo { width: 130px !important; }
           .lp-nav-gap { display: none !important; }
           .lp-login-btn { display: none !important; }
-          .lp-nav-actions { gap: 12px !important; }
+          .lp-nav-actions { gap: 10px !important; }
           .lp-cta-nowrap { white-space: normal !important; font-size: 20px !important; }
-          .lp-cta-sub-nowrap { white-space: normal !important; }
+          .lp-cta-sub-nowrap { white-space: normal !important; font-size: 12px !important; }
           .lp-dash-preview { display: none !important; }
           .lp-dash-text { display: block !important; max-width: 100% !important; }
+          .lp-hero-section { min-height: auto !important; padding: 40px 0 32px !important; }
+          .lp-hero-grid { padding: 20px 5% !important; }
+          .lp-section-pad { padding: 20px 0 !important; }
+          .lp-hero-badge { font-size: 11px !important; }
+          .lp-hero-h1 { font-size: 36px !important; margin-bottom: 14px !important; }
+          .lp-hero-p { font-size: 13px !important; margin-bottom: 20px !important; }
+          .lp-stats-label { font-size: 10px !important; }
         }
       `}</style>
 
@@ -607,7 +618,7 @@ export default function Landing() {
         {/* ════════════════════════════════════════════════════
             HERO — full viewport, cinematic, books right
         ════════════════════════════════════════════════════ */}
-        <section style={{
+        <section className="lp-hero-section" style={{
           position: 'relative',
           minHeight: 'calc(100vh - 75px)',
           display: 'flex',
@@ -667,7 +678,7 @@ export default function Landing() {
                 <span style={{ fontSize: 12, fontWeight: 600, color: ACCENT }}>Your AI-Powered Study Companion</span>
               </div>
 
-              <h1 style={{
+              <h1 className="lp-hero-h1" style={{
                 fontSize: 'clamp(42px, 4.5vw, 64px)',
                 fontWeight: 800,
                 lineHeight: 1.05,
@@ -844,7 +855,7 @@ export default function Landing() {
                     <Icon size={44} className="lp-stats-icon" style={{ color: CYAN, flexShrink: 0 }} />
                     <div>
                       <div className="lp-stats-val" style={{ fontSize: 24, fontWeight: 800, color: T.text, lineHeight: 1, transition: 'color 0.35s' }}>{value}</div>
-                      <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4, transition: 'color 0.35s' }}>{label}</div>
+                      <div className="lp-stats-label" style={{ fontSize: 12, color: T.textMuted, marginTop: 4, transition: 'color 0.35s' }}>{label}</div>
                     </div>
                   </div>
                 ))}
@@ -952,8 +963,8 @@ export default function Landing() {
 
               <div className="lp-why-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 24 }}>
                 {WHY_CARDS.map(({ icon: Icon, label, sub, color }) => (
-                  <div key={label} style={{ textAlign: 'center', padding: '12px 24px 28px' }}>
-                    <div style={{
+                  <div key={label} className="lp-why-card-inner" style={{ textAlign: 'center', padding: '12px 24px 28px' }}>
+                    <div className="lp-why-icon" style={{
                       width: 82, height: 82, borderRadius: '50%',
                       background: `${color}22`,
                       border: `1.5px solid ${color}50`,
