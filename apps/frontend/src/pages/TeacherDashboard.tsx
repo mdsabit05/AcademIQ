@@ -86,27 +86,36 @@ export default function TeacherDashboard() {
   const firstName = user?.name?.split(' ')[0] ?? 'Teacher'
 
   return (
-    <div className="min-h-full p-6 space-y-6">
+    <div className="min-h-full p-4 md:p-6 space-y-4 md:space-y-6 pb-24 md:pb-6">
 
       {/* ── Hero greeting ── */}
-      <div className="rounded-2xl overflow-hidden relative">
+      <div className="rounded-2xl overflow-hidden relative min-h-[120px] md:min-h-[140px]">
         {/* Hero background image */}
         <div className="absolute inset-0 pointer-events-none" style={{
           backgroundImage: `url(${isLight ? teacherBgLightUrl : teacherBgUrl})`,
           backgroundSize: 'cover',
-          backgroundPosition: 'center right',
+          backgroundPosition: 'center center',
           backgroundRepeat: 'no-repeat',
-          opacity: 0.9,
         }} />
-        <div className="relative z-10 p-6">
-          <p className="text-sm text-primary font-medium mb-1">{greeting()},</p>
-          <h1 className="text-2xl font-bold text-white mb-1">{firstName} 👋</h1>
-          <p className="text-sm text-muted">You're in Teacher mode. Create papers, manage materials, and organise your subjects.</p>
+        {/* Overlay for text readability */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: isLight
+            ? 'linear-gradient(to right, rgba(255,255,255,0.85) 60%, rgba(255,255,255,0.3))'
+            : 'linear-gradient(to right, rgba(10,15,28,0.88) 55%, rgba(10,15,28,0.2))',
+        }} />
+        <div className="relative z-10 p-4 md:p-6">
+          <p className="text-xs md:text-sm font-semibold text-primary mb-0.5">{greeting()},</p>
+          <h1 className="text-xl md:text-2xl font-bold mb-1" style={{ color: isLight ? '#1e293b' : '#fff' }}>
+            {firstName} 👋
+          </h1>
+          <p className="text-xs md:text-sm max-w-xs md:max-w-md" style={{ color: isLight ? '#475569' : '#94a3b8' }}>
+            You're in Teacher mode. Create papers, manage materials, and organise your subjects.
+          </p>
         </div>
       </div>
 
       {/* ── Quick actions ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
         <button
           onClick={() => navigate('/question-papers')}
           className="flex items-center gap-3 rounded-xl border border-border bg-surface p-4 hover:border-primary/40 hover:bg-primary/5 transition-all group text-left"
