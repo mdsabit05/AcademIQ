@@ -70,7 +70,11 @@ const tool: AgentTool<Params> = {
       // Default: all READY books owned by this user in the right context
       const rows = await sql<Array<{ id: string }>>`
         SELECT id FROM books
-        WHERE owner_id = ${ctx.dbUserId} AND status = 'READY' AND context = ${bookContext}
+        WHERE owner_id = ${ctx.dbUserId} AND status = 'READY'
+          AND (
+            context = ${bookContext}
+            OR (${bookContext} = 'student' AND context IS NULL)
+          )
         LIMIT 20
       `
       bookIds = rows.map((r) => r.id)

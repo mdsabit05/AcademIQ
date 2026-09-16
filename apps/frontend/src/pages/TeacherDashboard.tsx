@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
 import { useCurrentUser } from '../lib/useCurrentUser.ts'
-import type { Book } from 'shared'
+import type { Book, QuestionPaper } from 'shared'
 
 function greeting() {
   const h = new Date().getHours()
@@ -48,6 +48,7 @@ export default function TeacherDashboard() {
   const navigate = useNavigate()
 
   const [books, setBooks] = useState<Book[]>([])
+  const [papers, setPapers] = useState<QuestionPaper[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -57,14 +58,18 @@ export default function TeacherDashboard() {
         const token = await getToken()
         if (!token || cancelled) return
         const api = makeApi(token)
-        const [bookRes] = await Promise.allSettled([
+        const [bookRes, paperRes] = await Promise.allSettled([
           api.books.list(undefined, 'teacher'),
+          api.papers.list(),
         ])
 
         if (cancelled) return
 
         if (bookRes.status === 'fulfilled') {
           setBooks(bookRes.value.books.slice(0, 4))
+        }
+        if (paperRes.status === 'fulfilled') {
+          setPapers(paperRes.value.papers.slice(0, 4))
         }
       } catch {
         // silently fail — dashboard shows empty states
@@ -229,17 +234,47 @@ export default function TeacherDashboard() {
           </button>
         </div>
 
-        <div className="py-8 text-center">
-          <ScrollText size={32} className="mx-auto text-muted/30 mb-3" />
-          <p className="text-sm text-muted mb-3">Create AI-generated question papers from your materials</p>
-          <button
-            onClick={() => navigate('/question-papers')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-bg text-sm font-semibold hover:bg-primary/90 transition-colors"
-          >
-            <PlusCircle size={15} />
-            Create Question Paper
-          </button>
-        </div>
+        {loading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-10 rounded-lg bg-white/5 animate-pulse" />
+            ))}
+          </div>
+        ) : papers.length === 0 ? (
+          <div className="py-6 text-center">
+            <ScrollText size={28} className="mx-auto text-muted/40 mb-2" />
+            <p className="text-sm text-muted mb-3">Create AI-generated question papers from your materials</p>
+            <button
+              onClick={() => navigate('/question-papers')}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-bg text-sm font-semibold hover:bg-primary/90 transition-colors"
+            >
+              <PlusCircle size={15} />
+              Create Question Paper
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {papers.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => navigate('/question-papers')}
+                className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-white/5 transition-colors group text-left"
+              >
+                <div className="w-8 h-8 rounded-md bg-amber-500/10 flex items-center justify-center shrink-0">
+                  <ScrollText size={14} className="text-amber-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white font-medium truncate">{p.title}</p>
+                  <p className="text-xs text-muted truncate capitalize">{p.status}</p>
+                </div>
+                <div className="flex items-center gap-1 text-muted/50 shrink-0">
+                  <Clock size={11} />
+                  <span className="text-[10px]">{timeAgo(p.created_at)}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
     </div>

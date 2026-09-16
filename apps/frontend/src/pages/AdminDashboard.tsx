@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import {
   Users, BookOpen, FileText, Zap, Clock,
-  Search, Filter, Plus, ChevronDown,
+  Search, Filter, ChevronDown,
   MoreHorizontal,
 } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
@@ -184,9 +184,6 @@ export default function AdminDashboard() {
                 <h2 className="text-sm font-bold text-white">User Management</h2>
                 <p className="text-[11px] text-muted mt-0.5">Manage students, teachers and admins.</p>
               </div>
-              <button className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-bg hover:bg-primary/90 transition-colors shadow-[0_0_12px_rgba(34,211,238,0.2)]">
-                <Plus size={12} /> Add User
-              </button>
             </div>
 
             {/* Filters */}

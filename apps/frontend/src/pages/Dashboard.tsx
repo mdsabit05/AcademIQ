@@ -10,7 +10,6 @@ import {
   BookOpen,
   CheckCircle,
   ChevronRight,
-  Brain,
   Sparkles,
   MessageSquare,
   Calendar,
@@ -93,13 +92,6 @@ const ACTION_CARDS = [
     to: '/study-plan',
     color: '#F59E0B',
   },
-]
-
-const QUICK_ACTIONS = [
-  { icon: Sparkles, label: 'Ask AI', sub: 'Get instant help', to: '/tutor', color: '#22D3EE' },
-  { icon: FileText, label: 'Generate Test', sub: 'Create custom tests', to: '/test/new', color: '#EF4444' },
-  { icon: BookOpen, label: 'View Syllabus', sub: 'Explore your syllabus', to: '/syllabus', color: '#22C55E' },
-  { icon: Brain, label: 'My Memory', sub: 'Review what you know', to: '/memory', color: '#A855F7' },
 ]
 
 // ── ProgressBar ───────────────────────────────────────────────────────────────
@@ -402,10 +394,9 @@ export default function Dashboard() {
                   {latestBook.author && (
                     <p className="text-xs text-muted mb-3">{latestBook.author}</p>
                   )}
-                  <div className="h-1.5 bg-bg rounded-full overflow-hidden mb-1">
-                    <div className="h-full w-[30%] rounded-full bg-primary" />
-                  </div>
-                  <p className="text-xs text-muted">Ready to study</p>
+                  <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold mt-1" style={{ background: 'rgba(34,197,94,0.12)', color: '#22C55E', border: '1px solid rgba(34,197,94,0.3)' }}>
+                    <CheckCircle size={9} /> READY
+                  </span>
                 </div>
               </div>
 
@@ -562,9 +553,12 @@ export default function Dashboard() {
                     : null
 
                 // Syllabus completion: use topic_count if available
-                const completionPct = (s as Syllabus & { completed_count?: number; topic_count?: number }).completed_count != null && (s as Syllabus & { completed_count?: number; topic_count?: number }).topic_count
-                  ? Math.round(((s as Syllabus & { completed_count?: number; topic_count?: number }).completed_count! / (s as Syllabus & { completed_count?: number; topic_count?: number }).topic_count!) * 100)
-                  : masteryPct ?? attemptPct ?? 0
+                const sTyped = s as Syllabus & { completed_count?: number; topic_count?: number }
+                const topicBased = sTyped.completed_count != null && sTyped.topic_count
+                  ? Math.round((sTyped.completed_count! / sTyped.topic_count!) * 100)
+                  : null
+                const completionPct = topicBased ?? masteryPct ?? attemptPct ?? 0
+                const hasData = topicBased !== null || masteryPct !== null || attemptPct !== null
 
                 return (
                   <button
@@ -581,11 +575,14 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm text-white truncate block">{s.title}</span>
-                        <span className="text-xs font-semibold ml-2 shrink-0" style={{ color }}>
-                          {completionPct}%
+                        <span className="text-xs font-semibold ml-2 shrink-0" style={{ color: hasData ? color : 'var(--color-muted)' }}>
+                          {hasData ? `${completionPct}%` : '—'}
                         </span>
                       </div>
-                      <ProgressBar pct={completionPct} color={color} />
+                      {hasData
+                        ? <ProgressBar pct={completionPct} color={color} />
+                        : <div className="flex-1 h-1.5 rounded-full border border-dashed border-border/60" />
+                      }
                     </div>
                     <ChevronRight size={13} className="text-muted/40 group-hover:text-muted transition-colors shrink-0" />
                   </button>
@@ -650,35 +647,6 @@ export default function Dashboard() {
               })}
             </div>
           )}
-        </div>
-      </div>
-
-      {/* ── Quick Actions ──────────────────────────────────────────────────────── */}
-      <div className="mx-3 lg:mx-6 rounded-xl border border-border bg-surface p-4 lg:p-5">
-        <h2 className="font-semibold text-white mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {QUICK_ACTIONS.map(({ icon: Icon, label, sub, to, color }) => (
-            <button
-              key={label}
-              onClick={() => navigate(to)}
-              className="group flex items-center gap-3 rounded-xl border border-border bg-bg p-3 text-left transition-all hover:bg-white/5"
-            >
-              <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                style={{ backgroundColor: `${color}20` }}
-              >
-                <Icon size={17} style={{ color }} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-white">{label}</p>
-                <p className="text-xs text-muted truncate">{sub}</p>
-              </div>
-              <ArrowRight
-                size={13}
-                className="text-muted ml-auto shrink-0 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
-              />
-            </button>
-          ))}
         </div>
       </div>
 

@@ -686,13 +686,21 @@ export default function AskAI() {
         {/* ── Input ───────────────────────────────────────────────────────────── */}
         <div className="shrink-0 border-t border-border px-4 lg:px-5 py-3">
           <div className="max-w-2xl mx-auto">
-            <div className="flex items-center gap-2 lg:gap-3 rounded-xl border border-border bg-surface px-3 lg:px-4 py-2.5 lg:py-3 focus-within:border-primary/50 transition-colors">
+            {selectedBookIds.length === 0 && (
+              <p className="text-[11px] text-muted/60 text-center mb-1.5">
+                ↑ Select a book above to unlock the chat
+              </p>
+            )}
+            <div className={clsx(
+              'flex items-center gap-2 lg:gap-3 rounded-xl border bg-surface px-3 lg:px-4 py-2.5 lg:py-3 transition-colors',
+              selectedBookIds.length === 0 ? 'border-border opacity-50 cursor-not-allowed' : 'border-border focus-within:border-primary/50',
+            )}>
               <Mic size={15} className="text-muted shrink-0" />
               <input type="text" value={input} onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
                 placeholder={selectedBookIds.length === 0 ? 'Select documents to start…' : 'Ask anything about your materials…'}
                 disabled={streaming || selectedBookIds.length === 0}
-                className="flex-1 bg-transparent text-sm text-white placeholder:text-muted/50 focus:outline-none min-w-0" />
+                className="flex-1 bg-transparent text-sm text-white placeholder:text-muted/50 focus:outline-none min-w-0 disabled:cursor-not-allowed" />
               <button onClick={() => handleSend()} disabled={streaming || !input.trim() || selectedBookIds.length === 0}
                 className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-40 shrink-0"
                 style={{ background: '#22D3EE' }}>

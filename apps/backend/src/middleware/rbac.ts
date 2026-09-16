@@ -116,7 +116,10 @@ export async function verifyBookAccess(
         WHERE id = ANY(${bookIds}::uuid[])
           AND owner_id = ${dbUserId}
           AND status = 'READY'
-          AND context = ${context}
+          AND (
+            context = ${context}
+            OR (${context} = 'student' AND context IS NULL)
+          )
       `
     : await sql<Array<{ id: string }>>`
         SELECT id FROM books

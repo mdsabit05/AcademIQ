@@ -193,7 +193,7 @@ export default function GeneralAI() {
       </div>
 
       {/* Input */}
-      <div className="border-t border-border p-4 pb-4 md:pb-4 mb-16 md:mb-0">
+      <div className="border-t border-border p-4 pb-4 md:pb-4 md:mb-0">
         <div className="flex gap-3">
           <input
             type="text"
