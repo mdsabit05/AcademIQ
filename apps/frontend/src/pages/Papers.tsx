@@ -127,6 +127,7 @@ export default function Papers() {
   const [currentQuestions, setCurrentQuestions] = useState<PaperQuestion[]>([])
   const [showMyPapers, setShowMyPapers] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [showMobileChat, setShowMobileChat] = useState(false)
 
   // Form state
   const [form, setForm] = useState<FormData>({
@@ -413,7 +414,7 @@ ${currentQuestions.map((q, i) => `
         <div className="flex items-center gap-3">
           <div>
             <h1 className="text-base font-bold text-white">Question Papers</h1>
-            <p className="text-[11px] text-muted">Create, customise and generate question papers for your subjects.</p>
+            <p className="text-[11px] text-muted hidden sm:block">Create, customise and generate question papers for your subjects.</p>
           </div>
           {/* Inline step pills */}
           <div className="hidden md:flex items-center gap-1 ml-2">
@@ -437,25 +438,93 @@ ${currentQuestions.map((q, i) => `
             })}
           </div>
         </div>
-        <button
-          onClick={() => setShowMyPapers(true)}
-          className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-white hover:bg-white/5 transition-colors shrink-0"
-        >
-          <FileText size={13} className="text-muted" />
-          My Papers
-          {papers.length > 0 && (
-            <span className="ml-1 bg-primary/20 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-              {papers.length}
-            </span>
-          )}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Mobile step indicator */}
+          <div className="flex md:hidden items-center gap-1 text-[11px] text-muted">
+            <span className="text-primary font-bold">{step}</span>
+            <span>/4</span>
+            <span className="text-white font-medium">{STEP_LABELS[step - 1]?.label}</span>
+          </div>
+          <button
+            onClick={() => setShowMobileChat(true)}
+            className="md:hidden flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary"
+          >
+            <Sparkles size={12} /> AI
+          </button>
+          <button
+            onClick={() => setShowMyPapers(true)}
+            className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-white hover:bg-white/5 transition-colors"
+          >
+            <FileText size={13} className="text-muted" />
+            <span className="hidden sm:inline">My Papers</span>
+            {papers.length > 0 && (
+              <span className="bg-primary/20 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                {papers.length}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
+      {/* Mobile AI Chat overlay */}
+      {showMobileChat && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-bg md:hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <div className="flex items-center gap-2">
+              <Sparkles size={14} className="text-primary" />
+              <h3 className="text-sm font-semibold text-white">AI Paper Assistant</h3>
+            </div>
+            <button onClick={() => setShowMobileChat(false)} className="text-muted hover:text-white p-1">
+              ✕
+            </button>
+          </div>
+          <div className="flex-1 flex flex-col p-4 min-h-0">
+            <div className="flex-1 space-y-2 overflow-y-auto pr-1 min-h-0 mb-3">
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex gap-2.5 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
+                  {msg.sender === 'assistant' && (
+                    <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/30 flex-shrink-0 flex items-center justify-center mt-0.5">
+                      <Sparkles size={12} className="text-primary" />
+                    </div>
+                  )}
+                  <div className={`text-xs leading-relaxed rounded-xl p-3 whitespace-pre-line max-w-[85%] ${
+                    msg.sender === 'assistant'
+                      ? 'bg-surface border border-border text-white'
+                      : 'bg-primary/20 text-white border border-primary/30'
+                  }`}>
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {QUICK_PROMPTS.map((p) => (
+                <button key={p} onClick={() => setChatInput(p)}
+                  className="text-[11px] bg-surface hover:bg-white/5 text-primary/80 border border-primary/20 rounded-full px-2.5 py-0.5 transition-colors">
+                  {p}
+                </button>
+              ))}
+            </div>
+            <div className="relative">
+              <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="Type your requirements..."
+                className="w-full bg-surface border border-border rounded-xl pl-3.5 pr-10 py-2.5 text-sm text-white placeholder:text-muted/50 focus:outline-none focus:border-primary transition-colors" />
+              <button onClick={handleSend} disabled={!chatInput.trim()}
+                className="absolute right-1.5 top-1.5 p-1.5 rounded-lg bg-primary text-bg hover:bg-primary/90 transition-colors disabled:opacity-40">
+                <Send size={12} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main grid */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 flex-1 min-h-0">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 flex-1 min-h-0 overflow-y-auto md:overflow-hidden pb-20 md:pb-0">
 
         {/* ── Left column ── */}
-        <div className="md:col-span-7 space-y-3 overflow-y-auto">
+        <div className="md:col-span-7 space-y-3 md:overflow-y-auto">
 
           {/* Step 1 — Basic Details */}
           {step === 1 && (
@@ -802,8 +871,8 @@ ${currentQuestions.map((q, i) => `
           )}
         </div>
 
-        {/* ── Right column — AI Chat ── */}
-        <div className="md:col-span-5 flex flex-col rounded-2xl border border-border bg-surface p-4 min-h-0">
+        {/* ── Right column — AI Chat (desktop only) ── */}
+        <div className="hidden md:flex md:col-span-5 flex-col rounded-2xl border border-border bg-surface p-4 min-h-0">
           {/* Chat header */}
           <div className="flex items-center justify-between pb-3 border-b border-border">
             <div className="flex items-center gap-2">

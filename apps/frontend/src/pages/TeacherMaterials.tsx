@@ -212,7 +212,7 @@ function UploadModal({ subjects, onClose, onUpload }: UploadModalProps) {
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Unit 3 Lecture Notes, Previous Year Papers…"
               className="w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-white placeholder:text-muted/50 focus:border-primary focus:outline-none transition-colors" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-muted mb-1.5 uppercase tracking-wider">Author / Source</label>
               <input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Optional"
@@ -573,22 +573,22 @@ export default function TeacherMaterials() {
     <div className="h-full flex flex-col overflow-hidden">
 
       {/* ── Header ── */}
-      <div className="px-6 pt-6 pb-4 shrink-0 border-b border-border flex items-center justify-between">
+      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 shrink-0 border-b border-border flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-0.5">Teacher Mode</p>
-          <h1 className="text-2xl font-black text-white leading-tight">
+          <h1 className="text-xl md:text-2xl font-black text-white leading-tight">
             Teaching{' '}
             <span className="text-primary" style={{ textShadow: '0 0 30px rgba(34,211,238,0.4)' }}>
               Materials
             </span>
           </h1>
-          <p className="mt-1 text-xs text-muted max-w-md leading-relaxed">
+          <p className="mt-1 text-xs text-muted max-w-md leading-relaxed hidden md:block">
             Upload lecture notes, question banks, syllabi, or reference PDFs. Use them to generate question papers with AI.
           </p>
         </div>
         <button
           onClick={() => setShowUpload(true)}
-          className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-bg hover:bg-primary-hover transition-colors shrink-0"
+          className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-bg hover:bg-primary-hover transition-colors md:shrink-0"
         >
           <Upload size={15} /> Upload Material
         </button>
@@ -596,7 +596,7 @@ export default function TeacherMaterials() {
 
       {/* ── Stats Row ── */}
       {!loading && (
-        <div className="grid grid-cols-4 gap-3 px-6 py-3 shrink-0">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 px-4 md:px-6 py-3 shrink-0">
           <StatCard icon={<FileText size={16} style={{ color: '#22D3EE' }} />}    value={stats.total}      label="Total Materials" color="#22D3EE" />
           <StatCard icon={<CheckCircle size={16} style={{ color: '#22C55E' }} />} value={stats.ready}      label="Ready"           color="#22C55E" />
           <StatCard icon={<div className="w-[16px] h-[16px] rounded-full" style={{ border: '2.5px solid #F97316' }} />} value={stats.processing} label="Processing" color="#F97316" />
@@ -604,12 +604,12 @@ export default function TeacherMaterials() {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-3 min-h-0">
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-24 md:pb-4 space-y-3 min-h-0">
 
         {/* ── Toolbar ── */}
         {!loading && (
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <div className="relative flex-1 min-w-0 max-w-sm">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
               <input value={search} onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search materials by title or subject…"
