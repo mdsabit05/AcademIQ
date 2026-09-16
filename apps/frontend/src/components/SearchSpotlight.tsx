@@ -76,7 +76,7 @@ export default function SearchSpotlight({ open, onClose }: Props) {
       const api = makeApi(token)
 
       const [booksRes, testsRes, subjectsRes] = await Promise.allSettled([
-        api.books.list(),
+        api.books.list(undefined, 'student'),
         api.tests.list(),
         api.subjects.list(),
       ])

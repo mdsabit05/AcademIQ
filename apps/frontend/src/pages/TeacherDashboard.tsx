@@ -58,7 +58,7 @@ export default function TeacherDashboard() {
         if (!token || cancelled) return
         const api = makeApi(token)
         const [bookRes] = await Promise.allSettled([
-          api.books.list(),
+          api.books.list(undefined, 'teacher'),
         ])
 
         if (cancelled) return

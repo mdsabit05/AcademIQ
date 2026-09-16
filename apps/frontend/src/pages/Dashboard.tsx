@@ -144,7 +144,7 @@ export default function Dashboard() {
       const api = makeApi(token)
       try {
         const [booksRes, syllabiRes, progressRes, historyRes] = await Promise.all([
-          api.books.list(),
+          api.books.list(undefined, 'student'),
           api.syllabus.list(),
           api.progress.summary(),
           api.progress.history(6, 0),
