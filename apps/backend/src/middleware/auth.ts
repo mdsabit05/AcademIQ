@@ -5,8 +5,10 @@
  */
 
 import { createMiddleware } from 'hono/factory'
-import { verifyToken } from '@clerk/backend'
+import { verifyToken, createClerkClient } from '@clerk/backend'
 import sql from '../db/client.js'
+
+const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! })
 
 export type Role = 'student' | 'teacher' | 'admin'
 
@@ -33,15 +35,38 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
     })
     const clerkUserId = payload.sub
 
-    // Upsert user on first request; return role and prefs on subsequent requests.
-    // ON CONFLICT only updates clerk_id (no-op) to trigger RETURNING.
+    // Fetch email + name from Clerk (needed for admin detection and display)
+    let email = ''
+    let name = ''
+    try {
+      const clerkUser = await clerkClient.users.getUser(clerkUserId)
+      email = clerkUser.emailAddresses[0]?.emailAddress ?? ''
+      name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ')
+    } catch {
+      // Non-fatal — continue with empty email
+    }
+
+    // Auto-promote to admin if email matches ADMIN_EMAIL env var
+    const adminEmails = (process.env.ADMIN_EMAIL ?? '').toLowerCase().split(',').map((e) => e.trim()).filter(Boolean)
+    const isAdminEmail = email && adminEmails.includes(email.toLowerCase())
+
+    // Upsert user; always sync email/name from Clerk.
+    // If user qualifies for admin and isn't already, promote them.
     const [user] = await sql<
       Array<{ id: string; role: Role; learning_prefs: Record<string, unknown> }>
     >`
       INSERT INTO users (clerk_id, email, name, role)
-      VALUES (${clerkUserId}, '', '', 'student')
+      VALUES (
+        ${clerkUserId},
+        ${email},
+        ${name},
+        ${isAdminEmail ? 'admin' : 'student'}
+      )
       ON CONFLICT (clerk_id) DO UPDATE
-        SET clerk_id = EXCLUDED.clerk_id
+        SET
+          email = EXCLUDED.email,
+          name  = CASE WHEN users.name = '' OR users.name IS NULL THEN EXCLUDED.name ELSE users.name END,
+          role  = CASE WHEN ${isAdminEmail}::boolean AND users.role != 'admin' THEN 'admin' ELSE users.role END
       RETURNING id, role, learning_prefs
     `
 
