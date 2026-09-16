@@ -572,158 +572,167 @@ export default function TeacherMaterials() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
 
-      {/* ── Header ── */}
-      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 shrink-0 border-b border-border flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-0.5">Teacher Mode</p>
-          <h1 className="text-xl md:text-2xl font-black text-white leading-tight">
-            Teaching{' '}
-            <span className="text-primary" style={{ textShadow: '0 0 30px rgba(34,211,238,0.4)' }}>
-              Materials
-            </span>
-          </h1>
-          <p className="mt-1 text-xs text-muted max-w-md leading-relaxed hidden md:block">
-            Upload lecture notes, question banks, syllabi, or reference PDFs. Use them to generate question papers with AI.
-          </p>
+      {/* ── Single scroll container — header + stats scroll away, toolbar sticks ── */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+
+        {/* ── Header (scrolls away) ── */}
+        <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-0.5">Teacher Mode</p>
+            <h1 className="text-xl md:text-2xl font-black text-white leading-tight">
+              Teaching{' '}
+              <span className="text-primary" style={{ textShadow: '0 0 30px rgba(34,211,238,0.4)' }}>
+                Materials
+              </span>
+            </h1>
+            <p className="mt-1 text-xs text-muted max-w-md leading-relaxed hidden md:block">
+              Upload lecture notes, question banks, syllabi, or reference PDFs. Use them to generate question papers with AI.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowUpload(true)}
+            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-bg hover:bg-primary-hover transition-colors md:shrink-0"
+          >
+            <Upload size={15} /> Upload Material
+          </button>
         </div>
-        <button
-          onClick={() => setShowUpload(true)}
-          className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-bg hover:bg-primary-hover transition-colors md:shrink-0"
-        >
-          <Upload size={15} /> Upload Material
-        </button>
-      </div>
 
-      {/* ── Stats Row ── */}
-      {!loading && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 px-4 md:px-6 py-3 shrink-0">
-          <StatCard icon={<FileText size={16} style={{ color: '#22D3EE' }} />}    value={stats.total}      label="Total Materials" color="#22D3EE" />
-          <StatCard icon={<CheckCircle size={16} style={{ color: '#22C55E' }} />} value={stats.ready}      label="Ready"           color="#22C55E" />
-          <StatCard icon={<div className="w-[16px] h-[16px] rounded-full" style={{ border: '2.5px solid #F97316' }} />} value={stats.processing} label="Processing" color="#F97316" />
-          <StatCard icon={<AlertCircle size={16} style={{ color: '#EF4444' }} />} value={stats.failed}     label="Failed"          color="#EF4444" />
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-24 md:pb-4 space-y-3 min-h-0">
-
-        {/* ── Toolbar ── */}
+        {/* ── Stats Row (scrolls away) ── */}
         {!loading && (
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-0 max-w-sm">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search materials by title or subject…"
-                className="w-full rounded-lg border border-border bg-surface pl-9 pr-3 py-2 text-sm text-white placeholder:text-muted/50 focus:border-primary focus:outline-none transition-colors" />
-              {search && (
-                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-white"><X size={12} /></button>
-              )}
-            </div>
-
-            {subjects.length > 0 && (
-              <div className="relative">
-                <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}
-                  className="appearance-none rounded-lg border border-border bg-surface pl-3 pr-7 py-2 text-sm text-white focus:border-primary focus:outline-none transition-colors">
-                  <option value="">All Subjects</option>
-                  {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-                <ChevronDown size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted" />
-              </div>
-            )}
-
-            <div className="relative">
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-                className="appearance-none rounded-lg border border-border bg-surface pl-3 pr-7 py-2 text-sm text-white focus:border-primary focus:outline-none transition-colors">
-                <option value="">All Status</option>
-                {Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-              <ChevronDown size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted" />
-            </div>
-
-            <div className="relative">
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
-                className="appearance-none rounded-lg border border-border bg-surface pl-3 pr-7 py-2 text-sm text-white focus:border-primary focus:outline-none transition-colors">
-                {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-              <ChevronDown size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted" />
-            </div>
-
-            <div className="ml-auto flex items-center rounded-lg border border-border overflow-hidden">
-              <button onClick={() => setViewMode('grid')}
-                className={clsx('p-2 transition-colors', viewMode === 'grid' ? 'bg-primary/15 text-primary' : 'text-muted hover:text-white hover:bg-white/5')}>
-                <LayoutGrid size={15} />
-              </button>
-              <button onClick={() => setViewMode('list')}
-                className={clsx('p-2 transition-colors', viewMode === 'list' ? 'bg-primary/15 text-primary' : 'text-muted hover:text-white hover:bg-white/5')}>
-                <List size={15} />
-              </button>
-            </div>
+          <div className="flex gap-2.5 px-4 md:px-6 py-2 overflow-x-auto scrollbar-none">
+            <StatCard icon={<FileText size={16} style={{ color: '#22D3EE' }} />}    value={stats.total}      label="Total Materials" color="#22D3EE" />
+            <StatCard icon={<CheckCircle size={16} style={{ color: '#22C55E' }} />} value={stats.ready}      label="Ready"           color="#22C55E" />
+            <StatCard icon={<div className="w-[16px] h-[16px] rounded-full" style={{ border: '2.5px solid #F97316' }} />} value={stats.processing} label="Processing" color="#F97316" />
+            <StatCard icon={<AlertCircle size={16} style={{ color: '#EF4444' }} />} value={stats.failed}     label="Failed"          color="#EF4444" />
           </div>
         )}
+
+        {/* ── Toolbar — sticks to top when header scrolls away ── */}
+        <div className="sticky top-0 z-10 bg-bg border-y border-border px-4 md:px-6 py-2 space-y-2">
+          {!loading && (
+            <div className="space-y-2">
+              {/* Search — full width */}
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+                <input value={search} onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search materials by title or subject…"
+                  className="w-full rounded-lg border border-border bg-surface pl-9 pr-3 py-2 text-sm text-white placeholder:text-muted/50 focus:border-primary focus:outline-none transition-colors" />
+                {search && (
+                  <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-white"><X size={12} /></button>
+                )}
+              </div>
+
+              {/* Filters + view toggle — scrollable on mobile */}
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
+                {subjects.length > 0 && (
+                  <div className="relative shrink-0">
+                    <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}
+                      className="appearance-none rounded-lg border border-border bg-surface pl-3 pr-6 py-2 text-xs text-white focus:border-primary focus:outline-none transition-colors">
+                      <option value="">All Subjects</option>
+                      {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                    <ChevronDown size={11} className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-muted" />
+                  </div>
+                )}
+
+                <div className="relative shrink-0">
+                  <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
+                    className="appearance-none rounded-lg border border-border bg-surface pl-3 pr-6 py-2 text-xs text-white focus:border-primary focus:outline-none transition-colors">
+                    <option value="">All Status</option>
+                    {Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  </select>
+                  <ChevronDown size={11} className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-muted" />
+                </div>
+
+                <div className="relative shrink-0">
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
+                    className="appearance-none rounded-lg border border-border bg-surface pl-3 pr-6 py-2 text-xs text-white focus:border-primary focus:outline-none transition-colors">
+                    {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                  <ChevronDown size={11} className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-muted" />
+                </div>
+
+                <div className="ml-auto shrink-0 flex items-center rounded-lg border border-border overflow-hidden">
+                  <button onClick={() => setViewMode('grid')}
+                    className={clsx('p-2 transition-colors', viewMode === 'grid' ? 'bg-primary/15 text-primary' : 'text-muted hover:text-white hover:bg-white/5')}>
+                    <LayoutGrid size={15} />
+                  </button>
+                  <button onClick={() => setViewMode('list')}
+                    className={clsx('p-2 transition-colors', viewMode === 'list' ? 'bg-primary/15 text-primary' : 'text-muted hover:text-white hover:bg-white/5')}>
+                    <List size={15} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* ── Content ── */}
-        {loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-xl border border-border bg-surface p-4 space-y-3">
-                <div className="flex items-start justify-between"><Skeleton className="w-9 h-9" /><Skeleton className="w-5 h-5" /></div>
-                <Skeleton className="h-3.5 w-3/4" />
-                <Skeleton className="h-2.5 w-1/3" />
-                <Skeleton className="h-5 w-16" />
+        <div className="px-4 md:px-6 pt-3 pb-24 md:pb-4 space-y-3">
+          {loading ? (
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="rounded-xl border border-border bg-surface p-4 space-y-3">
+                  <div className="flex items-start justify-between"><Skeleton className="w-9 h-9" /><Skeleton className="w-5 h-5" /></div>
+                  <Skeleton className="h-3.5 w-3/4" />
+                  <Skeleton className="h-2.5 w-1/3" />
+                  <Skeleton className="h-5 w-16" />
+                </div>
+              ))}
+            </div>
+
+          ) : books.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-surface">
+                <FolderOpen size={28} className="text-muted/50" />
               </div>
-            ))}
-          </div>
-
-        ) : books.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-surface">
-              <FolderOpen size={28} className="text-muted/50" />
+              <h2 className="text-lg font-black text-white">No teaching materials yet</h2>
+              <p className="mt-2 max-w-sm text-sm text-muted leading-relaxed">
+                Upload your first lecture note, syllabus, or question bank PDF and use it to generate AI-powered question papers.
+              </p>
+              <button onClick={() => setShowUpload(true)}
+                className="mt-6 flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-bg hover:bg-primary-hover transition-colors">
+                <Upload size={15} /> Upload Material
+              </button>
             </div>
-            <h2 className="text-lg font-black text-white">No teaching materials yet</h2>
-            <p className="mt-2 max-w-sm text-sm text-muted leading-relaxed">
-              Upload your first lecture note, syllabus, or question bank PDF and use it to generate AI-powered question papers.
-            </p>
-            <button onClick={() => setShowUpload(true)}
-              className="mt-6 flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-bg hover:bg-primary-hover transition-colors">
-              <Upload size={15} /> Upload Material
-            </button>
-          </div>
 
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Search size={28} className="mb-3 text-muted/40" />
-            <p className="text-sm font-medium text-white">No materials match your filters</p>
-            <button onClick={() => { setSearch(''); setFilterSubject(''); setFilterStatus('') }}
-              className="mt-2 text-xs text-primary hover:underline">Clear filters</button>
-          </div>
-
-        ) : viewMode === 'grid' ? (
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((book) => (
-              <MaterialCard key={book.id} book={book}
-                subject={book.subject_id ? subjectMap[book.subject_id] : undefined}
-                subjectIndex={book.subject_id ? (subjectIndexMap[book.subject_id] ?? 0) : 0}
-                onDelete={setDeleteTarget} onCreatePaper={handleCreatePaper} />
-            ))}
-            {/* Upload more card */}
-            <div onClick={() => setShowUpload(true)}
-              className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border hover:border-primary/40 bg-surface/40 cursor-pointer transition-colors p-6 text-center min-h-[180px]">
-              <CloudUpload size={28} className="text-primary mb-3" />
-              <p className="text-sm font-bold text-white">Upload More</p>
-              <p className="text-xs text-muted mt-1">Drop files or <span className="text-primary">browse</span></p>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Search size={28} className="mb-3 text-muted/40" />
+              <p className="text-sm font-medium text-white">No materials match your filters</p>
+              <button onClick={() => { setSearch(''); setFilterSubject(''); setFilterStatus('') }}
+                className="mt-2 text-xs text-primary hover:underline">Clear filters</button>
             </div>
-          </div>
 
-        ) : (
-          <div className="rounded-xl border border-border bg-surface overflow-hidden">
-            {filtered.map((book) => (
-              <MaterialRow key={book.id} book={book}
-                subject={book.subject_id ? subjectMap[book.subject_id] : undefined}
-                subjectIndex={book.subject_id ? (subjectIndexMap[book.subject_id] ?? 0) : 0}
-                onDelete={setDeleteTarget} onCreatePaper={handleCreatePaper} />
-            ))}
-          </div>
-        )}
-      </div>
+          ) : viewMode === 'grid' ? (
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+              {filtered.map((book) => (
+                <MaterialCard key={book.id} book={book}
+                  subject={book.subject_id ? subjectMap[book.subject_id] : undefined}
+                  subjectIndex={book.subject_id ? (subjectIndexMap[book.subject_id] ?? 0) : 0}
+                  onDelete={setDeleteTarget} onCreatePaper={handleCreatePaper} />
+              ))}
+              <div onClick={() => setShowUpload(true)}
+                className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border hover:border-primary/40 bg-surface/40 cursor-pointer transition-colors p-6 text-center min-h-[180px]">
+                <CloudUpload size={28} className="text-primary mb-3" />
+                <p className="text-sm font-bold text-white">Upload More</p>
+                <p className="text-xs text-muted mt-1">Drop files or <span className="text-primary">browse</span></p>
+              </div>
+            </div>
+
+          ) : (
+            <div className="rounded-xl border border-border bg-surface overflow-hidden">
+              {filtered.map((book) => (
+                <MaterialRow key={book.id} book={book}
+                  subject={book.subject_id ? subjectMap[book.subject_id] : undefined}
+                  subjectIndex={book.subject_id ? (subjectIndexMap[book.subject_id] ?? 0) : 0}
+                  onDelete={setDeleteTarget} onCreatePaper={handleCreatePaper} />
+              ))}
+            </div>
+          )}
+        </div>
+
+      </div>{/* end scroll container */}
 
       {showUpload && <UploadModal subjects={subjects} onClose={() => setShowUpload(false)} onUpload={handleUpload} />}
       {deleteTarget && <DeleteConfirm title={deleteTarget.title} onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} />}
