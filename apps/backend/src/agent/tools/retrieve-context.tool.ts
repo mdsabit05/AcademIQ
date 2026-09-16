@@ -63,17 +63,20 @@ const tool: AgentTool<Params> = {
     const { query, topK = 5 } = params
     let bookIds = params.bookIds
 
+    // Determine context based on user role: teachers search their materials, students search their books
+    const bookContext: 'student' | 'teacher' = ctx.userRole === 'teacher' ? 'teacher' : 'student'
+
     if (!bookIds || bookIds.length === 0) {
-      // Default: all READY books owned by this user
+      // Default: all READY books owned by this user in the right context
       const rows = await sql<Array<{ id: string }>>`
         SELECT id FROM books
-        WHERE owner_id = ${ctx.dbUserId} AND status = 'READY'
+        WHERE owner_id = ${ctx.dbUserId} AND status = 'READY' AND context = ${bookContext}
         LIMIT 20
       `
       bookIds = rows.map((r) => r.id)
     } else {
-      // Verify the caller owns every requested book (throws 403 if not)
-      await verifyBookAccess(bookIds, ctx.dbUserId)
+      // Verify the caller owns every requested book with correct context
+      await verifyBookAccess(bookIds, ctx.dbUserId, bookContext)
     }
 
     if (bookIds.length === 0) {

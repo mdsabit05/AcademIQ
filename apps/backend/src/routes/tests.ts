@@ -41,7 +41,7 @@ tests.post('/', async (c) => {
   }>()
 
   try {
-    await verifyBookAccess(body.bookIds ?? [], dbUserId)
+    await verifyBookAccess(body.bookIds ?? [], dbUserId, 'student')
   } catch (err: unknown) {
     const status = (err as { status?: number }).status ?? 400
     return c.json({ error: (err as Error).message }, status as 400 | 403)

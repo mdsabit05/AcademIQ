@@ -18,8 +18,7 @@
 
 import { Hono } from 'hono'
 import sql from '../db/client.js'
-import { requireOwnership } from '../middleware/rbac.js'
-import { verifyBookAccess } from '../middleware/rbac.js'
+import { requireOwnership, requireRole, verifyBookAccess } from '../middleware/rbac.js'
 import { retrieve } from '../services/retrieval.service.js'
 import { rerank } from '../services/reranker.service.js'
 import { buildContext } from '../services/context-builder.service.js'
@@ -31,6 +30,9 @@ import { testGenerationPrompt } from '../prompts/test.prompt.js'
 import type { AuthEnv } from '../middleware/auth.js'
 
 const papers = new Hono<AuthEnv>()
+
+// All paper routes are teacher/admin only
+papers.use('*', requireRole('teacher', 'admin'))
 
 // ── Blueprints ──────────────────────────────────────────────────────────────
 
@@ -122,7 +124,7 @@ papers.post('/blueprints/:id/generate', requireOwnership('paper_blueprints', 'id
   const allBookIds = [...new Set(sections.flatMap((s) => s.bookIds ?? []))]
   if (allBookIds.length > 0) {
     try {
-      await verifyBookAccess(allBookIds, dbUserId)
+      await verifyBookAccess(allBookIds, dbUserId, 'teacher')
     } catch (err: unknown) {
       const status = (err as { status?: number }).status ?? 400
       return c.json({ error: (err as Error).message }, status as 400 | 403)

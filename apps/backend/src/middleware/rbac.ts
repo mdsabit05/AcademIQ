@@ -104,17 +104,26 @@ export function requireOwnership(table: string, paramName: string) {
 export async function verifyBookAccess(
   bookIds: string[],
   dbUserId: string,
+  context?: 'student' | 'teacher',
 ): Promise<void> {
   if (bookIds.length === 0) {
     throw Object.assign(new Error('No books selected'), { status: 400 })
   }
 
-  const owned = await sql<Array<{ id: string }>>`
-    SELECT id FROM books
-    WHERE id = ANY(${bookIds}::uuid[])
-      AND owner_id = ${dbUserId}
-      AND status = 'READY'
-  `
+  const owned = context
+    ? await sql<Array<{ id: string }>>`
+        SELECT id FROM books
+        WHERE id = ANY(${bookIds}::uuid[])
+          AND owner_id = ${dbUserId}
+          AND status = 'READY'
+          AND context = ${context}
+      `
+    : await sql<Array<{ id: string }>>`
+        SELECT id FROM books
+        WHERE id = ANY(${bookIds}::uuid[])
+          AND owner_id = ${dbUserId}
+          AND status = 'READY'
+      `
 
   if (owned.length !== bookIds.length) {
     throw Object.assign(

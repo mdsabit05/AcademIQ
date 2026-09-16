@@ -148,7 +148,14 @@ export default function App() {
         <Route path="/syllabus" element={<SyllabusPage />} />
 
         {/* Teacher: Materials */}
-        <Route path="/teacher/materials" element={<TeacherMaterials />} />
+        <Route
+          path="/teacher/materials"
+          element={
+            <RoleRoute require="teacher">
+              <TeacherMaterials />
+            </RoleRoute>
+          }
+        />
 
         {/* Teacher: Question Papers */}
         <Route
