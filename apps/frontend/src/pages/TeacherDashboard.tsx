@@ -12,7 +12,6 @@ import { useTheme } from '../lib/theme.tsx'
 import {
   BookOpen,
   ScrollText,
-  BookMarked,
   PlusCircle,
   ArrowRight,
   FileText,
@@ -21,7 +20,7 @@ import {
 } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
 import { useCurrentUser } from '../lib/useCurrentUser.ts'
-import type { Subject, Book } from 'shared'
+import type { Book } from 'shared'
 
 function greeting() {
   const h = new Date().getHours()
@@ -47,7 +46,6 @@ export default function TeacherDashboard() {
   const { user } = useCurrentUser()
   const navigate = useNavigate()
 
-  const [subjects, setSubjects] = useState<Subject[]>([])
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -58,16 +56,12 @@ export default function TeacherDashboard() {
         const token = await getToken()
         if (!token || cancelled) return
         const api = makeApi(token)
-        const [subRes, bookRes] = await Promise.allSettled([
-          api.subjects.list(),
+        const [bookRes] = await Promise.allSettled([
           api.books.list(),
         ])
 
         if (cancelled) return
 
-        if (subRes.status === 'fulfilled') {
-          setSubjects(subRes.value.subjects.slice(0, 4))
-        }
         if (bookRes.status === 'fulfilled') {
           setBooks(bookRes.value.books.slice(0, 4))
         }
@@ -159,65 +153,8 @@ export default function TeacherDashboard() {
         </button>
       </div>
 
-      {/* ── Two column: Subjects + Materials ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-        {/* Subjects */}
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <BookMarked size={16} className="text-primary" />
-              <h2 className="text-sm font-semibold text-white">My Subjects</h2>
-            </div>
-            <button
-              onClick={() => navigate('/syllabus')}
-              className="text-xs text-primary hover:underline flex items-center gap-0.5"
-            >
-              View all <ChevronRight size={12} />
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-10 rounded-lg bg-white/5 animate-pulse" />
-              ))}
-            </div>
-          ) : subjects.length === 0 ? (
-            <div className="py-6 text-center">
-              <BookMarked size={28} className="mx-auto text-muted/40 mb-2" />
-              <p className="text-sm text-muted">No subjects yet</p>
-              <button
-                onClick={() => navigate('/syllabus')}
-                className="mt-2 text-xs text-primary hover:underline"
-              >
-                Create your first subject →
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              {subjects.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => navigate('/syllabus')}
-                  className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-white/5 transition-colors group text-left"
-                >
-                  <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-                    <BookMarked size={14} className="text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white font-medium truncate">{s.name}</p>
-                    {s.semester && (
-                      <p className="text-xs text-muted">Sem {s.semester}</p>
-                    )}
-                  </div>
-                  <ChevronRight size={13} className="text-muted/40 group-hover:text-muted transition-colors shrink-0" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
+      {/* ── Materials ── */}
+      <div>
         {/* Materials */}
         <div className="rounded-xl border border-border bg-surface p-4">
           <div className="flex items-center justify-between mb-3">
