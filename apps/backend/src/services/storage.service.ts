@@ -20,6 +20,8 @@ import { unlink } from 'fs/promises'
 import { join, dirname } from 'path'
 import { pipeline } from 'stream/promises'
 import type { Readable } from 'stream'
+import { S3Client, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
+import { Upload } from '@aws-sdk/lib-storage'
 
 export interface StorageProvider {
   /**
@@ -90,6 +92,65 @@ class LocalStorageProvider implements StorageProvider {
   }
 }
 
+class S3StorageProvider implements StorageProvider {
+  private client: S3Client
+  private bucket: string
+
+  constructor() {
+    this.bucket = process.env.B2_BUCKET_NAME ?? process.env.S3_BUCKET ?? ''
+    this.client = new S3Client({
+      region: process.env.B2_REGION ?? process.env.S3_REGION ?? 'us-east-1',
+      endpoint: process.env.B2_ENDPOINT ?? process.env.S3_ENDPOINT,
+      credentials: {
+        accessKeyId: process.env.B2_KEY_ID ?? process.env.S3_ACCESS_KEY ?? '',
+        secretAccessKey: process.env.B2_APPLICATION_KEY ?? process.env.S3_SECRET_KEY ?? '',
+      },
+      forcePathStyle: true,
+    })
+  }
+
+  async saveStream(key: string, stream: Readable): Promise<{ sizeBytes: number }> {
+    let sizeBytes = 0
+    stream.on('data', (chunk: Buffer) => { sizeBytes += chunk.length })
+
+    const upload = new Upload({
+      client: this.client,
+      params: { Bucket: this.bucket, Key: key, Body: stream, ContentType: 'application/pdf' },
+    })
+    await upload.done()
+    return { sizeBytes }
+  }
+
+  createReadStream(key: string): Readable {
+    const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: key })
+    // Return a lazy stream — the promise resolves on first read
+    const { Readable: NodeReadable } = require('stream')
+    const pass = new NodeReadable({ read() {} })
+    this.client.send(cmd).then((res) => {
+      const body = res.Body as Readable
+      body.on('data', (chunk) => pass.push(chunk))
+      body.on('end', () => pass.push(null))
+      body.on('error', (err) => pass.destroy(err))
+    }).catch((err) => pass.destroy(err))
+    return pass
+  }
+
+  getLocalPath(_key: string): null { return null }
+
+  async delete(key: string): Promise<void> {
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }))
+  }
+
+  async exists(key: string): Promise<boolean> {
+    try {
+      await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }))
+      return true
+    } catch {
+      return false
+    }
+  }
+}
+
 function createProvider(): StorageProvider {
   const provider = process.env.STORAGE_PROVIDER ?? 'local'
 
@@ -100,8 +161,10 @@ function createProvider(): StorageProvider {
     return new LocalStorageProvider(basePath)
   }
 
-  // S3 provider would be implemented here as S3StorageProvider
-  // with the same interface — pipeline.service.ts remains unchanged
+  if (provider === 's3') {
+    return new S3StorageProvider()
+  }
+
   throw new Error(`Unsupported STORAGE_PROVIDER: ${provider}`)
 }
 

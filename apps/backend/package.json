@@ -11,6 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1132.0",
+    "@aws-sdk/lib-storage": "^3.1132.0",
     "@clerk/backend": "^1.13.0",
     "@hono/node-server": "^1.13.0",
     "busboy": "^1.6.0",
