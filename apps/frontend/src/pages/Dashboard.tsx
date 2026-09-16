@@ -547,16 +547,41 @@ export default function Dashboard() {
                 <div className="space-y-3">
                   {items.map((s, i) => {
                     const color = PALETTE[i % PALETTE.length]
-                    const firstWord = s.name.toLowerCase().split(/\s+/)[0]
-                    const matched = topicMastery.filter((t) =>
-                      String(t.context_key).toLowerCase().includes(firstWord),
+
+                    // Match topicMastery using all significant words (>2 chars) from subject name
+                    const words = s.name.toLowerCase().split(/\s+/).filter((w) => w.length > 2)
+                    const masteryMatched = topicMastery.filter((t) =>
+                      words.some((w) => String(t.context_key).toLowerCase().includes(w)),
                     )
-                    const pct =
-                      matched.length > 0
+                    const masteryPct =
+                      masteryMatched.length > 0
                         ? Math.round(
-                            (matched.reduce((sum, t) => sum + t.confidence, 0) / matched.length) * 100,
+                            (masteryMatched.reduce((sum, t) => sum + t.confidence, 0) / masteryMatched.length) * 100,
                           )
-                        : 0
+                        : null
+
+                    // Use test attempt scores for books in this subject
+                    const subjectBooks = books.filter((b) => b.subject_id === s.id)
+                    const bookTitles = subjectBooks.map((b) => b.title.toLowerCase())
+                    const subjectAttempts = attempts.filter((a) =>
+                      a.total_marks > 0 &&
+                      (bookTitles.some((t) => (a.topic ?? '').toLowerCase().includes(t.split(' ')[0])) ||
+                       words.some((w) => (a.topic ?? '').toLowerCase().includes(w))),
+                    )
+                    const attemptPct =
+                      subjectAttempts.length > 0
+                        ? Math.round(
+                            (subjectAttempts.reduce((sum, a) => sum + a.score / a.total_marks, 0) /
+                              subjectAttempts.length) * 100,
+                          )
+                        : null
+
+                    // Prefer mastery data; fall back to test scores; fall back to 0
+                    const pct = masteryPct ?? attemptPct ?? 0
+                    const subtitle =
+                      subjectBooks.length > 0
+                        ? `${subjectBooks.length} book${subjectBooks.length > 1 ? 's' : ''}${subjectAttempts.length > 0 ? ` · ${subjectAttempts.length} test${subjectAttempts.length > 1 ? 's' : ''}` : ''}`
+                        : null
 
                     return (
                       <div key={s.id} className="flex items-center gap-3 group">
@@ -568,7 +593,10 @@ export default function Dashboard() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm text-white truncate">{s.name}</span>
+                            <div className="min-w-0">
+                              <span className="text-sm text-white truncate block">{s.name}</span>
+                              {subtitle && <span className="text-[10px] text-muted">{subtitle}</span>}
+                            </div>
                             <span className="text-xs font-semibold ml-2 shrink-0" style={{ color }}>
                               {pct}%
                             </span>
