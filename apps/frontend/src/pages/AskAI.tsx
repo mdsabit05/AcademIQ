@@ -213,7 +213,7 @@ export default function AskAI() {
       const token = await getToken()
       if (!token) return
       const api = makeApi(token)
-      const [booksRes, subjectsRes] = await Promise.allSettled([api.books.list(), api.subjects.list()])
+      const [booksRes, subjectsRes] = await Promise.allSettled([api.books.list(undefined, 'student'), api.subjects.list()])
       if (booksRes.status === 'fulfilled') {
         const ready = booksRes.value.books.filter((b) => b.status === 'READY')
         setBooks(ready)
