@@ -261,7 +261,8 @@ export default function AskAI() {
       const sid = await ensureSession(selectedBookIds)
       const token = await getToken()
       if (!token) return
-      const res = await fetch(`${window.location.pathname.replace(/\/$/, '')}/api/chat/${sid}/message`, {
+      const apiBase = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
+      const res = await fetch(`${apiBase}/chat/${sid}/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ content, webSearch, deepReason }),
