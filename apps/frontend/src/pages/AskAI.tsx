@@ -193,6 +193,8 @@ export default function AskAI() {
     setMessages(msgs.map((m) => ({ role: m.role, content: m.content })))
     setStreamBuffer('')
     if (session.book_ids?.length) setSelectedBookIds(session.book_ids)
+    // Jump to bottom after the chat view renders
+    setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'instant' }), 50)
   }, [getToken])
 
   const startNewChat = useCallback(() => {
@@ -201,9 +203,9 @@ export default function AskAI() {
   }, [])
 
   useEffect(() => {
-    if (streaming && streamBuffer && !hasScrolledToStream.current) {
+    if (streaming && !hasScrolledToStream.current) {
       hasScrolledToStream.current = true
-      streamTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      endRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
     if (!streaming) hasScrolledToStream.current = false
   }, [streaming, streamBuffer])
@@ -257,6 +259,7 @@ export default function AskAI() {
     setMessages((prev) => [...prev, { role: 'user', content }])
     setStreaming(true); setStreamBuffer('')
     setNavCollapsed(true)
+    setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), 0)
     try {
       const sid = await ensureSession(selectedBookIds)
       const token = await getToken()
