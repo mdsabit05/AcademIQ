@@ -1,7 +1,7 @@
 /**
  * Books routes
  *
- * POST   /books           — upload a PDF (busboy streaming, max 200 MB)
+ * POST   /books           — upload a PDF (multipart/form-data)
  * GET    /books           — list user's books
  * GET    /books/:id       — get book details + status
  * DELETE /books/:id       — delete book + storage file
@@ -9,8 +9,7 @@
  */
 
 import { Hono } from 'hono'
-import busboy from 'busboy'
-import type { IncomingMessage, ServerResponse } from 'http'
+import { Readable } from 'stream'
 import sql from '../db/client.js'
 import { storage, bookStorageKey } from '../services/storage.service.js'
 import { requireOwnership } from '../middleware/rbac.js'
@@ -19,164 +18,70 @@ import type { AuthEnv } from '../middleware/auth.js'
 
 const MAX_FILE_BYTES = 200 * 1024 * 1024 // 200 MB
 
-type BooksEnv = AuthEnv & {
-  Bindings: {
-    incoming: IncomingMessage
-    outgoing: ServerResponse
-  }
-}
-
-const books = new Hono<BooksEnv>()
+const books = new Hono<AuthEnv>()
 
 // ── Upload ──────────────────────────────────────────────────────────────────
 
 books.post('/', async (c) => {
   const dbUserId = c.get('dbUserId')
 
-  const contentType = c.req.header('content-type') ?? ''
-  if (!contentType.includes('multipart/form-data')) {
-    return c.json({ error: 'Expected multipart/form-data' }, 400)
+  let body: Record<string, string | File>
+  try {
+    body = await c.req.parseBody()
+  } catch {
+    return c.json({ error: 'Failed to parse multipart body' }, 400)
   }
 
-  // Access the raw Node.js IncomingMessage to stream via busboy.
-  // @hono/node-server exposes this on c.env.incoming
-  const rawReq = c.env.incoming
-  if (!rawReq) {
-    return c.json({ error: 'Streaming upload not supported in this environment' }, 500)
+  const file = body['file']
+  if (!file || typeof file === 'string') {
+    return c.json({ error: 'No file field in request' }, 400)
   }
 
-  return new Promise<Response>((resolve) => {
-    let title = ''
-    let subjectId: string | null = null
-    let author: string | null = null
-    let context: 'student' | 'teacher' = 'student'
-    let originalFilename = ''
-    let fileReceived = false
-    let fileSizeBytes = 0
-    let sizeExceeded = false
-    let bookId: string | null = null
-    let storageKey: string | null = null
+  if (file.size > MAX_FILE_BYTES) {
+    return c.json({ error: 'File exceeds 200 MB limit' }, 413)
+  }
 
-    // Track the async file handler so finish can await it
-    let fileHandlerDone: Promise<void> = Promise.resolve()
+  const originalFilename = file.name || 'upload.pdf'
+  let title = (typeof body['title'] === 'string' ? body['title'] : '').trim().slice(0, 500)
+  if (!title) title = originalFilename.replace(/\.pdf$/i, '').trim() || 'Untitled'
+  const author = (typeof body['author'] === 'string' ? body['author'] : '').trim().slice(0, 200) || null
+  const subjectId = (typeof body['subject_id'] === 'string' ? body['subject_id'] : '').trim() || null
+  const context: 'student' | 'teacher' = body['context'] === 'teacher' ? 'teacher' : 'student'
 
-    const bb = busboy({
-      headers: rawReq.headers,
-      limits: { files: 1, fileSize: MAX_FILE_BYTES },
-    })
+  let bookId: string | null = null
+  let storageKey: string | null = null
 
-    // ── Field handler ───────────────────────────────────────────────────
-    bb.on('field', (name, value) => {
-      if (name === 'title') title = value.trim().slice(0, 500)
-      if (name === 'author') author = value.trim().slice(0, 200) || null
-      if (name === 'subject_id') subjectId = value.trim() || null
-      if (name === 'context' && value === 'teacher') context = 'teacher'
-    })
+  try {
+    const [row] = await sql<[{ id: string }]>`
+      INSERT INTO books (owner_id, subject_id, title, author, filename, file_path, status, context)
+      VALUES (${dbUserId}, ${subjectId}, ${title}, ${author}, ${originalFilename}, 'placeholder', 'UPLOADING', ${context})
+      RETURNING id
+    `
+    bookId = row.id
+    storageKey = bookStorageKey(dbUserId, bookId)
+    await sql`UPDATE books SET file_path = ${storageKey} WHERE id = ${bookId}`
 
-    // ── File handler ────────────────────────────────────────────────────
-    bb.on('file', (fieldname, fileStream, info) => {
-      if (fieldname !== 'file') {
-        fileStream.resume() // discard
-        return
-      }
+    // Convert File to Node.js Readable stream
+    const arrayBuffer = await file.arrayBuffer()
+    const fileStream = Readable.from(Buffer.from(arrayBuffer))
+    const { sizeBytes } = await storage.saveStream(storageKey, fileStream)
 
-      fileReceived = true
-      originalFilename = info.filename || 'upload.pdf'
+    await sql`
+      UPDATE books SET status = 'UPLOADED', file_size = ${sizeBytes}, updated_at = now()
+      WHERE id = ${bookId}
+    `
 
-      if (!title) {
-        title = originalFilename.replace(/\.pdf$/i, '').trim() || 'Untitled'
-      }
-
-      // Capture the async work in a promise so finish() can await it
-      fileHandlerDone = (async () => {
-        try {
-          const [row] = await sql<[{ id: string }]>`
-            INSERT INTO books (owner_id, subject_id, title, author, filename, file_path, status, context)
-            VALUES (
-              ${dbUserId},
-              ${subjectId},
-              ${title},
-              ${author},
-              ${originalFilename},
-              'placeholder',
-              'UPLOADING',
-              ${context}
-            )
-            RETURNING id
-          `
-          bookId = row.id
-          storageKey = bookStorageKey(dbUserId, bookId)
-
-          // Update file_path now that we have the bookId
-          await sql`UPDATE books SET file_path = ${storageKey} WHERE id = ${bookId}`
-
-          // Stream file to storage
-          fileStream.on('limit', () => {
-            sizeExceeded = true
-          })
-
-          const { sizeBytes } = await storage.saveStream(storageKey, fileStream)
-          fileSizeBytes = sizeBytes
-        } catch (err) {
-          console.error('[books] upload error:', err)
-          if (bookId) {
-            await sql`
-              UPDATE books SET status = 'FAILED', error_msg = ${String(err).slice(0, 500)}
-              WHERE id = ${bookId}
-            `.catch(() => {})
-          }
-          resolve(c.json({ error: 'Upload failed' }, 500) as unknown as Response)
-        }
-      })()
-    })
-
-    // ── Finish ──────────────────────────────────────────────────────────
-    bb.on('finish', async () => {
-      // Wait for the async file handler to complete before inspecting state
-      await fileHandlerDone
-
-      if (!fileReceived || !bookId) {
-        resolve(c.json({ error: 'No file field in request' }, 400) as unknown as Response)
-        return
-      }
-
-      if (sizeExceeded) {
-        // Clean up storage file and DB row for partial upload
-        if (storageKey) await storage.delete(storageKey).catch(() => {})
-        await sql`DELETE FROM books WHERE id = ${bookId}`.catch(() => {})
-        resolve(
-          c.json({ error: `File exceeds 200 MB limit` }, 413) as unknown as Response,
-        )
-        return
-      }
-
-      // Update file size and transition to UPLOADED
-      await sql`
-        UPDATE books
-        SET status = 'UPLOADED', file_size = ${fileSizeBytes}, updated_at = now()
-        WHERE id = ${bookId}
-      `
-
-      // Enqueue background processing
-      await enqueueProcessBook(bookId)
-
-      const [book] = await sql`SELECT * FROM books WHERE id = ${bookId}`
-      resolve(c.json({ book }, 201) as unknown as Response)
-    })
-
-    bb.on('error', async (err) => {
-      console.error('[books] busboy error:', err)
-      if (bookId) {
-        await sql`
-          UPDATE books SET status = 'FAILED', error_msg = ${String(err).slice(0, 500)}
-          WHERE id = ${bookId}
-        `.catch(() => {})
-      }
-      resolve(c.json({ error: 'Upload processing error' }, 500) as unknown as Response)
-    })
-
-    rawReq.pipe(bb)
-  })
+    await enqueueProcessBook(bookId)
+    const [book] = await sql`SELECT * FROM books WHERE id = ${bookId}`
+    return c.json({ book }, 201)
+  } catch (err) {
+    console.error('[books] upload error:', err)
+    if (bookId) {
+      await sql`UPDATE books SET status = 'FAILED', error_msg = ${String(err).slice(0, 500)} WHERE id = ${bookId}`.catch(() => {})
+      if (storageKey) await storage.delete(storageKey).catch(() => {})
+    }
+    return c.json({ error: 'Upload failed' }, 500)
+  }
 })
 
 // ── List ────────────────────────────────────────────────────────────────────
