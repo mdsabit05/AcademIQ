@@ -10,6 +10,10 @@
 import { Hono } from 'hono'
 import busboy from 'busboy'
 import type { IncomingMessage, ServerResponse } from 'http'
+import { tmpdir } from 'os'
+import { join } from 'path'
+import { mkdirSync, createWriteStream, unlink } from 'fs'
+import { pipeline } from 'stream/promises'
 import sql from '../db/client.js'
 import { storage } from '../services/storage.service.js'
 import { requireOwnership } from '../middleware/rbac.js'
@@ -125,18 +129,41 @@ syllabus.post('/', async (c) => {
 })
 
 async function parseSyllabus(syllabusId: string, _userId: string, fileKey: string) {
-  const localPath = storage.getLocalPath(fileKey)
-  if (!localPath) return
+  let tempFile: string | null = null
+  let filePath: string
 
-  const ext = localPath.slice(localPath.lastIndexOf('.')).toLowerCase()
+  try {
+    const localPath = storage.getLocalPath(fileKey)
+    if (localPath) {
+      filePath = localPath
+    } else {
+      // Remote storage (B2/S3) — download to temp file for processing
+      const tmpDir = join(tmpdir(), 'academiq-syllabus')
+      mkdirSync(tmpDir, { recursive: true })
+      const ext = fileKey.slice(fileKey.lastIndexOf('.'))
+      tempFile = join(tmpDir, `${syllabusId}${ext}`)
+      const readStream = storage.createReadStream(fileKey)
+      await pipeline(readStream as NodeJS.ReadableStream, createWriteStream(tempFile))
+      filePath = tempFile
+    }
+  } catch (err) {
+    await sql`UPDATE syllabi SET status = 'failed' WHERE id = ${syllabusId}`.catch(() => {})
+    throw err
+  }
+
+  const ext = filePath.slice(filePath.lastIndexOf('.')).toLowerCase()
   let text: string
-  if (IMAGE_EXTS.has(ext)) {
-    console.log(`[syllabus] OCR processing image: ${ext}`)
-    text = (await recognizePath(localPath)).slice(0, 8000)
-    console.log(`[syllabus] OCR extracted ${text.length} chars`)
-  } else {
-    const { pages } = await extractPages(localPath)
-    text = pages.map((p) => p.text).join('\n').slice(0, 8000)
+  try {
+    if (IMAGE_EXTS.has(ext)) {
+      console.log(`[syllabus] OCR processing image: ${ext}`)
+      text = (await recognizePath(filePath)).slice(0, 8000)
+      console.log(`[syllabus] OCR extracted ${text.length} chars`)
+    } else {
+      const { pages } = await extractPages(filePath)
+      text = pages.map((p) => p.text).join('\n').slice(0, 8000)
+    }
+  } finally {
+    if (tempFile) unlink(tempFile, () => {})
   }
 
   const prompt = `Extract the syllabus structure from this text as a flat JSON array of topics.
