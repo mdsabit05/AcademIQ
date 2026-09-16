@@ -16,7 +16,7 @@ import {
   Calendar,
 } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
-import type { Book, Subject, Syllabus } from 'shared'
+import type { Book, Syllabus } from 'shared'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -131,7 +131,6 @@ export default function Dashboard() {
   const isLight = theme === 'light'
 
   const [books, setBooks] = useState<Book[]>([])
-  const [subjects, setSubjects] = useState<Subject[]>([])
   const [syllabi, setSyllabi] = useState<Syllabus[]>([])
   const [topicMastery, setTopicMastery] = useState<TopicMastery[]>([])
   const [attempts, setAttempts] = useState<HistoryAttempt[]>([])
@@ -144,15 +143,13 @@ export default function Dashboard() {
       if (!token) return
       const api = makeApi(token)
       try {
-        const [booksRes, subjectsRes, syllabiRes, progressRes, historyRes] = await Promise.all([
+        const [booksRes, syllabiRes, progressRes, historyRes] = await Promise.all([
           api.books.list(),
-          api.subjects.list(),
           api.syllabus.list(),
           api.progress.summary(),
           api.progress.history(6, 0),
         ])
         setBooks(booksRes.books.filter((b) => b.status === 'READY'))
-        setSubjects(subjectsRes.subjects)
         setSyllabi(syllabiRes.syllabi.filter((s) => s.status === 'ready'))
         setTopicMastery(progressRes.topicMastery)
         setAttempts(historyRes.attempts as HistoryAttempt[])
@@ -501,117 +498,102 @@ export default function Dashboard() {
         </div>
 
         {/* Your Syllabi */}
-        {(() => {
-          // Show subjects if they exist, otherwise fall back to syllabi
-          const hasSubjects = subjects.length > 0
-          const items = hasSubjects
-            ? subjects.slice(0, 4).map((s) => ({ id: s.id, name: s.name }))
-            : syllabi.slice(0, 4).map((s) => ({ id: s.id, name: s.title }))
-          const cardTitle = hasSubjects ? 'Your Subjects' : 'Your Syllabi'
+        <div className="rounded-xl border border-border bg-surface p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-white">Your Syllabi</h2>
+            <button
+              onClick={() => navigate('/syllabus')}
+              className="text-xs text-primary hover:underline"
+            >
+              Manage
+            </button>
+          </div>
 
-          return (
-            <div className="rounded-xl border border-border bg-surface p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold text-white">{cardTitle}</h2>
-                <button
-                  onClick={() => navigate('/syllabus')}
-                  className="text-xs text-primary hover:underline"
-                >
-                  Manage
-                </button>
-              </div>
-
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <Skeleton className="w-7 h-7 shrink-0" />
-                      <div className="flex-1 space-y-1.5">
-                        <Skeleton className="h-3 w-3/4" />
-                        <Skeleton className="h-1" />
-                      </div>
-                    </div>
-                  ))}
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="w-7 h-7 shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-3 w-3/4" />
+                    <Skeleton className="h-1" />
+                  </div>
                 </div>
-              ) : items.length === 0 ? (
-                <div className="py-8 text-center">
-                  <p className="text-sm text-muted mb-2">No syllabi yet</p>
-                  <button
-                    onClick={() => navigate('/syllabus')}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Upload your first syllabus →
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {items.map((s, i) => {
-                    const color = PALETTE[i % PALETTE.length]
-
-                    // Match topicMastery using all significant words (>2 chars) from subject name
-                    const words = s.name.toLowerCase().split(/\s+/).filter((w) => w.length > 2)
-                    const masteryMatched = topicMastery.filter((t) =>
-                      words.some((w) => String(t.context_key).toLowerCase().includes(w)),
-                    )
-                    const masteryPct =
-                      masteryMatched.length > 0
-                        ? Math.round(
-                            (masteryMatched.reduce((sum, t) => sum + t.confidence, 0) / masteryMatched.length) * 100,
-                          )
-                        : null
-
-                    // Use test attempt scores for books in this subject
-                    const subjectBooks = books.filter((b) => b.subject_id === s.id)
-                    const bookTitles = subjectBooks.map((b) => b.title.toLowerCase())
-                    const subjectAttempts = attempts.filter((a) =>
-                      a.total_marks > 0 &&
-                      (bookTitles.some((t) => (a.topic ?? '').toLowerCase().includes(t.split(' ')[0])) ||
-                       words.some((w) => (a.topic ?? '').toLowerCase().includes(w))),
-                    )
-                    const attemptPct =
-                      subjectAttempts.length > 0
-                        ? Math.round(
-                            (subjectAttempts.reduce((sum, a) => sum + a.score / a.total_marks, 0) /
-                              subjectAttempts.length) * 100,
-                          )
-                        : null
-
-                    // Prefer mastery data; fall back to test scores; fall back to 0
-                    const pct = masteryPct ?? attemptPct ?? 0
-                    const subtitle =
-                      subjectBooks.length > 0
-                        ? `${subjectBooks.length} book${subjectBooks.length > 1 ? 's' : ''}${subjectAttempts.length > 0 ? ` · ${subjectAttempts.length} test${subjectAttempts.length > 1 ? 's' : ''}` : ''}`
-                        : null
-
-                    return (
-                      <div key={s.id} className="flex items-center gap-3 group">
-                        <div
-                          className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: `${color}20` }}
-                        >
-                          <BookOpen size={13} style={{ color }} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="min-w-0">
-                              <span className="text-sm text-white truncate block">{s.name}</span>
-                              {subtitle && <span className="text-[10px] text-muted">{subtitle}</span>}
-                            </div>
-                            <span className="text-xs font-semibold ml-2 shrink-0" style={{ color }}>
-                              {pct}%
-                            </span>
-                          </div>
-                          <ProgressBar pct={pct} color={color} />
-                        </div>
-                        <ChevronRight size={13} className="text-muted shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+              ))}
             </div>
-          )
-        })()}
+          ) : syllabi.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-sm text-muted mb-2">No syllabi yet</p>
+              <button
+                onClick={() => navigate('/syllabus')}
+                className="text-xs text-primary hover:underline"
+              >
+                Upload your first syllabus →
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {syllabi.slice(0, 4).map((s, i) => {
+                const color = PALETTE[i % PALETTE.length]
+
+                // Match topicMastery using all significant words (>2 chars) from syllabus title
+                const words = s.title.toLowerCase().split(/\s+/).filter((w) => w.length > 2)
+                const masteryMatched = topicMastery.filter((t) =>
+                  words.some((w) => String(t.context_key).toLowerCase().includes(w)),
+                )
+                const masteryPct =
+                  masteryMatched.length > 0
+                    ? Math.round(
+                        (masteryMatched.reduce((sum, t) => sum + t.confidence, 0) / masteryMatched.length) * 100,
+                      )
+                    : null
+
+                // Fall back to test attempt scores
+                const syllabiAttempts = attempts.filter((a) =>
+                  a.total_marks > 0 &&
+                  words.some((w) => (a.topic ?? '').toLowerCase().includes(w)),
+                )
+                const attemptPct =
+                  syllabiAttempts.length > 0
+                    ? Math.round(
+                        (syllabiAttempts.reduce((sum, a) => sum + a.score / a.total_marks, 0) /
+                          syllabiAttempts.length) * 100,
+                      )
+                    : null
+
+                // Syllabus completion: use topic_count if available
+                const completionPct = (s as Syllabus & { completed_count?: number; topic_count?: number }).completed_count != null && (s as Syllabus & { completed_count?: number; topic_count?: number }).topic_count
+                  ? Math.round(((s as Syllabus & { completed_count?: number; topic_count?: number }).completed_count! / (s as Syllabus & { completed_count?: number; topic_count?: number }).topic_count!) * 100)
+                  : masteryPct ?? attemptPct ?? 0
+
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => navigate('/syllabus', { state: { syllabusId: s.id } })}
+                    className="w-full flex items-center gap-3 group text-left"
+                  >
+                    <div
+                      className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: `${color}20` }}
+                    >
+                      <BookOpen size={13} style={{ color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-white truncate block">{s.title}</span>
+                        <span className="text-xs font-semibold ml-2 shrink-0" style={{ color }}>
+                          {completionPct}%
+                        </span>
+                      </div>
+                      <ProgressBar pct={completionPct} color={color} />
+                    </div>
+                    <ChevronRight size={13} className="text-muted/40 group-hover:text-muted transition-colors shrink-0" />
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Recent Activity */}
         <div className="rounded-xl border border-border bg-surface p-5">

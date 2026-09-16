@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@clerk/clerk-react'
+import { useLocation } from 'react-router-dom'
 import {
   BookOpen, Upload, Trash2, CheckSquare, Square, ChevronRight,
   ChevronDown, FileText, Plus, X, Loader2, CheckCircle2, AlertCircle,
@@ -283,6 +284,8 @@ export default function SyllabusPage() {
   const { getToken } = useAuth()
   const { theme } = useTheme()
   const isLight = theme === 'light'
+  const location = useLocation()
+  const navSyllabusId = (location.state as { syllabusId?: string } | null)?.syllabusId ?? null
 
   // Syllabi list
   const [syllabi, setSyllabi] = useState<Syllabus[]>([])
@@ -309,7 +312,12 @@ export default function SyllabusPage() {
       const { syllabi: data } = await makeApi(token).syllabus.list()
       setSyllabi(data)
       setLoadingSyllabi(false)
-      if (data.length > 0 && !selectedId) setSelectedId(data[0].id)
+      if (data.length > 0 && !selectedId) {
+        // Open the syllabus that was clicked from Dashboard, or default to first
+        const target = navSyllabusId && data.find((s) => s.id === navSyllabusId)
+        setSelectedId(target ? target.id : data[0].id)
+        if (target) setMobileTab('topics')
+      }
     }
     load()
   }, [getToken])
