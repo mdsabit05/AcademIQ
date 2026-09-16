@@ -56,6 +56,8 @@ syllabus.post('/', async (c) => {
     let subjectId: string | null = null
     let syllabusId: string | null = null
     let filePath = ''
+    // Track when the file is fully saved to storage before parsing starts
+    let fileSavePromise: Promise<void> = Promise.resolve()
 
     const bb = busboy({
       headers: rawReq.headers,
@@ -67,7 +69,7 @@ syllabus.post('/', async (c) => {
       if (name === 'subject_id') subjectId = value.trim() || null
     })
 
-    bb.on('file', async (fieldname, fileStream, info) => {
+    bb.on('file', (fieldname, fileStream, info) => {
       if (fieldname !== 'file') { fileStream.resume(); return }
 
       const filename = info.filename || 'syllabus'
@@ -82,7 +84,7 @@ syllabus.post('/', async (c) => {
       }
       if (!title) title = filename.replace(/\.\w+$/i, '').trim() || 'Syllabus'
 
-      try {
+      fileSavePromise = (async () => {
         const [row] = await sql<[{ id: string }]>`
           INSERT INTO syllabi (owner_id, subject_id, title, status)
           VALUES (${dbUserId}, ${subjectId}, ${title}, 'processing')
@@ -94,16 +96,19 @@ syllabus.post('/', async (c) => {
 
         await sql`UPDATE syllabi SET file_path = ${key} WHERE id = ${syllabusId}`
         await storage.saveStream(key, fileStream)
-      } catch (err) {
+      })().catch(async (err) => {
         fileStream.resume()
         if (syllabusId) {
           await sql`UPDATE syllabi SET status = 'failed' WHERE id = ${syllabusId}`.catch(() => {})
         }
         resolve(c.json({ error: 'Upload failed' }, 500) as unknown as Response)
-      }
+      })
     })
 
     bb.on('finish', async () => {
+      // Wait for file to be fully saved before responding or parsing
+      await fileSavePromise
+
       if (!syllabusId) {
         resolve(c.json({ error: 'No file uploaded' }, 400) as unknown as Response)
         return
