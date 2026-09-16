@@ -560,7 +560,7 @@ export default function SyllabusPage() {
                         )}
                       </div>
                       <button
-                        className="opacity-0 group-hover:opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-0.5 rounded transition-opacity"
+                        className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-0.5 rounded transition-opacity"
                         onClick={(e) => { e.stopPropagation(); setDeleteTargetId(s.id) }}
                       >
                         <Trash2 size={12} style={{ color: isLight ? '#dc2626' : '#f87171' }} />
