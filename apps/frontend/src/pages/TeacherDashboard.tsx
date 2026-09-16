@@ -12,6 +12,7 @@ import { useTheme } from '../lib/theme.tsx'
 import {
   BookOpen,
   ScrollText,
+  BookMarked,
   PlusCircle,
   ArrowRight,
   FileText,
