@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
-import { Search, Sun, Moon } from 'lucide-react'
-import { useUser } from '@clerk/clerk-react'
+import { Search, Sun, Moon, LogOut, Settings } from 'lucide-react'
+import { useUser, useClerk } from '@clerk/clerk-react'
 import Sidebar from './Sidebar.tsx'
 import TopBar from './TopBar.tsx'
 import MobileBottomNav from './MobileBottomNav.tsx'
@@ -15,12 +15,25 @@ import SearchSpotlight from '../SearchSpotlight.tsx'
 // ── Mobile top bar ─────────────────────────────────────────────────────────────
 function MobileTopBar() {
   const { user } = useUser()
+  const { signOut } = useClerk()
   const [spotlightOpen, setSpotlightOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const { mode, setMode } = useMode()
   const { theme, toggle } = useTheme()
   const navigate = useNavigate()
+  const menuRef = useRef<HTMLDivElement>(null)
   const imageUrl = user?.imageUrl
   const initials = user?.fullName?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() ?? 'U'
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   return (
     <>
@@ -29,7 +42,7 @@ function MobileTopBar() {
 
         {/* Row 1: Logo + controls + avatar */}
         <div className="flex items-center justify-between gap-2">
-          <Logo />
+          <Logo size="sm" />
 
           <div className="flex items-center gap-1.5 ml-auto">
             {/* Student / Teacher toggle */}
@@ -60,12 +73,39 @@ function MobileTopBar() {
               {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             </button>
 
-            {/* Avatar */}
-            <div className="w-8 h-8 rounded-full overflow-hidden border border-border shrink-0">
-              {imageUrl
-                ? <img src={imageUrl} alt="avatar" className="w-full h-full object-cover" />
-                : <div className="w-full h-full bg-primary flex items-center justify-center text-bg text-xs font-bold">{initials}</div>
-              }
+            {/* Avatar + dropdown */}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen((o) => !o)}
+                className="w-8 h-8 rounded-full overflow-hidden border border-border shrink-0"
+              >
+                {imageUrl
+                  ? <img src={imageUrl} alt="avatar" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full bg-primary flex items-center justify-center text-bg text-xs font-bold">{initials}</div>
+                }
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border bg-surface shadow-xl py-1 overflow-hidden" style={{ zIndex: 9999 }}>
+                  <div className="px-3 py-2 border-b border-border/60">
+                    <p className="text-xs font-semibold text-white truncate">{user?.fullName ?? 'User'}</p>
+                    <p className="text-[10px] text-muted">{user?.primaryEmailAddress?.emailAddress}</p>
+                  </div>
+                  <button
+                    onClick={() => { setMenuOpen(false); signOut(() => navigate('/')) }}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-muted hover:text-white hover:bg-white/5 transition-colors"
+                  >
+                    <LogOut size={14} /> Sign Out
+                  </button>
+                  <div className="h-px bg-border/60 mx-2 my-1" />
+                  <button
+                    onClick={() => { setMenuOpen(false); navigate('/settings') }}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-muted hover:text-white hover:bg-white/5 transition-colors"
+                  >
+                    <Settings size={14} /> Settings
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
