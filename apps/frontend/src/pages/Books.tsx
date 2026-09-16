@@ -287,7 +287,7 @@ function UploadModal({ subjects, onClose, onUpload }: UploadModalProps) {
 
 // ── Delete Confirm ─────────────────────────────────────────────────────────────
 
-function DeleteConfirm({ title, onConfirm, onCancel }: { title: string; onConfirm: () => void; onCancel: () => void }) {
+function DeleteConfirm({ title, onConfirm, onCancel, deleting }: { title: string; onConfirm: () => void; onCancel: () => void; deleting?: boolean }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }}>
       <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-6 shadow-2xl">
@@ -301,8 +301,8 @@ function DeleteConfirm({ title, onConfirm, onCancel }: { title: string; onConfir
           Permanently delete <span className="text-white font-medium">"{title}"</span> and all its AI-indexed content? This cannot be undone.
         </p>
         <div className="mt-5 flex justify-end gap-3">
-          <button onClick={onCancel} className="rounded-lg px-4 py-2 text-sm text-muted hover:text-white transition-colors">Cancel</button>
-          <button onClick={onConfirm} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors">Delete</button>
+          <button onClick={onCancel} disabled={deleting} className="rounded-lg px-4 py-2 text-sm text-muted hover:text-white transition-colors disabled:opacity-50">Cancel</button>
+          <button onClick={onConfirm} disabled={deleting} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-50">{deleting ? 'Deleting...' : 'Delete'}</button>
         </div>
       </div>
     </div>
@@ -604,6 +604,7 @@ export default function Books() {
   const [loading, setLoading] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Book | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [search, setSearch] = useState('')
   const [filterSubject, setFilterSubject] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
@@ -670,12 +671,20 @@ export default function Books() {
   }
 
   async function confirmDelete() {
-    if (!deleteTarget) return
-    const token = await getToken()
-    if (!token) return
-    await makeApi(token).books.delete(deleteTarget.id)
-    setBooks((prev) => prev.filter((b) => b.id !== deleteTarget.id))
-    setDeleteTarget(null)
+    if (!deleteTarget || deleting) return
+    setDeleting(true)
+    try {
+      const token = await getToken()
+      if (!token) return
+      await makeApi(token).books.delete(deleteTarget.id)
+      setBooks((prev) => prev.filter((b) => b.id !== deleteTarget.id))
+      setDeleteTarget(null)
+    } catch (e) {
+      console.error('[Books] delete error:', e)
+      setDeleteTarget(null)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   function handleAskAI(book: Book) { navigate(`/tutor?bookId=${book.id}`) }
@@ -980,7 +989,7 @@ export default function Books() {
         <UploadModal subjects={subjects} onClose={() => setShowUpload(false)} onUpload={handleUpload} />
       )}
       {deleteTarget && (
-        <DeleteConfirm title={deleteTarget.title} onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} />
+        <DeleteConfirm title={deleteTarget.title} onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} deleting={deleting} />
       )}
     </div>
   )

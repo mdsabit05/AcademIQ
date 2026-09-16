@@ -19,7 +19,7 @@ import {
 import { unlink } from 'fs/promises'
 import { join, dirname } from 'path'
 import { pipeline } from 'stream/promises'
-import type { Readable } from 'stream'
+import { Readable } from 'stream'
 import { S3Client, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 
@@ -123,9 +123,7 @@ class S3StorageProvider implements StorageProvider {
 
   createReadStream(key: string): Readable {
     const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: key })
-    // Return a lazy stream — the promise resolves on first read
-    const { Readable: NodeReadable } = require('stream')
-    const pass = new NodeReadable({ read() {} })
+    const pass = new Readable({ read() {} })
     this.client.send(cmd).then((res) => {
       const body = res.Body as Readable
       body.on('data', (chunk) => pass.push(chunk))
