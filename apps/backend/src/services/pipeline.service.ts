@@ -7,6 +7,11 @@
  *   Any step can transition to FAILED with an error message.
  */
 
+import { mkdirSync, createWriteStream } from 'fs'
+import { unlink } from 'fs/promises'
+import { join } from 'path'
+import { pipeline } from 'stream/promises'
+import { tmpdir } from 'os'
 import sql from '../db/client.js'
 import { storage } from './storage.service.js'
 import { extractAndChunk } from './chunker.service.js'
@@ -46,6 +51,7 @@ async function setStatus(
  */
 export async function processBook(bookId: string): Promise<void> {
   let filePath: string
+  let tempFile: string | null = null
 
   try {
     // ── 1. Resolve storage path ──────────────────────────────────────────
@@ -55,8 +61,17 @@ export async function processBook(bookId: string): Promise<void> {
     if (!book) throw new Error(`Book ${bookId} not found`)
 
     const localPath = storage.getLocalPath(book.file_path)
-    if (!localPath) throw new Error('Storage provider does not support local paths')
-    filePath = localPath
+    if (localPath) {
+      filePath = localPath
+    } else {
+      // Remote storage (B2/S3) — download to a temp file for processing
+      const tmpDir = join(tmpdir(), 'academiq-processing')
+      mkdirSync(tmpDir, { recursive: true })
+      tempFile = join(tmpDir, `${bookId}.pdf`)
+      const readStream = storage.createReadStream(book.file_path)
+      await pipeline(readStream as NodeJS.ReadableStream, createWriteStream(tempFile))
+      filePath = tempFile
+    }
   } catch (err) {
     await setStatus(bookId, 'FAILED', {
       error_msg: `Setup failed: ${String(err)}`,
@@ -125,5 +140,8 @@ export async function processBook(bookId: string): Promise<void> {
     await setStatus(bookId, 'FAILED', {
       error_msg: String(err).slice(0, 500),
     })
+  } finally {
+    // Clean up temp file if we downloaded from remote storage
+    if (tempFile) await unlink(tempFile).catch(() => {})
   }
 }
