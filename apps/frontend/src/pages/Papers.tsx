@@ -25,7 +25,7 @@ import {
   BookOpen,
 } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
-import type { QuestionPaper, PaperBlueprint, PaperQuestion, Subject, Book } from 'shared'
+import type { QuestionPaper, PaperBlueprint, PaperQuestion, Book } from 'shared'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -121,7 +121,6 @@ export default function Papers() {
 
   // App state
   const [step, setStep] = useState<Step>(1)
-  const [subjects, setSubjects] = useState<Subject[]>([])
   const [books, setBooks] = useState<Book[]>([])
   const [selectedBookIds, setSelectedBookIds] = useState<string[]>([])
   const [papers, setPapers] = useState<QuestionPaper[]>([])
@@ -170,19 +169,11 @@ export default function Papers() {
         const token = await getToken()
         if (!token) return
         const api = makeApi(token)
-        const [subRes, bpRes, papersRes, booksRes] = await Promise.allSettled([
-          api.subjects.list(),
+        const [bpRes, papersRes, booksRes] = await Promise.allSettled([
           api.papers.blueprints.list(),
           api.papers.list(),
           api.books.list(undefined, 'teacher'),
         ])
-        if (subRes.status === 'fulfilled') {
-          setSubjects(subRes.value.subjects)
-          if (subRes.value.subjects.length > 0) {
-            const first = subRes.value.subjects[0]
-            setForm((f) => ({ ...f, subjectId: first.id, subjectName: first.name }))
-          }
-        }
         if (bpRes.status === 'fulfilled') setBlueprints(bpRes.value.blueprints)
         if (papersRes.status === 'fulfilled') setPapers(papersRes.value.papers)
         if (booksRes.status === 'fulfilled') {
@@ -575,23 +566,15 @@ ${currentQuestions.map((q, i) => `
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Field label="Subject" required>
-                  <div className="relative">
-                    <select
-                      value={form.subjectId}
-                      onChange={(e) => {
-                        const s = subjects.find((x) => x.id === e.target.value)
-                        setField('subjectId', e.target.value)
-                        setField('subjectName', s?.name ?? '')
-                      }}
-                      className={selectCls}
-                    >
-                      {subjects.length === 0
-                        ? <option value="">No subjects found</option>
-                        : subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)
-                      }
-                    </select>
-                    <ChevronDown size={14} className="pointer-events-none absolute right-3 top-3 text-muted" />
-                  </div>
+                  <input
+                    value={form.subjectName}
+                    onChange={(e) => {
+                      setField('subjectName', e.target.value)
+                      setField('subjectId', '')
+                    }}
+                    placeholder="e.g. Mathematics, Physics…"
+                    className={inputCls}
+                  />
                 </Field>
 
                 <Field label="Topic / Unit">
