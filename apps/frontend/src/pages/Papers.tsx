@@ -186,11 +186,16 @@ export default function Papers() {
         if (bpRes.status === 'fulfilled') setBlueprints(bpRes.value.blueprints)
         if (papersRes.status === 'fulfilled') setPapers(papersRes.value.papers)
         if (booksRes.status === 'fulfilled') {
-          setBooks(booksRes.value.books)
-          // Pre-select book passed via URL query param (e.g. from TeacherMaterials)
+          const loadedBooks: Book[] = booksRes.value.books
+          setBooks(loadedBooks)
+          const readyBooks = loadedBooks.filter((b: Book) => b.status === 'READY')
           const preselectedId = searchParams.get('bookId')
-          if (preselectedId && booksRes.value.books.some((b: Book) => b.id === preselectedId)) {
+          if (preselectedId && readyBooks.some((b: Book) => b.id === preselectedId)) {
+            // Came from TeacherMaterials — select that specific book
             setSelectedBookIds([preselectedId])
+          } else {
+            // Default: select all ready books so AI has full context
+            setSelectedBookIds(readyBooks.map((b: Book) => b.id))
           }
         }
       } finally {
@@ -677,7 +682,7 @@ ${currentQuestions.map((q, i) => `
                       )
                     })}
                   </div>
-                  <p className="text-xs text-muted mt-1">Select books/notes the AI should use to generate questions. {selectedBookIds.length === 0 && <span className="text-amber-400">No materials selected — AI will use general knowledge.</span>}</p>
+                  <p className="text-xs text-muted mt-1">{selectedBookIds.length === 0 ? <span className="text-amber-400">No materials selected — AI will use general knowledge only.</span> : <span className="text-emerald-400">{selectedBookIds.length} material{selectedBookIds.length > 1 ? 's' : ''} selected — AI will generate questions from your content.</span>}</p>
                 </Field>
               )}
 
