@@ -95,13 +95,21 @@ export function makeApi(token: string) {
         apiFetch<{ success: boolean }>(`/books/${id}`, token, { method: 'DELETE' }),
 
       openFile: async (id: string) => {
-        const res = await fetch(`${BASE}/books/${id}/file`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!res.ok) throw new Error('Failed to load file')
-        const blob = await res.blob()
-        const url = URL.createObjectURL(blob)
-        window.open(url, '_blank')
+        // Open the window synchronously (before any await) to avoid popup blockers
+        const win = window.open('about:blank', '_blank')
+        try {
+          const res = await fetch(`${BASE}/books/${id}/file`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (!res.ok) throw new Error('Failed to load file')
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          if (win) win.location.href = url
+          else window.open(url, '_blank')
+        } catch (err) {
+          win?.close()
+          throw err
+        }
       },
     },
 

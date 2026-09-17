@@ -306,9 +306,10 @@ interface CardProps {
   subjectIndex: number
   onDelete: (book: Book) => void
   onCreatePaper: (book: Book) => void
+  onPreview: (book: Book) => void
 }
 
-function MaterialCard({ book, subject, subjectIndex, onDelete, onCreatePaper }: CardProps) {
+function MaterialCard({ book, subject, subjectIndex, onDelete, onCreatePaper, onPreview }: CardProps) {
   const isReady = book.status === 'READY'
   const isFailed = book.status === 'FAILED'
   const isProcessing = PROCESSING_STATUSES.has(book.status)
@@ -382,6 +383,7 @@ function MaterialCard({ book, subject, subjectIndex, onDelete, onCreatePaper }: 
               <ScrollText size={11} /> Create Paper
             </button>
             <button
+              onClick={() => onPreview(book)}
               className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-bold text-muted hover:text-white hover:bg-white/5 transition-colors border border-border">
               <Eye size={11} /> Preview
             </button>
@@ -407,7 +409,7 @@ function MaterialCard({ book, subject, subjectIndex, onDelete, onCreatePaper }: 
 
 // ── Material Row (List view) ───────────────────────────────────────────────────
 
-function MaterialRow({ book, subject, subjectIndex, onDelete, onCreatePaper }: CardProps) {
+function MaterialRow({ book, subject, subjectIndex, onDelete, onCreatePaper, onPreview }: CardProps) {
   const isReady = book.status === 'READY'
   const isFailed = book.status === 'FAILED'
   const sColor = subject ? subjectColor(subjectIndex) : '#94A3B8'
@@ -438,11 +440,17 @@ function MaterialRow({ book, subject, subjectIndex, onDelete, onCreatePaper }: C
       <StatusBadge status={book.status} />
       <div className="flex shrink-0 items-center gap-1.5">
         {isReady && (
-          <button onClick={() => onCreatePaper(book)}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-colors"
-            style={{ background: 'rgba(34,211,238,0.1)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.25)' }}>
-            <ScrollText size={10} /> Create Paper
-          </button>
+          <>
+            <button onClick={() => onCreatePaper(book)}
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-colors"
+              style={{ background: 'rgba(34,211,238,0.1)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.25)' }}>
+              <ScrollText size={10} /> Create Paper
+            </button>
+            <button onClick={() => onPreview(book)}
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold text-muted hover:text-white hover:bg-white/5 transition-colors border border-border">
+              <Eye size={10} /> Preview
+            </button>
+          </>
         )}
         {isFailed && (
           <button onClick={() => onDelete(book)}
@@ -540,6 +548,16 @@ export default function TeacherMaterials() {
 
   function handleCreatePaper(book: Book) {
     navigate(`/question-papers?bookId=${book.id}`)
+  }
+
+  async function handlePreview(book: Book) {
+    const token = await getToken()
+    if (!token) return
+    try {
+      await makeApi(token).books.openFile(book.id)
+    } catch (e) {
+      console.error('[TeacherMaterials] preview error:', e)
+    }
   }
 
   const subjectMap = Object.fromEntries(subjects.map((s) => [s.id, s]))
@@ -710,7 +728,7 @@ export default function TeacherMaterials() {
                 <MaterialCard key={book.id} book={book}
                   subject={book.subject_id ? subjectMap[book.subject_id] : undefined}
                   subjectIndex={book.subject_id ? (subjectIndexMap[book.subject_id] ?? 0) : 0}
-                  onDelete={setDeleteTarget} onCreatePaper={handleCreatePaper} />
+                  onDelete={setDeleteTarget} onCreatePaper={handleCreatePaper} onPreview={handlePreview} />
               ))}
               <div onClick={() => setShowUpload(true)}
                 className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border hover:border-primary/40 bg-surface/40 cursor-pointer transition-colors p-6 text-center min-h-[180px]">
@@ -726,7 +744,7 @@ export default function TeacherMaterials() {
                 <MaterialRow key={book.id} book={book}
                   subject={book.subject_id ? subjectMap[book.subject_id] : undefined}
                   subjectIndex={book.subject_id ? (subjectIndexMap[book.subject_id] ?? 0) : 0}
-                  onDelete={setDeleteTarget} onCreatePaper={handleCreatePaper} />
+                  onDelete={setDeleteTarget} onCreatePaper={handleCreatePaper} onPreview={handlePreview} />
               ))}
             </div>
           )}
