@@ -127,13 +127,13 @@ export default function Dashboard() {
   const [syllabi, setSyllabi] = useState<Syllabus[]>([])
   const [topicMastery, setTopicMastery] = useState<TopicMastery[]>([])
   const [attempts, setAttempts] = useState<HistoryAttempt[]>([])
-  const [sessions, setSessions] = useState<HistorySession[]>([])
+  const [_sessions, setSessions] = useState<HistorySession[]>([])
   const [loading, setLoading] = useState(true)
 
   // Todo list state
   const [tasks, setTasks] = useState<PlanTask[]>([])
   const [todoInput, setTodoInput] = useState('')
-  const [addingTodo, setAddingTodo] = useState(false)
+  const [_addingTodo, setAddingTodo] = useState(false)
   const todoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
