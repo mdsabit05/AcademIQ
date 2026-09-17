@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import {
   FileText,
@@ -21,9 +22,10 @@ import {
   Plus,
   Trash2,
   Download,
+  BookOpen,
 } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
-import type { QuestionPaper, PaperBlueprint, PaperQuestion, Subject } from 'shared'
+import type { QuestionPaper, PaperBlueprint, PaperQuestion, Subject, Book } from 'shared'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -115,14 +117,18 @@ const selectCls = `${inputCls} appearance-none cursor-pointer`
 
 export default function Papers() {
   const { getToken } = useAuth()
+  const [searchParams] = useSearchParams()
 
   // App state
   const [step, setStep] = useState<Step>(1)
   const [subjects, setSubjects] = useState<Subject[]>([])
+  const [books, setBooks] = useState<Book[]>([])
+  const [selectedBookIds, setSelectedBookIds] = useState<string[]>([])
   const [papers, setPapers] = useState<QuestionPaper[]>([])
   const [_blueprints, setBlueprints] = useState<PaperBlueprint[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [loadingPaper, setLoadingPaper] = useState(false)
   const [currentPaper, setCurrentPaper] = useState<QuestionPaper | null>(null)
   const [currentQuestions, setCurrentQuestions] = useState<PaperQuestion[]>([])
   const [showMyPapers, setShowMyPapers] = useState(false)
@@ -164,10 +170,11 @@ export default function Papers() {
         const token = await getToken()
         if (!token) return
         const api = makeApi(token)
-        const [subRes, bpRes, papersRes] = await Promise.allSettled([
+        const [subRes, bpRes, papersRes, booksRes] = await Promise.allSettled([
           api.subjects.list(),
           api.papers.blueprints.list(),
           api.papers.list(),
+          api.books.list(undefined, 'teacher'),
         ])
         if (subRes.status === 'fulfilled') {
           setSubjects(subRes.value.subjects)
@@ -178,12 +185,20 @@ export default function Papers() {
         }
         if (bpRes.status === 'fulfilled') setBlueprints(bpRes.value.blueprints)
         if (papersRes.status === 'fulfilled') setPapers(papersRes.value.papers)
+        if (booksRes.status === 'fulfilled') {
+          setBooks(booksRes.value.books)
+          // Pre-select book passed via URL query param (e.g. from TeacherMaterials)
+          const preselectedId = searchParams.get('bookId')
+          if (preselectedId && booksRes.value.books.some((b: Book) => b.id === preselectedId)) {
+            setSelectedBookIds([preselectedId])
+          }
+        }
       } finally {
         setLoading(false)
       }
     }
     load()
-  }, [getToken])
+  }, [getToken, searchParams])
 
   function setField<K extends keyof FormData>(k: K, v: FormData[K]) {
     setForm((f) => {
@@ -236,7 +251,7 @@ export default function Papers() {
             type: s.type,
             count: s.count,
             marksEach: s.marksEach,
-            bookIds: [],
+            bookIds: selectedBookIds,
             topics: form.topic ? [form.topic] : [],
           })),
         },
@@ -307,6 +322,24 @@ ${currentQuestions.map((q, i) => `
     win.document.close()
     win.focus()
     setTimeout(() => { win.print() }, 500)
+  }
+
+  async function handleViewPaper(paper: QuestionPaper) {
+    setLoadingPaper(true)
+    try {
+      const token = await getToken()
+      if (!token) return
+      const api = makeApi(token)
+      const { paper: full, questions } = await api.papers.get(paper.id)
+      setCurrentPaper(full)
+      setCurrentQuestions(questions)
+      setShowMyPapers(false)
+      setStep(4)
+    } catch (err) {
+      alert((err as Error).message)
+    } finally {
+      setLoadingPaper(false)
+    }
   }
 
   async function handleFinalize() {
@@ -391,10 +424,11 @@ ${currentQuestions.map((q, i) => `
                   {paper.status.toUpperCase()}
                 </span>
                 <button
-                  onClick={() => { setCurrentPaper(paper); setShowMyPapers(false); setStep(4) }}
-                  className="mt-auto text-xs text-primary hover:underline"
+                  onClick={() => handleViewPaper(paper)}
+                  disabled={loadingPaper}
+                  className="mt-auto text-xs text-primary hover:underline disabled:opacity-50"
                 >
-                  View →
+                  {loadingPaper ? 'Loading…' : 'View →'}
                 </button>
               </div>
             ))}
@@ -617,6 +651,35 @@ ${currentQuestions.map((q, i) => `
                   </div>
                 </Field>
               </div>
+
+              {/* Source Materials — determines what context the AI uses */}
+              {books.length > 0 && (
+                <Field label="Source Materials (AI Context)">
+                  <div className="flex flex-wrap gap-2">
+                    {books.map((b) => {
+                      const selected = selectedBookIds.includes(b.id)
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => setSelectedBookIds((prev) =>
+                            selected ? prev.filter((id) => id !== b.id) : [...prev, b.id]
+                          )}
+                          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                            selected
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-border bg-bg text-muted hover:border-primary/50 hover:text-white'
+                          }`}
+                        >
+                          <BookOpen size={11} />
+                          {b.title}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-xs text-muted mt-1">Select books/notes the AI should use to generate questions. {selectedBookIds.length === 0 && <span className="text-amber-400">No materials selected — AI will use general knowledge.</span>}</p>
+                </Field>
+              )}
 
               <Field label="Instructions for Students (Optional)">
                 <textarea
