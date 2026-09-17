@@ -54,11 +54,6 @@ interface HistoryAttempt {
   submitted_at: string
 }
 
-interface HistorySession {
-  id: string
-  mode: string
-  created_at: string
-}
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -127,13 +122,11 @@ export default function Dashboard() {
   const [syllabi, setSyllabi] = useState<Syllabus[]>([])
   const [topicMastery, setTopicMastery] = useState<TopicMastery[]>([])
   const [attempts, setAttempts] = useState<HistoryAttempt[]>([])
-  const [_sessions, setSessions] = useState<HistorySession[]>([])
   const [loading, setLoading] = useState(true)
 
   // Todo list state
   const [tasks, setTasks] = useState<PlanTask[]>([])
   const [todoInput, setTodoInput] = useState('')
-  const [_addingTodo, setAddingTodo] = useState(false)
   const todoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -153,7 +146,6 @@ export default function Dashboard() {
         setSyllabi(syllabiRes.syllabi.filter((s) => s.status === 'ready'))
         setTopicMastery(progressRes.topicMastery)
         setAttempts(historyRes.attempts as HistoryAttempt[])
-        setSessions(historyRes.sessions as HistorySession[])
         setTasks(tasksRes.tasks)
       } catch (err) {
         console.error('[dashboard] load error:', err)
@@ -627,7 +619,7 @@ export default function Dashboard() {
             />
             <button
               onClick={handleAddTodo}
-              disabled={addingTodo || !todoInput.trim()}
+              disabled={!todoInput.trim()}
               className="rounded-lg bg-primary/10 border border-primary/30 text-primary px-3 py-2 hover:bg-primary/20 transition-colors disabled:opacity-40"
             >
               <Plus size={15} />
