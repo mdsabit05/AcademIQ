@@ -399,7 +399,7 @@ export default function TestNew() {
       if (!token) return
       const api = makeApi(token)
       const [{ books: allBooks }, { subjects: allSubjects }] = await Promise.all([
-        api.books.list(undefined, 'student'),
+        api.books.list(),
         api.subjects.list(),
       ])
       const ready = allBooks.filter((b) => b.status === 'READY')
