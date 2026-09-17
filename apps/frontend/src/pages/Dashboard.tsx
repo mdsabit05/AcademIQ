@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import heroBgUrl from '../assets/hero-bg.png'
 import lightLandingUrl from '../assets/lightLanding.png'
 import { useNavigate } from 'react-router-dom'
@@ -11,11 +11,12 @@ import {
   CheckCircle,
   ChevronRight,
   Sparkles,
-  MessageSquare,
   Calendar,
+  Plus,
+  Trash2,
 } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
-import type { Book, Syllabus } from 'shared'
+import type { Book, Syllabus, PlanTask } from 'shared'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -129,23 +130,31 @@ export default function Dashboard() {
   const [sessions, setSessions] = useState<HistorySession[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Todo list state
+  const [tasks, setTasks] = useState<PlanTask[]>([])
+  const [todoInput, setTodoInput] = useState('')
+  const [addingTodo, setAddingTodo] = useState(false)
+  const todoInputRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     async function load() {
       const token = await getToken()
       if (!token) return
       const api = makeApi(token)
       try {
-        const [booksRes, syllabiRes, progressRes, historyRes] = await Promise.all([
+        const [booksRes, syllabiRes, progressRes, historyRes, tasksRes] = await Promise.all([
           api.books.list(undefined, 'student'),
           api.syllabus.list(),
           api.progress.summary(),
           api.progress.history(6, 0),
+          api.studyplan.listTasks(),
         ])
         setBooks(booksRes.books.filter((b) => b.status === 'READY'))
         setSyllabi(syllabiRes.syllabi.filter((s) => s.status === 'ready'))
         setTopicMastery(progressRes.topicMastery)
         setAttempts(historyRes.attempts as HistoryAttempt[])
         setSessions(historyRes.sessions as HistorySession[])
+        setTasks(tasksRes.tasks)
       } catch (err) {
         console.error('[dashboard] load error:', err)
       } finally {
@@ -154,6 +163,30 @@ export default function Dashboard() {
     }
     load().catch(console.error)
   }, [getToken])
+
+  async function handleAddTodo() {
+    const text = todoInput.trim()
+    if (!text) return
+    setTodoInput('')
+    const token = await getToken()
+    if (!token) return
+    const { task } = await makeApi(token).studyplan.addTask({ text })
+    setTasks((prev) => [task, ...prev])
+  }
+
+  async function handleToggleTodo(id: string, completed: boolean) {
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed } : t))
+    const token = await getToken()
+    if (!token) return
+    await makeApi(token).studyplan.toggleTask(id, completed)
+  }
+
+  async function handleDeleteTodo(id: string) {
+    setTasks((prev) => prev.filter((t) => t.id !== id))
+    const token = await getToken()
+    if (!token) return
+    await makeApi(token).studyplan.deleteTask(id)
+  }
 
   // Derived values
   const firstName = user?.firstName ?? user?.fullName?.split(' ')[0] ?? ''
@@ -168,28 +201,6 @@ export default function Dashboard() {
 
   const displayTopics = topicMastery.slice(0, 4)
 
-  // Merged activity feed (tests + sessions sorted by date)
-  const activity = [
-    ...attempts.slice(0, 4).map((a) => ({
-      type: 'test' as const,
-      label: `Completed Quiz — ${a.topic ?? a.type.replace('_', ' ')}`,
-      sub: `Score: ${a.score}/${a.total_marks}`,
-      date: a.submitted_at,
-    })),
-    ...sessions.slice(0, 4).map((s) => ({
-      type: 'session' as const,
-      label:
-        s.mode === 'ask'
-          ? 'Asked a question in AI Tutor'
-          : s.mode === 'learn'
-            ? 'Completed a Learn session'
-            : 'AI Study session',
-      sub: s.mode,
-      date: s.created_at,
-    })),
-  ]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 4)
 
   return (
     <div className="space-y-3 min-h-full pb-6">
@@ -592,59 +603,77 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Recent Activity */}
-        <div className="rounded-xl border border-border bg-surface p-5">
+        {/* To-Do List */}
+        <div className="rounded-xl border border-border bg-surface p-5 flex flex-col">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-white">Recent Activity</h2>
+            <h2 className="font-semibold text-white">To-Do List</h2>
             <button
-              onClick={() => navigate('/progress')}
+              onClick={() => navigate('/study-plan')}
               className="text-xs text-primary hover:underline"
             >
               View All
             </button>
           </div>
 
+          {/* Add task input */}
+          <div className="flex gap-2 mb-4">
+            <input
+              ref={todoInputRef}
+              value={todoInput}
+              onChange={(e) => setTodoInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
+              placeholder="Add a task…"
+              className="flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-white placeholder:text-muted/50 focus:outline-none focus:border-primary transition-colors"
+            />
+            <button
+              onClick={handleAddTodo}
+              disabled={addingTodo || !todoInput.trim()}
+              className="rounded-lg bg-primary/10 border border-primary/30 text-primary px-3 py-2 hover:bg-primary/20 transition-colors disabled:opacity-40"
+            >
+              <Plus size={15} />
+            </button>
+          </div>
+
           {loading ? (
             <div className="space-y-3">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex gap-3">
-                  <Skeleton className="w-8 h-8 shrink-0" />
-                  <div className="flex-1 space-y-1.5 pt-1">
-                    <Skeleton className="h-3 w-full" />
-                    <Skeleton className="h-2 w-2/3" />
-                  </div>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-3 items-center">
+                  <Skeleton className="w-4 h-4 shrink-0 rounded" />
+                  <Skeleton className="h-3 flex-1" />
                 </div>
               ))}
             </div>
-          ) : activity.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-muted">No activity yet</p>
-              <p className="text-xs text-muted mt-1 opacity-70">
-                Start studying to see your history
-              </p>
+          ) : tasks.length === 0 ? (
+            <div className="py-6 text-center flex-1">
+              <CheckCircle size={24} className="mx-auto mb-2 text-muted/30" />
+              <p className="text-sm text-muted">No tasks yet</p>
+              <p className="text-xs text-muted/60 mt-0.5">Add something to get started</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {activity.map((item, i) => {
-                const color = item.type === 'test' ? '#22C55E' : '#6366F1'
-                const Icon = item.type === 'test' ? CheckCircle : MessageSquare
-                return (
-                  <div key={i} className="flex items-start gap-3">
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                      style={{ backgroundColor: `${color}20` }}
-                    >
-                      <Icon size={14} style={{ color }} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-white leading-tight truncate">{item.label}</p>
-                      <p className="text-xs text-muted mt-0.5 capitalize">
-                        {item.sub} · {timeAgo(item.date)}
-                      </p>
-                    </div>
-                  </div>
-                )
-              })}
+            <div className="space-y-2 overflow-y-auto max-h-64 pr-1">
+              {tasks.slice(0, 10).map((task) => (
+                <div key={task.id} className="group flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-white/[0.03] transition-colors">
+                  <button
+                    onClick={() => handleToggleTodo(task.id, !task.completed)}
+                    className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center transition-colors ${
+                      task.completed
+                        ? 'bg-emerald-500 border-emerald-500'
+                        : 'border-border hover:border-primary'
+                    }`}
+                  >
+                    {task.completed && <CheckCircle size={10} className="text-white" />}
+                  </button>
+                  <span className={`flex-1 text-sm leading-snug ${task.completed ? 'line-through text-muted/50' : 'text-white'}`}>
+                    {task.text}
+                  </span>
+                  <button
+                    onClick={() => handleDeleteTodo(task.id)}
+                    className="opacity-0 group-hover:opacity-100 text-muted hover:text-red-400 transition-all"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
