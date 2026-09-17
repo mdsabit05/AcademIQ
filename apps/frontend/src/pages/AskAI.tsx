@@ -348,7 +348,7 @@ export default function AskAI() {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-5 min-h-0">
-            <div className="max-w-2xl mx-auto space-y-5">
+            <div className={clsx('mx-auto space-y-5 transition-all duration-300', historyVisible ? 'max-w-2xl' : 'max-w-4xl')}>
               {messages.map((msg, i) => (
                 <div key={i} className={clsx('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
                   {msg.role === 'assistant' && (
@@ -383,7 +383,7 @@ export default function AskAI() {
 
           {/* Input */}
           <div className="shrink-0 border-t border-border px-4 lg:px-6 py-3">
-            <div className="max-w-2xl mx-auto">
+            <div className={clsx('mx-auto transition-all duration-300', historyVisible ? 'max-w-2xl' : 'max-w-4xl')}>
               <div className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 focus-within:border-primary/50 transition-colors">
                 <Mic size={16} className="text-muted shrink-0" />
                 <input type="text" value={input} onChange={(e) => setInput(e.target.value)}
@@ -689,7 +689,7 @@ export default function AskAI() {
 
         {/* ── Input ───────────────────────────────────────────────────────────── */}
         <div className="shrink-0 border-t border-border px-4 lg:px-5 py-3">
-          <div className="max-w-2xl mx-auto">
+          <div className={clsx('mx-auto transition-all duration-300', historyVisible ? 'max-w-2xl' : 'max-w-4xl')}>
             {selectedBookIds.length === 0 && (
               <p className="text-[11px] text-muted/60 text-center mb-1.5">
                 ↑ Select a book above to unlock the chat
