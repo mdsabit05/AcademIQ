@@ -6,16 +6,18 @@
  * Security invariants:
  *  - Token verification errors are logged WITHOUT the token or raw error
  *    body to avoid leaking JWT fragments into log aggregators.
- *  - Admin promotion is audit-logged so role escalations are traceable.
+ *  - Auth events (failures, new users, admin promotions) are emitted as
+ *    structured JSON so anomaly-detection alerts can fire on them.
  *  - CLERK_SECRET_KEY absence is caught at import time, not per-request.
  */
 
 import { createMiddleware } from 'hono/factory'
 import { verifyToken, createClerkClient } from '@clerk/backend'
 import sql from '../db/client.js'
+import { logger } from '../lib/logger.js'
 
 if (!process.env.CLERK_SECRET_KEY) {
-  console.error('[auth] FATAL: CLERK_SECRET_KEY is not set — all requests will be rejected')
+  logger.error('CLERK_SECRET_KEY is not set — all requests will be rejected', { module: 'auth' })
 }
 
 const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! })
@@ -34,10 +36,19 @@ export type AuthEnv = {
 export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
   const authHeader = c.req.header('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
+    logger.warn('auth rejected: missing or malformed Authorization header', {
+      ip: c.req.header('x-forwarded-for')?.split(',')[0].trim() ?? c.req.header('x-real-ip') ?? 'unknown',
+      path: c.req.path,
+      method: c.req.method,
+    })
     return c.json({ error: 'Unauthorized' }, 401)
   }
 
   const token = authHeader.replace('Bearer ', '')
+  const ip =
+    c.req.header('x-forwarded-for')?.split(',')[0].trim() ??
+    c.req.header('x-real-ip') ??
+    'unknown'
 
   try {
     const payload = await verifyToken(token, {
@@ -53,7 +64,7 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
       email = clerkUser.emailAddresses[0]?.emailAddress ?? ''
       name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ')
     } catch {
-      // Non-fatal — continue with empty email
+      // Non-fatal — continue with empty email/name
     }
 
     // Admin detection: match against comma-separated ADMIN_EMAIL env var.
@@ -83,13 +94,19 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
         id,
         role,
         learning_prefs,
-        -- Flag promotion so we can audit-log it without a second query
         (xmax = 0 OR (${isAdminEmail}::boolean AND role = 'admin')) AS was_promoted
     `
 
-    // Audit log: record whenever a user is auto-promoted to admin
+    // Audit log: structured entry for every role escalation.
     if (user.was_promoted && user.role === 'admin') {
-      console.warn(`[auth] admin promotion: clerk_id=${clerkUserId} db_id=${user.id} email=${email}`)
+      logger.warn('admin promotion', {
+        event: 'role_escalation',
+        clerkId: clerkUserId,
+        dbId: user.id,
+        // email is safe here — it's the admin's own email, not a secret
+        email,
+        ip,
+      })
     }
 
     c.set('clerkUserId', clerkUserId)
@@ -99,10 +116,16 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
 
     await next()
   } catch (err) {
-    // Log only the error type/message — never the raw error object which may
+    // Log only the error message — never the raw error object which may
     // contain JWT fragments or internal stack details.
-    const message = err instanceof Error ? err.message : String(err)
-    console.warn(`[auth] token rejected: ${message}`)
+    const reason = err instanceof Error ? err.message : String(err)
+    logger.warn('auth rejected: token verification failed', {
+      event: 'auth_failure',
+      reason,
+      ip,
+      path: c.req.path,
+      method: c.req.method,
+    })
     return c.json({ error: 'Unauthorized' }, 401)
   }
 })

@@ -1,23 +1,23 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { logger } from 'hono/logger'
 
+import { logger as log } from './lib/logger.js'
+import { securityHeaders } from './middleware/security-headers.js'
+import { requestLogger } from './middleware/request-logger.js'
 import { authMiddleware } from './middleware/auth.js'
 import { rateLimit } from './middleware/rate-limit.js'
 
 // ── Startup secret validation ─────────────────────────────────────────────────
 // CLERK_SECRET_KEY is required — without it every request will be rejected.
 if (!process.env.CLERK_SECRET_KEY) {
-  console.error('[startup] FATAL: CLERK_SECRET_KEY is not set')
+  log.error('CLERK_SECRET_KEY is not set', { module: 'startup' })
   process.exit(1)
 }
 // CLERK_WEBHOOK_SECRET is optional — only needed if Clerk webhooks are configured.
 if (!process.env.CLERK_WEBHOOK_SECRET) {
-  console.warn('[startup] WARNING: CLERK_WEBHOOK_SECRET is not set — webhook endpoint will reject all requests')
+  log.warn('CLERK_WEBHOOK_SECRET is not set — webhook endpoint will return 503', { module: 'startup' })
 }
-import { startWorker, stopWorker } from './jobs/worker.js'
-import { terminateOcr } from './services/ocr.service.js'
 
 // Unauthenticated
 import webhooksRoute from './routes/webhooks.js'
@@ -36,10 +36,20 @@ import papersRoute from './routes/papers.js'
 import adminRoute from './routes/admin.js'
 import agentRoute from './routes/agent.js'
 import studyplanRoute from './routes/studyplan.js'
+import { startWorker, stopWorker } from './jobs/worker.js'
+import { terminateOcr } from './services/ocr.service.js'
 
 const app = new Hono()
 
-app.use('*', logger())
+// ── Global middleware (applied to every request) ──────────────────────────────
+
+// 1. Security headers on every response.
+app.use('*', securityHeaders)
+
+// 2. Structured request logging (replaces Hono's default text logger).
+app.use('*', requestLogger)
+
+// 3. CORS — restrict to configured frontend origin(s).
 app.use(
   '*',
   cors({
@@ -50,57 +60,76 @@ app.use(
   }),
 )
 
+// ── Health check (unauthenticated, no rate limit, excluded from request log) ──
 app.get('/health', (c) => c.json({ status: 'ok' }))
 
-// ── Unauthenticated routes ──────────────────────────────────────────────────
+// ── Unauthenticated routes ────────────────────────────────────────────────────
 app.route('/api/webhooks', webhooksRoute)
 
-// ── Authenticated routes ────────────────────────────────────────────────────
+// ── Authenticated routes ──────────────────────────────────────────────────────
 const api = new Hono()
 
 // General API rate limit: 300 req / 1 min per IP.
 // Authenticated users doing normal work will never hit this.
 // Protects against token stuffing and automated scraping.
-api.use('*', rateLimit({ windowMs: 60 * 1000, max: 300 }))
+api.use('*', rateLimit({ windowMs: 60 * 1000, max: 300, label: 'api' }))
 api.use('*', authMiddleware)
 
-api.route('/books', booksRoute)
-api.route('/sessions', sessionsRoute)
-api.route('/chat', chatRoute)
-api.route('/tests', testsRoute)
-api.route('/progress', progressRoute)
-api.route('/memory', memoryRoute)
-api.route('/settings', settingsRoute)
-api.route('/subjects', subjectsRoute)
-api.route('/syllabus', syllabusRoute)
-api.route('/papers', papersRoute)
-api.route('/admin', adminRoute)
-api.route('/agent', agentRoute)
+api.route('/books',     booksRoute)
+api.route('/sessions',  sessionsRoute)
+api.route('/chat',      chatRoute)
+api.route('/tests',     testsRoute)
+api.route('/progress',  progressRoute)
+api.route('/memory',    memoryRoute)
+api.route('/settings',  settingsRoute)
+api.route('/subjects',  subjectsRoute)
+api.route('/syllabus',  syllabusRoute)
+api.route('/papers',    papersRoute)
+api.route('/admin',     adminRoute)
+api.route('/agent',     agentRoute)
 api.route('/studyplan', studyplanRoute)
 
 app.route('/api', api)
 
-// ── Server startup ──────────────────────────────────────────────────────────
+// ── Global error handler ──────────────────────────────────────────────────────
+app.onError((err, c) => {
+  log.error('unhandled error', {
+    error: err.message,
+    path: c.req.path,
+    method: c.req.method,
+    ip: c.req.header('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown',
+  })
+  return c.json({ error: 'Internal server error' }, 500)
+})
+
+// ── Server startup ────────────────────────────────────────────────────────────
 const port = Number(process.env.PORT ?? 2001)
 
 async function main() {
   await startWorker()
-  console.log(`Backend running on http://localhost:${port}`)
+  log.info('backend started', { port, env: process.env.NODE_ENV ?? 'development' })
   serve({ fetch: app.fetch, port, hostname: '0.0.0.0', overrideGlobalObjects: false })
 }
 
-// ── Graceful shutdown ───────────────────────────────────────────────────────
+// ── Graceful shutdown ─────────────────────────────────────────────────────────
 async function shutdown(signal: string) {
-  console.log(`[shutdown] received ${signal}`)
+  log.info('shutting down', { signal })
   await stopWorker()
   await terminateOcr()
   process.exit(0)
 }
 
 process.on('SIGTERM', () => shutdown('SIGTERM'))
-process.on('SIGINT', () => shutdown('SIGINT'))
+process.on('SIGINT',  () => shutdown('SIGINT'))
+
+// Catch any unhandled promise rejections so they appear in structured logs.
+process.on('unhandledRejection', (reason) => {
+  log.error('unhandled promise rejection', {
+    reason: reason instanceof Error ? reason.message : String(reason),
+  })
+})
 
 main().catch((err) => {
-  console.error('[startup] fatal error:', err)
+  log.error('startup failed', { error: (err as Error).message })
   process.exit(1)
 })

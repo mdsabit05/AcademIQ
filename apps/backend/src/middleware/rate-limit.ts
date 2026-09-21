@@ -6,9 +6,13 @@
  *
  * IP detection order: x-forwarded-for → x-real-ip → "unknown"
  * (suitable for deployments behind a reverse proxy / CDN)
+ *
+ * Rate-limit violations are logged as warnings so they appear in
+ * structured logs and can trigger alerts in log aggregators.
  */
 
 import type { Context, Next } from 'hono'
+import { logger } from '../lib/logger.js'
 
 interface Entry {
   count: number
@@ -20,10 +24,12 @@ export function rateLimit(opts: {
   windowMs: number
   /** Maximum number of requests allowed per window per IP. */
   max: number
+  /** Label used in log output to identify which limiter fired. */
+  label?: string
   /** Response message when the limit is exceeded. */
   message?: string
 }) {
-  const { windowMs, max, message = 'Too many requests — please try again later.' } = opts
+  const { windowMs, max, label = 'api', message = 'Too many requests — please try again later.' } = opts
   const store = new Map<string, Entry>()
 
   // Purge stale entries once per window to prevent unbounded memory growth.
@@ -54,6 +60,18 @@ export function rateLimit(opts: {
     entry.count++
     if (entry.count > max) {
       const retryAfter = Math.ceil((entry.resetAt - now) / 1000)
+
+      // Log every violation so spikes appear in dashboards/alerts.
+      logger.warn('rate limit exceeded', {
+        limiter: label,
+        ip,
+        count: entry.count,
+        max,
+        path: c.req.path,
+        method: c.req.method,
+        retryAfterSeconds: retryAfter,
+      })
+
       c.header('Retry-After', String(retryAfter))
       c.header('X-RateLimit-Limit', String(max))
       c.header('X-RateLimit-Remaining', '0')
