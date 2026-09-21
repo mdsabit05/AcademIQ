@@ -175,7 +175,7 @@ export default function AskAI() {
   const streamTopRef = useRef<HTMLDivElement>(null)
   const hasScrolledToStream = useRef(false)
 
-  const isChatMode = messages.length > 0 || streaming
+  const isChatMode = messages.length > 0 || streaming || (studyMode && sessionId !== null)
 
   // ── Intercept phone back button while in chat mode ──────────────────────────
   useEffect(() => {
@@ -210,9 +210,16 @@ export default function AskAI() {
   }, [getToken])
 
   const startNewChat = useCallback(() => {
+    if (studyMode) {
+      // In study mode, "new chat" goes back to step 3 (pick a topic again)
+      setSessionId(null); setMessages([]); setStreamBuffer('')
+      setStudyStep(3)
+      setTopicPanelVisible(false)
+      return
+    }
     setSessionId(null); setMessages([]); setStreamBuffer('')
     setSelectedBookIds([]); setInput('')
-  }, [])
+  }, [studyMode])
 
   // ── Study mode handlers ────────────────────────────────────────────────────
   async function enterStudyMode() {
@@ -269,8 +276,10 @@ export default function AskAI() {
       })
       setSessionId(session.id)
       setSessions((prev) => [session, ...prev])
+      setSelectedBookIds([studyBookId])
       setMessages([])
       setStreamBuffer('')
+      setTopicPanelVisible(true)
     } finally {
       setLoadingStudy(false)
     }
@@ -457,6 +466,22 @@ export default function AskAI() {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-5 min-h-0">
             <div className={clsx('mx-auto space-y-5 transition-all duration-300', historyVisible ? 'max-w-2xl' : 'max-w-4xl')}>
+              {/* Study mode welcome — shown when session exists but no messages yet */}
+              {studyMode && messages.length === 0 && !streaming && activeTopicId && (() => {
+                const topic = studyTopics.find(t => t.id === activeTopicId)
+                return topic ? (
+                  <div className="flex flex-col items-center text-center py-10 gap-3">
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center border-2 border-dashed border-border">
+                      <BookMarked size={22} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-base font-bold text-white">{topic.topic}</p>
+                      {topic.unit && <p className="text-xs text-muted mt-0.5">{topic.unit}</p>}
+                    </div>
+                    <p className="text-sm text-muted max-w-xs">Session ready. Ask a question or type <strong className="text-white">explain this topic</strong> to begin.</p>
+                  </div>
+                ) : null
+              })()}
               {messages.map((msg, i) => (
                 <div key={i} className={clsx('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
                   {msg.role === 'assistant' && (
@@ -552,10 +577,11 @@ export default function AskAI() {
             </button>
           </div>
 
+          {/* Scrollable content — no nav buttons here */}
           <div className="flex-1 overflow-y-auto p-4 lg:p-6">
             {/* Step 1: Pick a Book */}
             {studyStep === 1 && (
-              <div className="space-y-4 max-w-3xl mx-auto">
+              <div className="space-y-3 max-w-3xl mx-auto">
                 <p className="text-sm text-muted">Select the book you want to study from.</p>
                 <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                   {books.map((book) => (
@@ -574,21 +600,12 @@ export default function AskAI() {
                     </button>
                   ))}
                 </div>
-                <div className="flex justify-end pt-2">
-                  <button
-                    onClick={() => setStudyStep(2)}
-                    disabled={!studyBookId}
-                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-bg bg-primary hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Next →
-                  </button>
-                </div>
               </div>
             )}
 
             {/* Step 2: Pick a Syllabus */}
             {studyStep === 2 && (
-              <div className="space-y-4 max-w-3xl mx-auto">
+              <div className="space-y-3 max-w-3xl mx-auto">
                 <p className="text-sm text-muted">Choose a syllabus to guide your study session.</p>
                 {studySyllabi.length === 0 ? (
                   <div className="rounded-xl border border-border bg-surface p-8 text-center">
@@ -613,28 +630,12 @@ export default function AskAI() {
                     ))}
                   </div>
                 )}
-                <div className="flex justify-between pt-2">
-                  <button onClick={() => setStudyStep(1)} className="text-xs text-muted hover:text-white transition-colors">
-                    ← Back
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (!studySyllabus) return
-                      await loadStudyTopics(studySyllabus.id)
-                      setStudyStep(3)
-                    }}
-                    disabled={!studySyllabus}
-                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-bg bg-primary hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Next →
-                  </button>
-                </div>
               </div>
             )}
 
             {/* Step 3: Pick a Topic */}
             {studyStep === 3 && (
-              <div className="space-y-4 max-w-3xl mx-auto">
+              <div className="space-y-3 max-w-3xl mx-auto">
                 <p className="text-sm text-muted">Select the topic you want to start with.</p>
                 {loadingStudy ? (
                   <div className="text-sm text-muted animate-pulse">Loading topics…</div>
@@ -669,19 +670,39 @@ export default function AskAI() {
                     ))}
                   </div>
                 )}
-                <div className="flex justify-between pt-2">
-                  <button onClick={() => setStudyStep(2)} className="text-xs text-muted hover:text-white transition-colors">
-                    ← Back
-                  </button>
-                  <button
-                    onClick={startStudySession}
-                    disabled={!activeTopicId || loadingStudy}
-                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-bg bg-primary hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {loadingStudy ? 'Starting…' : 'Start Studying →'}
-                  </button>
-                </div>
               </div>
+            )}
+          </div>
+
+          {/* Sticky wizard footer — always visible */}
+          <div className="shrink-0 border-t border-border px-4 lg:px-6 py-3 flex items-center justify-between bg-bg">
+            <button
+              onClick={() => studyStep === 1 ? exitStudyMode() : setStudyStep((s) => (s - 1) as 1 | 2 | 3)}
+              className="text-sm text-muted hover:text-white transition-colors"
+            >
+              ← {studyStep === 1 ? 'Exit' : 'Back'}
+            </button>
+            {studyStep < 3 ? (
+              <button
+                onClick={async () => {
+                  if (studyStep === 2 && studySyllabus) {
+                    await loadStudyTopics(studySyllabus.id)
+                  }
+                  setStudyStep((s) => (s + 1) as 2 | 3)
+                }}
+                disabled={studyStep === 1 ? !studyBookId : !studySyllabus}
+                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-bg bg-primary hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next →
+              </button>
+            ) : (
+              <button
+                onClick={startStudySession}
+                disabled={!activeTopicId || loadingStudy}
+                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-bg bg-primary hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {loadingStudy ? 'Starting…' : 'Start Studying →'}
+              </button>
             )}
           </div>
         </div>
