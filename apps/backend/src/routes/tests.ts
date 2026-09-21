@@ -242,9 +242,15 @@ tests.get('/:id/attempts', requireOwnership('tests', 'id'), async (c) => {
 
 tests.get('/:id/attempts/:attemptId', requireOwnership('tests', 'id'), async (c) => {
   const { id: testId, attemptId } = c.req.param()
+  const dbUserId = c.get('dbUserId')
 
+  // SECURITY: must check user_id in addition to test_id.
+  // requireOwnership above only confirms the caller owns the TEST;
+  // without the user_id filter an attacker who owns any test could read
+  // another user's attempt by supplying an arbitrary attemptId (IDOR).
   const [attempt] = await sql`
-    SELECT * FROM test_attempts WHERE id = ${attemptId} AND test_id = ${testId}
+    SELECT * FROM test_attempts
+    WHERE id = ${attemptId} AND test_id = ${testId} AND user_id = ${dbUserId}
   `
   if (!attempt) return c.json({ error: 'Not found' }, 404)
 
