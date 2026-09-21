@@ -502,6 +502,155 @@ export default function AskAI() {
     <div className="flex h-full overflow-hidden">
       {historyVisible && <div className="hidden md:flex">{sidebar}</div>}
 
+      {studyMode ? (
+        <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+          {/* Study Mode Wizard header */}
+          <div className="shrink-0 border-b border-border px-4 lg:px-5 py-2.5 flex items-center gap-3">
+            <BookMarked size={15} className="text-primary" />
+            <span className="text-sm font-semibold text-white">Study Mode</span>
+            <span className="text-xs text-muted">
+              — Step {studyStep} of 3: {studyStep === 1 ? 'Pick a Book' : studyStep === 2 ? 'Pick a Syllabus' : 'Pick a Topic'}
+            </span>
+            <button onClick={exitStudyMode} className="ml-auto text-xs text-muted hover:text-white transition-colors">
+              Exit Study Mode
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+            {/* Step 1: Pick a Book */}
+            {studyStep === 1 && (
+              <div className="space-y-4 max-w-3xl mx-auto">
+                <p className="text-sm text-muted">Select the book you want to study from.</p>
+                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                  {books.map((book) => (
+                    <button
+                      key={book.id}
+                      onClick={() => setStudyBookId(book.id === studyBookId ? null : book.id)}
+                      className={`text-left rounded-xl border p-4 transition-colors ${
+                        studyBookId === book.id
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border bg-surface hover:border-primary/40'
+                      }`}
+                    >
+                      <p className="text-sm font-semibold text-white truncate">{book.title}</p>
+                      {book.author && <p className="text-xs text-muted mt-0.5 truncate">{book.author}</p>}
+                      <p className="text-xs text-muted mt-1">{book.page_count ? `${book.page_count} pages` : book.filename}</p>
+                    </button>
+                  ))}
+                </div>
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={() => setStudyStep(2)}
+                    disabled={!studyBookId}
+                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-bg bg-primary hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Pick a Syllabus */}
+            {studyStep === 2 && (
+              <div className="space-y-4 max-w-3xl mx-auto">
+                <p className="text-sm text-muted">Choose a syllabus to guide your study session.</p>
+                {studySyllabi.length === 0 ? (
+                  <div className="rounded-xl border border-border bg-surface p-8 text-center">
+                    <p className="text-sm text-white font-medium">No syllabi found</p>
+                    <p className="text-xs text-muted mt-1">Upload a syllabus from the Syllabus page first.</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+                    {studySyllabi.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => setStudySyllabus({ id: s.id, title: s.title })}
+                        className={`text-left rounded-xl border p-4 transition-colors ${
+                          studySyllabus?.id === s.id
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border bg-surface hover:border-primary/40'
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-white">{s.title}</p>
+                        <p className="text-xs text-muted mt-0.5">{new Date(s.created_at).toLocaleDateString()}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex justify-between pt-2">
+                  <button onClick={() => setStudyStep(1)} className="text-xs text-muted hover:text-white transition-colors">
+                    ← Back
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!studySyllabus) return
+                      await loadStudyTopics(studySyllabus.id)
+                      setStudyStep(3)
+                    }}
+                    disabled={!studySyllabus}
+                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-bg bg-primary hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Pick a Topic */}
+            {studyStep === 3 && (
+              <div className="space-y-4 max-w-3xl mx-auto">
+                <p className="text-sm text-muted">Select the topic you want to start with.</p>
+                {loadingStudy ? (
+                  <div className="text-sm text-muted animate-pulse">Loading topics…</div>
+                ) : (
+                  <div className="space-y-4">
+                    {Array.from(new Set(studyTopics.map((t) => t.unit ?? 'General'))).map((unit) => (
+                      <div key={unit}>
+                        <p className="text-xs font-black uppercase tracking-widest text-muted mb-2">{unit}</p>
+                        <div className="space-y-1.5">
+                          {studyTopics.filter((t) => (t.unit ?? 'General') === unit).map((topic) => (
+                            <button
+                              key={topic.id}
+                              onClick={() => setActiveTopicId(topic.id)}
+                              className={`w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors flex items-center gap-3 ${
+                                activeTopicId === topic.id
+                                  ? 'border-primary bg-primary/10 text-white'
+                                  : topic.completed
+                                    ? 'border-border bg-surface/50 text-muted/50'
+                                    : 'border-border bg-surface hover:border-primary/40 text-white'
+                              }`}
+                            >
+                              <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 text-[9px] ${
+                                topic.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-border'
+                              }`}>
+                                {topic.completed ? '✓' : ''}
+                              </span>
+                              <span className="flex-1 truncate">{topic.topic}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex justify-between pt-2">
+                  <button onClick={() => setStudyStep(2)} className="text-xs text-muted hover:text-white transition-colors">
+                    ← Back
+                  </button>
+                  <button
+                    onClick={startStudySession}
+                    disabled={!activeTopicId || loadingStudy}
+                    className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-bg bg-primary hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {loadingStudy ? 'Starting…' : 'Start Studying →'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
 
         {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
@@ -511,6 +660,14 @@ export default function AskAI() {
             <button onClick={() => setHistoryVisible((v) => !v)}
               className="flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors mr-1">
               {historyVisible ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+            </button>
+            <div className="w-px h-4 bg-border" />
+            <button
+              onClick={enterStudyMode}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
+              style={{ background: 'rgba(34,211,238,0.1)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.25)' }}
+            >
+              <BookMarked size={13} /> Study Mode
             </button>
             <span className="text-[11px] font-black uppercase tracking-[0.18em] text-white">Study Materials</span>
             {selectedBookIds.length > 0 && (
@@ -694,6 +851,15 @@ export default function AskAI() {
               )}
             </div>
 
+            {/* Study Mode button */}
+            <button
+              onClick={enterStudyMode}
+              className="flex items-center justify-center gap-2 w-full rounded-xl px-4 py-3 text-sm font-bold mb-3"
+              style={{ background: 'rgba(34,211,238,0.1)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.25)' }}
+            >
+              <BookMarked size={15} /> Study Mode
+            </button>
+
             {/* Quick actions */}
             <div className="grid grid-cols-2 gap-2.5">
               {QUICK_ACTIONS.map(({ label, icon, prompt }) => (
@@ -812,6 +978,8 @@ export default function AskAI() {
         </div>
       </div>
 
+      )} {/* end of ternary else (selection content) */}
+
       {/* Mobile book sheet */}
       {bookSheetOpen && (
         <BookSheet
@@ -820,54 +988,6 @@ export default function AskAI() {
           onToggle={toggleBook}
           onDone={() => setBookSheetOpen(false)}
         />
-      )}
-
-      {/* Study mode overlay — wired up in next task */}
-      {studyMode && (
-        <div className="fixed inset-0 z-40 flex flex-col bg-bg">
-          <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-border">
-            <BookMarked size={16} style={{ color: '#22D3EE' }} />
-            <span className="text-sm font-bold text-white">
-              Study Mode {studyStep > 1 ? `· Step ${studyStep}` : ''}
-              {loadingStudy ? ' · Loading…' : ''}
-            </span>
-            <div className="ml-auto flex items-center gap-2 text-[11px] text-muted">
-              {studySyllabi.length > 0 && <span>{studySyllabi.length} syllabi</span>}
-              <button onClick={exitStudyMode} className="hover:text-white transition-colors"><X size={14} /></button>
-            </div>
-          </div>
-          {topicPanelVisible && studySyllabus && (
-            <StudyTopicPanel
-              syllabusTitle={studySyllabus.title}
-              topics={studyTopics}
-              activeTopicId={activeTopicId}
-              onSetActive={setActiveTopicId}
-              onMarkComplete={handleMarkComplete}
-              onClose={() => setTopicPanelVisible(false)}
-            />
-          )}
-          <div className="flex-1 flex items-center justify-center flex-col gap-4 px-6">
-            <button
-              onClick={enterStudyMode}
-              className="text-xs text-muted hover:text-white transition-colors"
-            >
-              Reload syllabi
-            </button>
-            <button
-              onClick={() => studySyllabus && loadStudyTopics(studySyllabus.id)}
-              className="text-xs text-muted hover:text-white transition-colors"
-            >
-              Load topics
-            </button>
-            <button
-              onClick={startStudySession}
-              className="text-xs font-bold px-4 py-2 rounded-lg transition-colors"
-              style={{ background: '#22D3EE', color: '#0a0f1a' }}
-            >
-              Start session
-            </button>
-          </div>
-        </div>
       )}
     </div>
   )
