@@ -214,6 +214,7 @@ export default function AskAI() {
     setSelectedBookIds([]); setInput('')
   }, [])
 
+  // ── Study mode handlers ────────────────────────────────────────────────────
   async function enterStudyMode() {
     setStudyMode(true)
     setStudyStep(1)
