@@ -64,9 +64,9 @@ const QUICK_ACTIONS = [
 ]
 
 const HOW_IT_WORKS = [
-  { step: 1, title: 'Select your documents', desc: 'Choose one or more study materials from above', color: '#22D3EE' },
-  { step: 2, title: 'Ask anything',          desc: 'Get explanations, summaries, practice questions, and more', color: '#A855F7' },
-  { step: 3, title: 'Learn better',          desc: 'Use your own materials for personalized learning', color: '#22C55E' },
+  { step: 1, title: 'Select documents', desc: 'Choose one or more study materials from the book shelf above', color: '#22D3EE' },
+  { step: 2, title: 'Ask anything',     desc: 'Get explanations, summaries, practice questions, and more', color: '#A855F7' },
+  { step: 3, title: 'Study Mode',       desc: 'Pick a syllabus → topic → let AI teach you step by step with progress tracking', color: '#22C55E' },
 ]
 
 // ── Mobile Book Sheet ─────────────────────────────────────────────────────────
@@ -749,13 +749,6 @@ export default function AskAI() {
               {historyVisible ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
             </button>
             <div className="w-px h-4 bg-border" />
-            <button
-              onClick={enterStudyMode}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
-              style={{ background: 'rgba(34,211,238,0.1)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.25)' }}
-            >
-              <BookMarked size={13} /> Study Mode
-            </button>
             <span className="text-[11px] font-black uppercase tracking-[0.18em] text-white">Study Materials</span>
             {selectedBookIds.length > 0 && (
               <span className="text-[10px] font-black px-2 py-0.5 rounded"
@@ -866,6 +859,30 @@ export default function AskAI() {
           </div>
         </div>
 
+        {/* ── Study Mode Banner ───────────────────────────────────────────────── */}
+        <div className="hidden md:block shrink-0 px-5 py-2.5 border-b border-border"
+          style={{ background: 'linear-gradient(90deg, rgba(34,211,238,0.07) 0%, rgba(168,85,247,0.05) 100%)' }}>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(34,211,238,0.15)', border: '1px solid rgba(34,211,238,0.3)' }}>
+                <BookMarked size={15} style={{ color: '#22D3EE' }} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white leading-none">Study Mode</p>
+                <p className="text-[11px] text-muted mt-0.5">Follow your syllabus topic by topic — AI teaches, you track progress</p>
+              </div>
+            </div>
+            <button
+              onClick={enterStudyMode}
+              className="ml-auto flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-bold shrink-0 transition-colors"
+              style={{ background: '#22D3EE', color: '#0a0f1a' }}
+            >
+              <BookMarked size={12} /> Enter Study Mode
+            </button>
+          </div>
+        </div>
+
         {/* ── Main content ─────────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto min-h-0">
 
@@ -938,14 +955,25 @@ export default function AskAI() {
               )}
             </div>
 
-            {/* Study Mode button */}
-            <button
-              onClick={enterStudyMode}
-              className="flex items-center justify-center gap-2 w-full rounded-xl px-4 py-3 text-sm font-bold mb-3"
-              style={{ background: 'rgba(34,211,238,0.1)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.25)' }}
-            >
-              <BookMarked size={15} /> Study Mode
-            </button>
+            {/* Study Mode banner */}
+            <div className="rounded-2xl border border-border overflow-hidden"
+              style={{ background: 'linear-gradient(135deg, rgba(34,211,238,0.08) 0%, rgba(168,85,247,0.06) 100%)', borderColor: 'rgba(34,211,238,0.25)' }}>
+              <div className="flex items-center gap-3 p-3.5">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(34,211,238,0.15)', border: '1px solid rgba(34,211,238,0.3)' }}>
+                  <BookMarked size={16} style={{ color: '#22D3EE' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white leading-none">Study Mode</p>
+                  <p className="text-[11px] text-muted mt-0.5">Follow syllabus topics · AI teaches · track progress</p>
+                </div>
+                <button onClick={enterStudyMode}
+                  className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors"
+                  style={{ background: '#22D3EE', color: '#0a0f1a' }}>
+                  Start
+                </button>
+              </div>
+            </div>
 
             {/* Quick actions */}
             <div className="grid grid-cols-2 gap-2.5">
