@@ -10,14 +10,15 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Send, Search, Plus, FileText, ChevronDown, ChevronRight,
   Mic, Sparkles, Lightbulb, AlignLeft, GitCompare,
-  MessageSquare, Trash2, BookOpen, ArrowLeft, PanelLeftClose, PanelLeftOpen, X,
+  MessageSquare, Trash2, BookOpen, ArrowLeft, PanelLeftClose, PanelLeftOpen, X, BookMarked,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { makeApi } from '../lib/api.ts'
 import StreamingText from '../components/StreamingText.tsx'
 import ChatHistorySidebar from '../components/ChatHistorySidebar.tsx'
+import StudyTopicPanel from '../components/StudyTopicPanel.tsx'
 import { useSidebar } from '../lib/sidebarContext.tsx'
-import type { Book, Subject, ChatSession } from 'shared'
+import type { Book, Subject, ChatSession, Syllabus, SyllabusTopic } from 'shared'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -158,6 +159,17 @@ export default function AskAI() {
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [bookSheetOpen, setBookSheetOpen] = useState(false)
 
+  // Study mode state
+  const [studyMode, setStudyMode] = useState(false)
+  const [studyStep, setStudyStep] = useState<1 | 2 | 3>(1)
+  const [studyBookId, setStudyBookId] = useState<string | null>(null)
+  const [studySyllabus, setStudySyllabus] = useState<{ id: string; title: string } | null>(null)
+  const [studyTopics, setStudyTopics] = useState<SyllabusTopic[]>([])
+  const [studySyllabi, setStudySyllabi] = useState<Syllabus[]>([])
+  const [activeTopicId, setActiveTopicId] = useState<string | null>(null)
+  const [topicPanelVisible, setTopicPanelVisible] = useState(false)
+  const [loadingStudy, setLoadingStudy] = useState(false)
+
   const endRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const streamTopRef = useRef<HTMLDivElement>(null)
@@ -201,6 +213,77 @@ export default function AskAI() {
     setSessionId(null); setMessages([]); setStreamBuffer('')
     setSelectedBookIds([]); setInput('')
   }, [])
+
+  async function enterStudyMode() {
+    setStudyMode(true)
+    setStudyStep(1)
+    setStudyBookId(null)
+    setStudySyllabus(null)
+    setStudyTopics([])
+    setActiveTopicId(null)
+    setTopicPanelVisible(false)
+    const token = await getToken()
+    if (!token) return
+    const api = makeApi(token)
+    const { syllabi } = await api.syllabus.list()
+    setStudySyllabi(syllabi.filter((s) => s.status === 'ready'))
+  }
+
+  function exitStudyMode() {
+    setStudyMode(false)
+    setStudyStep(1)
+    setStudyBookId(null)
+    setStudySyllabus(null)
+    setStudyTopics([])
+    setActiveTopicId(null)
+    setTopicPanelVisible(false)
+  }
+
+  async function loadStudyTopics(syllabusId: string) {
+    setLoadingStudy(true)
+    try {
+      const token = await getToken()
+      if (!token) return
+      const api = makeApi(token)
+      const { topics } = await api.syllabus.get(syllabusId)
+      setStudyTopics(topics)
+    } finally {
+      setLoadingStudy(false)
+    }
+  }
+
+  async function startStudySession() {
+    if (!studyBookId || !activeTopicId) return
+    const activeTopic = studyTopics.find((t) => t.id === activeTopicId)
+    if (!activeTopic) return
+    setLoadingStudy(true)
+    try {
+      const token = await getToken()
+      if (!token) return
+      const api = makeApi(token)
+      const { session } = await api.sessions.create({
+        mode: 'learn',
+        bookIds: [studyBookId],
+        topic: activeTopic.topic,
+      })
+      setSessionId(session.id)
+      setSessions((prev) => [session, ...prev])
+      setMessages([])
+      setStreamBuffer('')
+    } finally {
+      setLoadingStudy(false)
+    }
+  }
+
+  async function handleMarkComplete(topicId: string) {
+    if (!studySyllabus) return
+    setStudyTopics((prev) =>
+      prev.map((t) => (t.id === topicId ? { ...t, completed: true } : t))
+    )
+    const token = await getToken()
+    if (!token) return
+    await makeApi(token).syllabus.updateTopic(studySyllabus.id, topicId, true)
+  }
 
   useEffect(() => {
     if (streaming && !hasScrolledToStream.current) {
@@ -736,6 +819,54 @@ export default function AskAI() {
           onToggle={toggleBook}
           onDone={() => setBookSheetOpen(false)}
         />
+      )}
+
+      {/* Study mode overlay — wired up in next task */}
+      {studyMode && (
+        <div className="fixed inset-0 z-40 flex flex-col bg-bg">
+          <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-border">
+            <BookMarked size={16} style={{ color: '#22D3EE' }} />
+            <span className="text-sm font-bold text-white">
+              Study Mode {studyStep > 1 ? `· Step ${studyStep}` : ''}
+              {loadingStudy ? ' · Loading…' : ''}
+            </span>
+            <div className="ml-auto flex items-center gap-2 text-[11px] text-muted">
+              {studySyllabi.length > 0 && <span>{studySyllabi.length} syllabi</span>}
+              <button onClick={exitStudyMode} className="hover:text-white transition-colors"><X size={14} /></button>
+            </div>
+          </div>
+          {topicPanelVisible && studySyllabus && (
+            <StudyTopicPanel
+              syllabusTitle={studySyllabus.title}
+              topics={studyTopics}
+              activeTopicId={activeTopicId}
+              onSetActive={setActiveTopicId}
+              onMarkComplete={handleMarkComplete}
+              onClose={() => setTopicPanelVisible(false)}
+            />
+          )}
+          <div className="flex-1 flex items-center justify-center flex-col gap-4 px-6">
+            <button
+              onClick={enterStudyMode}
+              className="text-xs text-muted hover:text-white transition-colors"
+            >
+              Reload syllabi
+            </button>
+            <button
+              onClick={() => studySyllabus && loadStudyTopics(studySyllabus.id)}
+              className="text-xs text-muted hover:text-white transition-colors"
+            >
+              Load topics
+            </button>
+            <button
+              onClick={startStudySession}
+              className="text-xs font-bold px-4 py-2 rounded-lg transition-colors"
+              style={{ background: '#22D3EE', color: '#0a0f1a' }}
+            >
+              Start session
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )
