@@ -277,11 +277,43 @@ export default function AskAI() {
       setSessionId(session.id)
       setSessions((prev) => [session, ...prev])
       setSelectedBookIds([studyBookId])
-      setMessages([])
-      setStreamBuffer('')
       setTopicPanelVisible(true)
-    } finally {
       setLoadingStudy(false)
+
+      // Auto-send opening message so AI starts explaining immediately
+      const content = `Explain "${activeTopic.topic}" to me`
+      setMessages([{ role: 'user', content }])
+      setStreamBuffer('')
+      setStreaming(true)
+      setNavCollapsed(true)
+      const apiBase = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
+      const res = await fetch(`${apiBase}/chat/${session.id}/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ content, webSearch: false, deepReason: false }),
+      })
+      if (!res.body) throw new Error('No response body')
+      const reader = res.body.getReader(); const decoder = new TextDecoder()
+      let buf = ''; let full = ''
+      while (true) {
+        const { done, value } = await reader.read(); if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n'); buf = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = line.slice(6).replace(/\r$/, ''); if (data.trim() === '[DONE]') continue
+          try { const p = JSON.parse(data) as string; full += p; setStreamBuffer(full) }
+          catch { full += data; setStreamBuffer(full) }
+        }
+      }
+      setMessages((prev) => [...prev, { role: 'assistant', content: full }])
+      setStreamBuffer('')
+    } catch (err) {
+      setMessages((prev) => [...prev, { role: 'assistant', content: `Error: ${(err as Error).message}` }])
+    } finally {
+      setStreaming(false)
+      setLoadingStudy(false)
+      refreshHistory()
     }
   }
 
@@ -566,15 +598,44 @@ export default function AskAI() {
       {studyMode ? (
         <div className="flex flex-col flex-1 overflow-hidden min-w-0">
           {/* Study Mode Wizard header */}
-          <div className="shrink-0 border-b border-border px-4 lg:px-5 py-2.5 flex items-center gap-3">
+          <div className="shrink-0 border-b border-border px-4 lg:px-5 py-2.5 flex items-center gap-2">
+            <button
+              onClick={() => studyStep === 1 ? exitStudyMode() : setStudyStep((s) => (s - 1) as 1 | 2 | 3)}
+              className="flex items-center gap-1 text-xs text-muted hover:text-white transition-colors mr-1"
+            >
+              <ArrowLeft size={13} /> {studyStep === 1 ? 'Exit' : 'Back'}
+            </button>
+            <div className="w-px h-4 bg-border" />
             <BookMarked size={15} className="text-primary" />
             <span className="text-sm font-semibold text-white">Study Mode</span>
-            <span className="text-xs text-muted">
+            <span className="text-xs text-muted hidden sm:inline">
               — Step {studyStep} of 3: {studyStep === 1 ? 'Pick a Book' : studyStep === 2 ? 'Pick a Syllabus' : 'Pick a Topic'}
             </span>
-            <button onClick={exitStudyMode} className="ml-auto text-xs text-muted hover:text-white transition-colors">
-              Exit Study Mode
-            </button>
+            <div className="ml-auto flex items-center gap-3">
+              <button onClick={exitStudyMode} className="text-xs text-muted hover:text-white transition-colors hidden sm:block">
+                Exit Study Mode
+              </button>
+              {/* Step 1: Next only */}
+              {studyStep === 1 && (
+                <button
+                  onClick={() => setStudyStep(2)}
+                  disabled={!studyBookId}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-bg bg-primary hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next →
+                </button>
+              )}
+              {/* Step 3: Start Studying */}
+              {studyStep === 3 && (
+                <button
+                  onClick={startStudySession}
+                  disabled={!activeTopicId || loadingStudy}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-bg bg-primary hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {loadingStudy ? 'Starting…' : 'Start Studying →'}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Scrollable content — no nav buttons here */}
@@ -617,12 +678,12 @@ export default function AskAI() {
                     {studySyllabi.map((s) => (
                       <button
                         key={s.id}
-                        onClick={() => setStudySyllabus({ id: s.id, title: s.title })}
-                        className={`text-left rounded-xl border p-4 transition-colors ${
-                          studySyllabus?.id === s.id
-                            ? 'border-primary bg-primary/10'
-                            : 'border-border bg-surface hover:border-primary/40'
-                        }`}
+                        onClick={async () => {
+                          setStudySyllabus({ id: s.id, title: s.title })
+                          await loadStudyTopics(s.id)
+                          setStudyStep(3)
+                        }}
+                        className="text-left rounded-xl border p-4 transition-colors border-border bg-surface hover:border-primary/40"
                       >
                         <p className="text-sm font-semibold text-white">{s.title}</p>
                         <p className="text-xs text-muted mt-0.5">{new Date(s.created_at).toLocaleDateString()}</p>
@@ -674,37 +735,6 @@ export default function AskAI() {
             )}
           </div>
 
-          {/* Sticky wizard footer — always visible */}
-          <div className="shrink-0 border-t border-border px-4 lg:px-6 py-3 flex items-center justify-between bg-bg">
-            <button
-              onClick={() => studyStep === 1 ? exitStudyMode() : setStudyStep((s) => (s - 1) as 1 | 2 | 3)}
-              className="text-sm text-muted hover:text-white transition-colors"
-            >
-              ← {studyStep === 1 ? 'Exit' : 'Back'}
-            </button>
-            {studyStep < 3 ? (
-              <button
-                onClick={async () => {
-                  if (studyStep === 2 && studySyllabus) {
-                    await loadStudyTopics(studySyllabus.id)
-                  }
-                  setStudyStep((s) => (s + 1) as 2 | 3)
-                }}
-                disabled={studyStep === 1 ? !studyBookId : !studySyllabus}
-                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-bg bg-primary hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Next →
-              </button>
-            ) : (
-              <button
-                onClick={startStudySession}
-                disabled={!activeTopicId || loadingStudy}
-                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-bg bg-primary hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {loadingStudy ? 'Starting…' : 'Start Studying →'}
-              </button>
-            )}
-          </div>
         </div>
       ) : (
 
