@@ -5,6 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="./newlogo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AcademIQ — AI-Powered Academic Learning</title>
+    <!-- Apply theme before first paint to prevent flash -->
+    <script>
+      (function () {
+        var stored = localStorage.getItem('note2test_theme') || 'light';
+        var resolved = stored === 'system'
+          ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          : stored;
+        if (resolved === 'light') document.documentElement.classList.add('light');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
