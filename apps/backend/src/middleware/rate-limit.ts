@@ -1,14 +1,20 @@
 /**
  * In-memory sliding-window rate limiter.
  *
- * Each call to rateLimit() creates its own independent store, so you can
- * apply different limits to different route groups without shared state.
+ * Supports two keying strategies:
+ *   - Per-IP  (default) — good for unauthenticated routes and a first-line
+ *     defence before auth runs.
+ *   - Per-user — keyed on the authenticated dbUserId so a single account
+ *     cannot bypass IP limits by rotating addresses.
  *
- * IP detection order: x-forwarded-for → x-real-ip → "unknown"
- * (suitable for deployments behind a reverse proxy / CDN)
+ * Use the exported `userKey` helper to switch to per-user keying on any
+ * route where Hono's auth middleware has already run.
  *
- * Rate-limit violations are logged as warnings so they appear in
- * structured logs and can trigger alerts in log aggregators.
+ * Each call to rateLimit() creates its own independent store, so different
+ * route groups carry different windows without shared state.
+ *
+ * Every violation is logged as a structured warning so log aggregators
+ * can alert on spikes.
  */
 
 import type { Context, Next } from 'hono'
@@ -19,52 +25,79 @@ interface Entry {
   resetAt: number
 }
 
+/** Key function that identifies a client by their authenticated user ID.
+ *  Falls back to IP if the user hasn't been resolved yet (e.g., auth failure path). */
+export function userKey(c: Context): string {
+  const uid = (c as Context & { get: (k: string) => string | undefined }).get('dbUserId')
+  if (uid) return `user:${uid}`
+  return (
+    c.req.header('x-forwarded-for')?.split(',')[0].trim() ??
+    c.req.header('x-real-ip') ??
+    'unknown'
+  )
+}
+
+/** Key function that identifies a client by IP address (default). */
+export function ipKey(c: Context): string {
+  return (
+    c.req.header('x-forwarded-for')?.split(',')[0].trim() ??
+    c.req.header('x-real-ip') ??
+    'unknown'
+  )
+}
+
 export function rateLimit(opts: {
   /** Length of the counting window in milliseconds. */
   windowMs: number
-  /** Maximum number of requests allowed per window per IP. */
+  /** Maximum requests per window. */
   max: number
-  /** Label used in log output to identify which limiter fired. */
+  /** How to identify the client. Defaults to IP-based. */
+  keyFn?: (c: Context) => string
+  /** Label used in log output and Retry-After to identify which limiter fired. */
   label?: string
-  /** Response message when the limit is exceeded. */
+  /** Response message sent in the 429 body. */
   message?: string
 }) {
-  const { windowMs, max, label = 'api', message = 'Too many requests — please try again later.' } = opts
+  const {
+    windowMs,
+    max,
+    keyFn = ipKey,
+    label = 'api',
+    message = 'Too many requests — please try again later.',
+  } = opts
+
   const store = new Map<string, Entry>()
 
   // Purge stale entries once per window to prevent unbounded memory growth.
   const timer = setInterval(() => {
     const now = Date.now()
-    for (const [key, entry] of store) {
-      if (entry.resetAt < now) store.delete(key)
+    for (const [k, entry] of store) {
+      if (entry.resetAt < now) store.delete(k)
     }
   }, windowMs)
-  // Don't keep the process alive for cleanup alone.
   if (timer.unref) timer.unref()
 
   return async (c: Context, next: Next) => {
-    const ip =
-      c.req.header('x-forwarded-for')?.split(',')[0].trim() ??
-      c.req.header('x-real-ip') ??
-      'unknown'
-
+    const key = keyFn(c)
     const now = Date.now()
-    let entry = store.get(ip)
+    let entry = store.get(key)
 
     if (!entry || entry.resetAt < now) {
       entry = { count: 1, resetAt: now + windowMs }
-      store.set(ip, entry)
+      store.set(key, entry)
+      c.header('X-RateLimit-Limit', String(max))
+      c.header('X-RateLimit-Remaining', String(max - 1))
       return next()
     }
 
     entry.count++
+
     if (entry.count > max) {
       const retryAfter = Math.ceil((entry.resetAt - now) / 1000)
 
-      // Log every violation so spikes appear in dashboards/alerts.
       logger.warn('rate limit exceeded', {
         limiter: label,
-        ip,
+        key,
         count: entry.count,
         max,
         path: c.req.path,

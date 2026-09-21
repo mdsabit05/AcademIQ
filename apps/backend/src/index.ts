@@ -6,7 +6,8 @@ import { logger as log } from './lib/logger.js'
 import { securityHeaders } from './middleware/security-headers.js'
 import { requestLogger } from './middleware/request-logger.js'
 import { authMiddleware } from './middleware/auth.js'
-import { rateLimit } from './middleware/rate-limit.js'
+import { rateLimit, userKey } from './middleware/rate-limit.js'
+import { botGuard } from './middleware/abuse-protection.js'
 
 // ── Startup secret validation ─────────────────────────────────────────────────
 // CLERK_SECRET_KEY is required — without it every request will be rejected.
@@ -69,11 +70,17 @@ app.route('/api/webhooks', webhooksRoute)
 // ── Authenticated routes ──────────────────────────────────────────────────────
 const api = new Hono()
 
-// General API rate limit: 300 req / 1 min per IP.
-// Authenticated users doing normal work will never hit this.
-// Protects against token stuffing and automated scraping.
-api.use('*', rateLimit({ windowMs: 60 * 1000, max: 300, label: 'api' }))
+// Layer 1 — IP-based limit (pre-auth): 200 req / min.
+// Stops scanners and floods before any crypto work is done.
+api.use('*', rateLimit({ windowMs: 60_000, max: 200, label: 'api-ip' }))
+
+// Layer 2 — Authentication.
 api.use('*', authMiddleware)
+
+// Layer 3 — Per-user limit (post-auth): 120 req / min.
+// Prevents a single compromised account from abusing the platform
+// even if they rotate IPs to get past layer 1.
+api.use('*', rateLimit({ windowMs: 60_000, max: 120, keyFn: userKey, label: 'api-user' }))
 
 api.route('/books',     booksRoute)
 api.route('/sessions',  sessionsRoute)

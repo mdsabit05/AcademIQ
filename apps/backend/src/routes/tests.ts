@@ -11,8 +11,9 @@
 
 import { Hono } from 'hono'
 import sql from '../db/client.js'
-import { requireOwnership } from '../middleware/rbac.js'
-import { verifyBookAccess } from '../middleware/rbac.js'
+import { requireOwnership, verifyBookAccess } from '../middleware/rbac.js'
+import { rateLimit, userKey } from '../middleware/rate-limit.js'
+import { botGuard } from '../middleware/abuse-protection.js'
 import { retrieve } from '../services/retrieval.service.js'
 import { rerank } from '../services/reranker.service.js'
 import { buildContext } from '../services/context-builder.service.js'
@@ -27,7 +28,13 @@ const tests = new Hono<AuthEnv>()
 
 // ── Generate test ───────────────────────────────────────────────────────────
 
-tests.post('/', async (c) => {
+tests.post(
+  '/',
+  botGuard,
+  // 5 test generations per user per 10 minutes — each generation runs a full
+  // RAG + LLM pipeline and may cost significant compute / API credits.
+  rateLimit({ windowMs: 10 * 60_000, max: 5, keyFn: userKey, label: 'test-generation' }),
+  async (c) => {
   const dbUserId = c.get('dbUserId')
   const body = await c.req.json<{
     bookIds: string[]

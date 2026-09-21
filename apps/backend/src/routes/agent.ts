@@ -25,11 +25,19 @@ import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { runAgentLoop } from '../agent/agent.service.js'
 import { verifyBookAccess } from '../middleware/rbac.js'
+import { rateLimit, userKey } from '../middleware/rate-limit.js'
+import { botGuard } from '../middleware/abuse-protection.js'
 import type { AuthEnv } from '../middleware/auth.js'
 
 const agent = new Hono<AuthEnv>()
 
-agent.post('/message', async (c) => {
+agent.post(
+  '/message',
+  botGuard,
+  // 10 agent requests per user per minute — the agentic loop makes multiple
+  // LLM calls per request, making it the most expensive endpoint in the app.
+  rateLimit({ windowMs: 60_000, max: 10, keyFn: userKey, label: 'agent-message' }),
+  async (c) => {
   const dbUserId = c.get('dbUserId')
   const userRole = c.get('userRole')
 

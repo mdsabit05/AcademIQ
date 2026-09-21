@@ -14,6 +14,8 @@ import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import sql from '../db/client.js'
 import { requireOwnership } from '../middleware/rbac.js'
+import { rateLimit, userKey } from '../middleware/rate-limit.js'
+import { botGuard } from '../middleware/abuse-protection.js'
 import { retrieve } from '../services/retrieval.service.js'
 import { rerank } from '../services/reranker.service.js'
 import { buildContext } from '../services/context-builder.service.js'
@@ -31,7 +33,13 @@ const chat = new Hono<AuthEnv>()
 
 // ── POST message ────────────────────────────────────────────────────────────
 
-chat.post('/:sessionId/message', requireOwnership('chat_sessions', 'sessionId'), async (c) => {
+chat.post(
+  '/:sessionId/message',
+  botGuard,
+  // 20 AI messages per user per minute — prevents chat flooding / LLM cost abuse.
+  rateLimit({ windowMs: 60_000, max: 20, keyFn: userKey, label: 'chat-message' }),
+  requireOwnership('chat_sessions', 'sessionId'),
+  async (c) => {
   const sessionId = c.req.param('sessionId')
   const dbUserId = c.get('dbUserId')
 

@@ -19,6 +19,8 @@
 import { Hono } from 'hono'
 import sql from '../db/client.js'
 import { requireOwnership, requireRole, verifyBookAccess } from '../middleware/rbac.js'
+import { rateLimit, userKey } from '../middleware/rate-limit.js'
+import { botGuard } from '../middleware/abuse-protection.js'
 import { retrieve } from '../services/retrieval.service.js'
 import { rerank } from '../services/reranker.service.js'
 import { buildContext } from '../services/context-builder.service.js'
@@ -103,7 +105,14 @@ papers.delete('/blueprints/:id', requireOwnership('paper_blueprints', 'id'), asy
 
 // ── Generate paper ──────────────────────────────────────────────────────────
 
-papers.post('/blueprints/:id/generate', requireOwnership('paper_blueprints', 'id'), async (c) => {
+papers.post(
+  '/blueprints/:id/generate',
+  botGuard,
+  // 3 paper generations per user per 10 minutes — each generation runs one
+  // RAG + LLM call *per section*, making this the most expensive batch operation.
+  rateLimit({ windowMs: 10 * 60_000, max: 3, keyFn: userKey, label: 'paper-generation' }),
+  requireOwnership('paper_blueprints', 'id'),
+  async (c) => {
   const blueprintId = c.req.param('id')
   const dbUserId = c.get('dbUserId')
   const body = await c.req.json<{ title?: string }>()

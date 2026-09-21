@@ -14,6 +14,7 @@ import sql from '../db/client.js'
 import { storage, bookStorageKey } from '../services/storage.service.js'
 import { requireOwnership } from '../middleware/rbac.js'
 import { enqueueProcessBook } from '../jobs/worker.js'
+import { rateLimit, userKey } from '../middleware/rate-limit.js'
 import type { AuthEnv } from '../middleware/auth.js'
 
 const MAX_FILE_BYTES = 200 * 1024 * 1024 // 200 MB
@@ -22,7 +23,11 @@ const books = new Hono<AuthEnv>()
 
 // ── Upload ──────────────────────────────────────────────────────────────────
 
-books.post('/', async (c) => {
+books.post(
+  '/',
+  // 10 uploads per user per hour — each upload enqueues an OCR/embedding job.
+  rateLimit({ windowMs: 60 * 60_000, max: 10, keyFn: userKey, label: 'book-upload' }),
+  async (c) => {
   const dbUserId = c.get('dbUserId')
 
   let body: Record<string, string | File>

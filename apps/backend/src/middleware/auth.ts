@@ -15,6 +15,7 @@ import { createMiddleware } from 'hono/factory'
 import { verifyToken, createClerkClient } from '@clerk/backend'
 import sql from '../db/client.js'
 import { logger } from '../lib/logger.js'
+import { trackAuthFailure, clearAuthFailures, isAuthLockedOut } from './abuse-protection.js'
 
 if (!process.env.CLERK_SECRET_KEY) {
   logger.error('CLERK_SECRET_KEY is not set — all requests will be rejected', { module: 'auth' })
@@ -34,10 +35,28 @@ export type AuthEnv = {
 }
 
 export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
+  const ip =
+    c.req.header('x-forwarded-for')?.split(',')[0].trim() ??
+    c.req.header('x-real-ip') ??
+    'unknown'
+
+  // Block IPs that have exceeded the auth failure threshold before doing any
+  // crypto work — this stops token stuffing / enumeration cheaply.
+  if (isAuthLockedOut(ip)) {
+    logger.warn('auth blocked: IP is locked out', {
+      event: 'auth_lockout_rejected',
+      ip,
+      path: c.req.path,
+    })
+    return c.json({ error: 'Too many failed authentication attempts — try again later.' }, 429)
+  }
+
   const authHeader = c.req.header('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
+    trackAuthFailure(ip)
     logger.warn('auth rejected: missing or malformed Authorization header', {
-      ip: c.req.header('x-forwarded-for')?.split(',')[0].trim() ?? c.req.header('x-real-ip') ?? 'unknown',
+      event: 'auth_failure',
+      ip,
       path: c.req.path,
       method: c.req.method,
     })
@@ -45,10 +64,6 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
   }
 
   const token = authHeader.replace('Bearer ', '')
-  const ip =
-    c.req.header('x-forwarded-for')?.split(',')[0].trim() ??
-    c.req.header('x-real-ip') ??
-    'unknown'
 
   try {
     const payload = await verifyToken(token, {
@@ -114,8 +129,14 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
     c.set('userRole', user.role)
     c.set('userPrefs', user.learning_prefs ?? {})
 
+    // Successful auth — clear any accumulated failure count for this IP.
+    clearAuthFailures(ip)
+
     await next()
   } catch (err) {
+    // Record failure BEFORE logging — trackAuthFailure may trigger lockout.
+    trackAuthFailure(ip)
+
     // Log only the error message — never the raw error object which may
     // contain JWT fragments or internal stack details.
     const reason = err instanceof Error ? err.message : String(err)
