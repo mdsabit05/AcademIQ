@@ -425,6 +425,23 @@ export default function AskAI() {
                 }).join('')}
               </span>
             </div>
+            {studyMode && (
+              <>
+                <button
+                  onClick={() => setTopicPanelVisible((v) => !v)}
+                  className="shrink-0 flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors"
+                >
+                  <BookMarked size={14} />
+                  <span className="hidden sm:inline">Topics</span>
+                  {studyTopics.filter((t) => !t.completed).length > 0 && (
+                    <span className="rounded-full bg-primary text-bg text-[10px] font-bold px-1.5 py-0.5 leading-none">
+                      {studyTopics.filter((t) => !t.completed).length}
+                    </span>
+                  )}
+                </button>
+                <div className="w-px h-4 bg-border" />
+              </>
+            )}
             <button onClick={clearSelection} className="shrink-0 flex items-center gap-1 text-xs text-muted hover:text-red-400 transition-colors">
               <Trash2 size={11} /> Clear
             </button>
