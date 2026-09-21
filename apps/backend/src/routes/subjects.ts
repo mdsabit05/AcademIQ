@@ -11,6 +11,7 @@
 import { Hono } from 'hono'
 import sql from '../db/client.js'
 import { requireOwnership } from '../middleware/rbac.js'
+import { limitStr } from '../lib/validate.js'
 import type { AuthEnv } from '../middleware/auth.js'
 
 const subjects = new Hono<AuthEnv>()
@@ -24,13 +25,14 @@ subjects.post('/', async (c) => {
     metadata?: Record<string, unknown>
   }>()
 
-  if (!body.name?.trim()) return c.json({ error: 'name is required' }, 400)
+  const name = limitStr(body.name, 200)
+  if (!name) return c.json({ error: 'name is required' }, 400)
 
   const [subject] = await sql`
     INSERT INTO subjects (owner_id, name, semester, description, metadata)
     VALUES (
-      ${dbUserId}, ${body.name.trim()},
-      ${body.semester ?? null}, ${body.description ?? null},
+      ${dbUserId}, ${name},
+      ${limitStr(body.semester, 100) || null}, ${limitStr(body.description, 1000) || null},
       ${JSON.stringify(body.metadata ?? {})}::jsonb
     )
     RETURNING *
@@ -65,9 +67,9 @@ subjects.patch('/:id', requireOwnership('subjects', 'id'), async (c) => {
   await sql`
     UPDATE subjects
     SET
-      name        = COALESCE(${body.name ?? null}, name),
-      semester    = COALESCE(${body.semester ?? null}, semester),
-      description = COALESCE(${body.description ?? null}, description)
+      name        = COALESCE(${body.name ? limitStr(body.name, 200) : null}, name),
+      semester    = COALESCE(${body.semester ? limitStr(body.semester, 100) : null}, semester),
+      description = COALESCE(${body.description ? limitStr(body.description, 1000) : null}, description)
     WHERE id = ${id}
   `
   const [subject] = await sql`SELECT * FROM subjects WHERE id = ${id}`

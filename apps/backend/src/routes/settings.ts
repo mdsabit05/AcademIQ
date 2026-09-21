@@ -8,8 +8,18 @@
 
 import { Hono } from 'hono'
 import sql from '../db/client.js'
+import { limitStr, filterKeys } from '../lib/validate.js'
 import type { AuthEnv } from '../middleware/auth.js'
 import type { LearningPrefs } from 'shared'
+
+// Only allow known keys — reject arbitrary JSON blobs that could contain injected data.
+const LEARNING_PREFS_KEYS = [
+  'preferredDifficulty',
+  'studyGoalMinutesPerDay',
+  'notificationsEnabled',
+  'theme',
+  'language',
+] as const
 
 const settings = new Hono<AuthEnv>()
 
@@ -36,16 +46,25 @@ settings.patch('/', async (c) => {
     learning_prefs?: Partial<LearningPrefs>
   }>()
 
-  // Merge learning_prefs — don't overwrite the whole object
-  if (body.learning_prefs) {
+  const name        = body.name        ? limitStr(body.name, 200)        : null
+  const institution = body.institution ? limitStr(body.institution, 200)  : null
+  const course      = body.course      ? limitStr(body.course, 200)       : null
+  const semester    = body.semester    ? limitStr(body.semester, 50)      : null
+
+  // Merge learning_prefs — strip unknown keys before writing to the DB.
+  if (body.learning_prefs && typeof body.learning_prefs === 'object') {
+    const safePrefs = filterKeys(
+      body.learning_prefs as Record<string, unknown>,
+      LEARNING_PREFS_KEYS,
+    )
     await sql`
       UPDATE users
       SET
-        name           = COALESCE(${body.name ?? null}, name),
-        institution    = COALESCE(${body.institution ?? null}, institution),
-        course         = COALESCE(${body.course ?? null}, course),
-        semester       = COALESCE(${body.semester ?? null}, semester),
-        learning_prefs = learning_prefs || ${JSON.stringify(body.learning_prefs)}::jsonb,
+        name           = COALESCE(${name}, name),
+        institution    = COALESCE(${institution}, institution),
+        course         = COALESCE(${course}, course),
+        semester       = COALESCE(${semester}, semester),
+        learning_prefs = learning_prefs || ${JSON.stringify(safePrefs)}::jsonb,
         updated_at     = now()
       WHERE id = ${dbUserId}
     `
@@ -53,10 +72,10 @@ settings.patch('/', async (c) => {
     await sql`
       UPDATE users
       SET
-        name        = COALESCE(${body.name ?? null}, name),
-        institution = COALESCE(${body.institution ?? null}, institution),
-        course      = COALESCE(${body.course ?? null}, course),
-        semester    = COALESCE(${body.semester ?? null}, semester),
+        name        = COALESCE(${name}, name),
+        institution = COALESCE(${institution}, institution),
+        course      = COALESCE(${course}, course),
+        semester    = COALESCE(${semester}, semester),
         updated_at  = now()
       WHERE id = ${dbUserId}
     `

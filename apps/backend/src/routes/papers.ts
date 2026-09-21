@@ -29,6 +29,7 @@ import { MODELS } from '../config/models.js'
 import { validateBlueprint, type BlueprintConfig, type BlueprintSection } from '../lib/blueprint-validator.js'
 import { detectDuplicates } from '../lib/duplicate-detector.js'
 import { testGenerationPrompt } from '../prompts/test.prompt.js'
+import { limitStr } from '../lib/validate.js'
 import type { AuthEnv } from '../middleware/auth.js'
 
 const papers = new Hono<AuthEnv>()
@@ -46,6 +47,9 @@ papers.post('/blueprints', async (c) => {
     config: BlueprintConfig
   }>()
 
+  const title = limitStr(body.title, 300)
+  if (!title) return c.json({ error: 'title is required' }, 400)
+
   const validation = validateBlueprint(body.config)
   if (!validation.valid) {
     return c.json({ error: 'Invalid blueprint config', details: validation.errors }, 400)
@@ -53,7 +57,7 @@ papers.post('/blueprints', async (c) => {
 
   const [blueprint] = await sql`
     INSERT INTO paper_blueprints (teacher_id, subject_id, title, config)
-    VALUES (${dbUserId}, ${body.subjectId ?? null}, ${body.title}, ${JSON.stringify(body.config)}::jsonb)
+    VALUES (${dbUserId}, ${body.subjectId ?? null}, ${title}, ${JSON.stringify(body.config)}::jsonb)
     RETURNING *
   `
   return c.json({ blueprint }, 201)
@@ -89,7 +93,7 @@ papers.patch('/blueprints/:id', requireOwnership('paper_blueprints', 'id'), asyn
   await sql`
     UPDATE paper_blueprints
     SET
-      title      = COALESCE(${body.title ?? null}, title),
+      title      = COALESCE(${body.title ? limitStr(body.title, 300) : null}, title),
       config     = COALESCE(${body.config ? JSON.stringify(body.config) : null}::jsonb, config),
       updated_at = now()
     WHERE id = ${id}
@@ -127,7 +131,7 @@ papers.post(
     ? JSON.parse(bp.config)
     : bp.config
   const sections: BlueprintSection[] = config.sections ?? []
-  const paperTitle = body.title ?? `${bp.title} — ${new Date().toLocaleDateString()}`
+  const paperTitle = limitStr(body.title || `${bp.title} — ${new Date().toLocaleDateString()}`, 300)
 
   // Verify book access only when books are actually specified
   const allBookIds = [...new Set(sections.flatMap((s) => s.bookIds ?? []))]

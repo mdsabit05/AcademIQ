@@ -11,7 +11,10 @@ import { Hono } from 'hono'
 import sql from '../db/client.js'
 import { requireOwnership } from '../middleware/rbac.js'
 import { verifyBookAccess } from '../middleware/rbac.js'
+import { limitStr, isEnum } from '../lib/validate.js'
 import type { AuthEnv } from '../middleware/auth.js'
+
+const VALID_MODES = ['learn', 'ask', 'general'] as const
 
 const sessions = new Hono<AuthEnv>()
 
@@ -25,9 +28,7 @@ sessions.post('/', async (c) => {
     topic?: string
   }>()
 
-  console.log('[sessions] POST body:', JSON.stringify(body), 'dbUserId:', dbUserId)
-
-  if (!body.mode || !['learn', 'ask', 'general'].includes(body.mode)) {
+  if (!isEnum(body.mode, VALID_MODES)) {
     return c.json({ error: 'Invalid mode. Must be learn | ask | general' }, 400)
   }
 
@@ -41,9 +42,11 @@ sessions.post('/', async (c) => {
     }
   }
 
+  const topic = body.topic ? limitStr(body.topic, 500) : null
+
   const [session] = await sql<[{ id: string }]>`
     INSERT INTO chat_sessions (owner_id, mode, topic)
-    VALUES (${dbUserId}, ${body.mode}, ${body.topic ?? null})
+    VALUES (${dbUserId}, ${body.mode}, ${topic})
     RETURNING id
   `
 
@@ -67,7 +70,8 @@ sessions.post('/', async (c) => {
 
 sessions.get('/', async (c) => {
   const dbUserId = c.get('dbUserId')
-  const mode = c.req.query('mode')
+  const rawMode = c.req.query('mode')
+  const mode = isEnum(rawMode, VALID_MODES) ? rawMode : undefined
 
   const rows = await sql`
     SELECT

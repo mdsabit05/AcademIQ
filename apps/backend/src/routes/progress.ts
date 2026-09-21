@@ -7,6 +7,7 @@
 
 import { Hono } from 'hono'
 import sql from '../db/client.js'
+import { safeOffset } from '../lib/validate.js'
 import type { AuthEnv } from '../middleware/auth.js'
 
 const progress = new Hono<AuthEnv>()
@@ -65,7 +66,7 @@ progress.get('/summary', async (c) => {
 progress.get('/history', async (c) => {
   const dbUserId = c.get('dbUserId')
   const limit = Math.min(Number(c.req.query('limit') ?? 20), 100)
-  const offset = Number(c.req.query('offset') ?? 0)
+  const offset = safeOffset(c.req.query('offset'))
 
   const attempts = await sql`
     SELECT ta.id, ta.score, ta.total_marks, ta.submitted_at,

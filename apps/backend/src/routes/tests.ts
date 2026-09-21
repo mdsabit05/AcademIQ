@@ -22,6 +22,7 @@ import { MODELS } from '../config/models.js'
 import { testGenerationPrompt } from '../prompts/test.prompt.js'
 import { scoreAttempt } from '../lib/scorer.js'
 import { extractAndSave } from '../services/memory.service.js'
+import { isoDate, limitStr } from '../lib/validate.js'
 import type { AuthEnv } from '../middleware/auth.js'
 
 const tests = new Hono<AuthEnv>()
@@ -47,6 +48,20 @@ tests.post(
     marksPerQuestion?: number
   }>()
 
+  if (!['mcq', 'one_mark', 'two_mark', 'five_mark', 'mixed'].includes(body.type)) {
+    return c.json({ error: 'Invalid type' }, 400)
+  }
+  if (!['easy', 'medium', 'hard'].includes(body.difficulty)) {
+    return c.json({ error: 'Invalid difficulty' }, 400)
+  }
+  const questionCount = Math.max(1, Math.min(50, Math.floor(Number(body.questionCount) || 1)))
+  const durationMinutes = body.durationMinutes != null
+    ? Math.max(0, Math.floor(Number(body.durationMinutes) || 0))
+    : undefined
+  const marksPerQuestion = body.marksPerQuestion != null
+    ? Math.max(1, Math.floor(Number(body.marksPerQuestion) || 1))
+    : undefined
+
   try {
     await verifyBookAccess(body.bookIds ?? [], dbUserId, 'student')
   } catch (err: unknown) {
@@ -55,18 +70,18 @@ tests.post(
   }
 
   // Retrieve relevant chunks for context
-  const topic = body.topic ?? ''
+  const topic = limitStr(body.topic, 500)
   const candidates = await retrieve(topic || 'general overview', body.bookIds, 20)
   const reranked = await rerank(topic || 'general overview', candidates, 8)
   const { contextText } = buildContext(reranked)
 
   // Generate questions
   const prompt = testGenerationPrompt(contextText, {
-    questionCount: body.questionCount,
+    questionCount,
     type: body.type,
     difficulty: body.difficulty,
-    topic: body.topic,
-    marksPerQuestion: body.marksPerQuestion,
+    topic: topic || undefined,
+    marksPerQuestion,
   })
 
   const generated = await completeJson<Array<{
@@ -86,7 +101,7 @@ tests.post(
   // Calculate totals
   const totalMarks = generated.reduce((sum, q) => sum + (q.marks ?? 1), 0)
   const config: Record<string, unknown> = {
-    marksPerQuestion: body.marksPerQuestion,
+    marksPerQuestion,
     bookIds: body.bookIds,
   }
 
@@ -96,8 +111,8 @@ tests.post(
       (owner_id, subject_id, topic, duration_minutes, total_marks,
        question_count, type, difficulty, config)
     VALUES (
-      ${dbUserId}, ${body.subjectId ?? null}, ${body.topic ?? null},
-      ${body.durationMinutes ?? null}, ${totalMarks},
+      ${dbUserId}, ${body.subjectId ?? null}, ${topic || null},
+      ${durationMinutes ?? null}, ${totalMarks},
       ${generated.length}, ${body.type}, ${body.difficulty},
       ${JSON.stringify(config)}::jsonb
     )
@@ -179,6 +194,18 @@ tests.post('/:id/attempt', requireOwnership('tests', 'id'), async (c) => {
     startedAt?: string
   }>()
 
+  // Validate and sanitize attempt metadata
+  if (!body.answers || typeof body.answers !== 'object' || Array.isArray(body.answers)) {
+    return c.json({ error: 'answers must be an object' }, 400)
+  }
+  const timeElapsedSeconds = body.timeElapsedSeconds != null
+    ? Math.max(0, Math.floor(Number(body.timeElapsedSeconds) || 0))
+    : null
+  const tabSwitches = body.tabSwitches != null
+    ? Math.max(0, Math.floor(Number(body.tabSwitches) || 0))
+    : 0
+  const startedAt = body.startedAt ? isoDate(body.startedAt) : null
+
   // Load all questions (with correct answers) for scoring
   const questions = await sql<Array<{
     id: string
@@ -200,8 +227,8 @@ tests.post('/:id/attempt', requireOwnership('tests', 'id'), async (c) => {
     VALUES (
       ${testId}, ${dbUserId}, ${JSON.stringify(body.answers)}::jsonb,
       ${totalScore}, ${totalMarks},
-      ${body.timeElapsedSeconds ?? null}, ${body.tabSwitches ?? 0},
-      ${body.startedAt ?? null}
+      ${timeElapsedSeconds}, ${tabSwitches},
+      ${startedAt}
     )
     RETURNING id
   `

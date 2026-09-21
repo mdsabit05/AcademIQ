@@ -15,6 +15,7 @@ import { storage, bookStorageKey } from '../services/storage.service.js'
 import { requireOwnership } from '../middleware/rbac.js'
 import { enqueueProcessBook } from '../jobs/worker.js'
 import { rateLimit, userKey } from '../middleware/rate-limit.js'
+import { limitStr } from '../lib/validate.js'
 import type { AuthEnv } from '../middleware/auth.js'
 
 const MAX_FILE_BYTES = 200 * 1024 * 1024 // 200 MB
@@ -153,8 +154,8 @@ books.patch('/:id', requireOwnership('books', 'id'), async (c) => {
   await sql`
     UPDATE books
     SET
-      title      = COALESCE(${body.title ?? null}, title),
-      author     = COALESCE(${body.author ?? null}, author),
+      title      = COALESCE(${body.title ? limitStr(body.title, 500) : null}, title),
+      author     = COALESCE(${body.author ? limitStr(body.author, 200) : null}, author),
       subject_id = CASE WHEN ${Object.hasOwn(body, 'subject_id')} THEN ${body.subject_id ?? null}
                         ELSE subject_id END,
       updated_at = now()

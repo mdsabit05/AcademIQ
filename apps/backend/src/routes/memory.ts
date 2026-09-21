@@ -8,13 +8,21 @@
 
 import { Hono } from 'hono'
 import sql from '../db/client.js'
+import { isEnum } from '../lib/validate.js'
 import type { AuthEnv } from '../middleware/auth.js'
+import type { MemoryType } from 'shared'
+
+const VALID_MEMORY_TYPES: readonly MemoryType[] = [
+  'topic_mastery', 'weak_topic', 'strong_topic',
+  'common_mistake', 'study_history', 'revision_priority', 'syllabus_coverage',
+]
 
 const memory = new Hono<AuthEnv>()
 
 memory.get('/', async (c) => {
   const dbUserId = c.get('dbUserId')
-  const memoryType = c.req.query('type')
+  const rawType = c.req.query('type')
+  const memoryType = isEnum(rawType, VALID_MEMORY_TYPES) ? rawType : undefined
 
   const rows = memoryType
     ? await sql`

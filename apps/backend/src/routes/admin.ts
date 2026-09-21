@@ -12,6 +12,7 @@
 import { Hono } from 'hono'
 import sql from '../db/client.js'
 import { requireRole } from '../middleware/rbac.js'
+import { safeOffset, limitStr } from '../lib/validate.js'
 import type { AuthEnv } from '../middleware/auth.js'
 
 const admin = new Hono<AuthEnv>()
@@ -20,8 +21,9 @@ admin.use('*', requireRole('admin'))
 
 admin.get('/users', async (c) => {
   const limit = Math.min(Number(c.req.query('limit') ?? 50), 200)
-  const offset = Number(c.req.query('offset') ?? 0)
-  const search = c.req.query('search')
+  const offset = safeOffset(c.req.query('offset'))
+  const rawSearch = c.req.query('search')
+  const search = rawSearch ? limitStr(rawSearch, 200) : undefined
 
   const rows = search
     ? await sql`

@@ -8,6 +8,7 @@
 
 import { Hono } from 'hono'
 import sql from '../db/client.js'
+import { isoDate, limitStr } from '../lib/validate.js'
 import type { AuthEnv } from '../middleware/auth.js'
 
 const studyplan = new Hono<AuthEnv>()
@@ -27,10 +28,13 @@ studyplan.get('/exams', async (c) => {
 studyplan.post('/exams', async (c) => {
   const userId = c.get('dbUserId')
   const body = await c.req.json<{ name: string; subject?: string; exam_date: string }>()
-  if (!body.name?.trim() || !body.exam_date) return c.json({ error: 'name and exam_date required' }, 400)
+  const name = limitStr(body.name, 200)
+  if (!name || !body.exam_date) return c.json({ error: 'name and exam_date required' }, 400)
+  const examDate = isoDate(body.exam_date)
+  if (!examDate) return c.json({ error: 'exam_date must be a valid ISO date' }, 400)
   const [row] = await sql`
     INSERT INTO plan_exams (user_id, name, subject, exam_date)
-    VALUES (${userId}, ${body.name.trim()}, ${body.subject?.trim() || null}, ${body.exam_date})
+    VALUES (${userId}, ${name}, ${limitStr(body.subject, 200) || null}, ${examDate})
     RETURNING id, name, subject, exam_date, created_at
   `
   return c.json({ exam: row }, 201)
@@ -58,10 +62,11 @@ studyplan.get('/tasks', async (c) => {
 studyplan.post('/tasks', async (c) => {
   const userId = c.get('dbUserId')
   const body = await c.req.json<{ text: string; subject?: string }>()
-  if (!body.text?.trim()) return c.json({ error: 'text required' }, 400)
+  const text = limitStr(body.text, 500)
+  if (!text) return c.json({ error: 'text required' }, 400)
   const [row] = await sql`
     INSERT INTO plan_tasks (user_id, text, subject)
-    VALUES (${userId}, ${body.text.trim()}, ${body.subject?.trim() || null})
+    VALUES (${userId}, ${text}, ${limitStr(body.subject, 200) || null})
     RETURNING id, text, subject, completed, created_at
   `
   return c.json({ task: row }, 201)
@@ -103,10 +108,15 @@ studyplan.get('/goals', async (c) => {
 studyplan.post('/goals', async (c) => {
   const userId = c.get('dbUserId')
   const body = await c.req.json<{ subject: string; description: string; due_date?: string; progress?: number }>()
-  if (!body.subject?.trim() || !body.description?.trim()) return c.json({ error: 'subject and description required' }, 400)
+  const subject = limitStr(body.subject, 200)
+  const description = limitStr(body.description, 1000)
+  if (!subject || !description) return c.json({ error: 'subject and description required' }, 400)
+  const dueDate = body.due_date ? isoDate(body.due_date) : null
+  if (body.due_date && !dueDate) return c.json({ error: 'due_date must be a valid ISO date' }, 400)
+  const progress = body.progress != null ? Math.max(0, Math.min(100, Number(body.progress) || 0)) : 0
   const [row] = await sql`
     INSERT INTO plan_goals (user_id, subject, description, due_date, progress)
-    VALUES (${userId}, ${body.subject.trim()}, ${body.description.trim()}, ${body.due_date || null}, ${body.progress ?? 0})
+    VALUES (${userId}, ${subject}, ${description}, ${dueDate}, ${progress})
     RETURNING id, subject, description, due_date, progress, created_at
   `
   return c.json({ goal: row }, 201)
