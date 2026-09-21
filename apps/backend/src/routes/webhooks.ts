@@ -4,7 +4,7 @@ import sql from '../db/client.js'
 import { rateLimit } from '../middleware/rate-limit.js'
 
 if (!process.env.CLERK_WEBHOOK_SECRET) {
-  console.error('[webhooks] FATAL: CLERK_WEBHOOK_SECRET is not set — webhook verification will fail')
+  console.warn('[webhooks] CLERK_WEBHOOK_SECRET is not set — webhook endpoint will return 503')
 }
 
 const app = new Hono()

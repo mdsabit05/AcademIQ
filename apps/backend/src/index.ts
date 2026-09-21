@@ -7,12 +7,14 @@ import { authMiddleware } from './middleware/auth.js'
 import { rateLimit } from './middleware/rate-limit.js'
 
 // ── Startup secret validation ─────────────────────────────────────────────────
-const REQUIRED_SECRETS = ['CLERK_SECRET_KEY', 'CLERK_WEBHOOK_SECRET'] as const
-for (const key of REQUIRED_SECRETS) {
-  if (!process.env[key]) {
-    console.error(`[startup] FATAL: required secret "${key}" is not set`)
-    process.exit(1)
-  }
+// CLERK_SECRET_KEY is required — without it every request will be rejected.
+if (!process.env.CLERK_SECRET_KEY) {
+  console.error('[startup] FATAL: CLERK_SECRET_KEY is not set')
+  process.exit(1)
+}
+// CLERK_WEBHOOK_SECRET is optional — only needed if Clerk webhooks are configured.
+if (!process.env.CLERK_WEBHOOK_SECRET) {
+  console.warn('[startup] WARNING: CLERK_WEBHOOK_SECRET is not set — webhook endpoint will reject all requests')
 }
 import { startWorker, stopWorker } from './jobs/worker.js'
 import { terminateOcr } from './services/ocr.service.js'
