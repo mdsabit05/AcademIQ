@@ -325,7 +325,14 @@ export default function AskAI() {
     setSessionId(null); setMessages([]); setStreamBuffer('')
   }
   function clearSelection() { setSelectedBookIds([]); setSessionId(null); setMessages([]); setStreamBuffer('') }
-  function backToSelection() { setMessages([]); setStreamBuffer(''); setSessionId(null) }
+  function backToSelection() {
+    if (studyMode) {
+      setStudyStep(3)
+    }
+    setSessionId(null)
+    setMessages([])
+    setStreamBuffer('')
+  }
 
   const ensureSession = useCallback(async (bookIds: string[]): Promise<string> => {
     if (sessionId) return sessionId
@@ -510,6 +517,18 @@ export default function AskAI() {
             </div>
           </div>
         </div>
+        {studyMode && topicPanelVisible && studySyllabus && (
+          <div className="hidden md:flex h-full">
+            <StudyTopicPanel
+              syllabusTitle={studySyllabus.title}
+              topics={studyTopics}
+              activeTopicId={activeTopicId}
+              onSetActive={setActiveTopicId}
+              onMarkComplete={handleMarkComplete}
+              onClose={() => setTopicPanelVisible(false)}
+            />
+          </div>
+        )}
       </div>
     )
   }
