@@ -277,7 +277,7 @@ export default function AskAI() {
       setSessionId(session.id)
       setSessions((prev) => [session, ...prev])
       setSelectedBookIds([studyBookId])
-      setTopicPanelVisible(true)
+      setTopicPanelVisible(false)
       setLoadingStudy(false)
 
       // Auto-send opening message so AI starts explaining immediately
