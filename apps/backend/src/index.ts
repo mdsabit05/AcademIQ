@@ -4,6 +4,16 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 
 import { authMiddleware } from './middleware/auth.js'
+import { rateLimit } from './middleware/rate-limit.js'
+
+// ── Startup secret validation ─────────────────────────────────────────────────
+const REQUIRED_SECRETS = ['CLERK_SECRET_KEY', 'CLERK_WEBHOOK_SECRET'] as const
+for (const key of REQUIRED_SECRETS) {
+  if (!process.env[key]) {
+    console.error(`[startup] FATAL: required secret "${key}" is not set`)
+    process.exit(1)
+  }
+}
 import { startWorker, stopWorker } from './jobs/worker.js'
 import { terminateOcr } from './services/ocr.service.js'
 
@@ -45,6 +55,11 @@ app.route('/api/webhooks', webhooksRoute)
 
 // ── Authenticated routes ────────────────────────────────────────────────────
 const api = new Hono()
+
+// General API rate limit: 300 req / 1 min per IP.
+// Authenticated users doing normal work will never hit this.
+// Protects against token stuffing and automated scraping.
+api.use('*', rateLimit({ windowMs: 60 * 1000, max: 300 }))
 api.use('*', authMiddleware)
 
 api.route('/books', booksRoute)

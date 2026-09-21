@@ -137,16 +137,9 @@ export function makeApi(token: string) {
     // ── Chat ───────────────────────────────────────────────────────────────
     chat: {
       /**
-       * Send a message to a session.
-       * Returns an EventSource-compatible URL for SSE streaming.
-       * Callers handle the stream via useSSE or fetch directly.
-       */
-      sendMessage: (sessionId: string, content: string) =>
-        `${BASE}/chat/${sessionId}/message?token=${encodeURIComponent(token)}&content=${encodeURIComponent(content)}`,
-
-      /**
-       * Post message and receive SSE stream response.
-       * Returns the raw Response for SSE parsing.
+       * Post a message and receive an SSE stream response.
+       * Token is sent in the Authorization header — never in the URL —
+       * to prevent it appearing in server logs, CDN logs, or Referer headers.
        */
       postMessage: (sessionId: string, content: string) =>
         fetch(`${BASE}/chat/${sessionId}/message`, {

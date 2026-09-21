@@ -2,11 +2,21 @@
  * Authentication middleware — Clerk JWT verification.
  * Adds clerkUserId, dbUserId, userRole, and userPrefs to Hono context.
  * No password authentication — Clerk handles all auth.
+ *
+ * Security invariants:
+ *  - Token verification errors are logged WITHOUT the token or raw error
+ *    body to avoid leaking JWT fragments into log aggregators.
+ *  - Admin promotion is audit-logged so role escalations are traceable.
+ *  - CLERK_SECRET_KEY absence is caught at import time, not per-request.
  */
 
 import { createMiddleware } from 'hono/factory'
 import { verifyToken, createClerkClient } from '@clerk/backend'
 import sql from '../db/client.js'
+
+if (!process.env.CLERK_SECRET_KEY) {
+  console.error('[auth] FATAL: CLERK_SECRET_KEY is not set — all requests will be rejected')
+}
 
 const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! })
 
@@ -46,14 +56,16 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
       // Non-fatal — continue with empty email
     }
 
-    // Auto-promote to admin if email matches ADMIN_EMAIL env var
-    const adminEmails = (process.env.ADMIN_EMAIL ?? '').toLowerCase().split(',').map((e) => e.trim()).filter(Boolean)
-    const isAdminEmail = email && adminEmails.includes(email.toLowerCase())
+    // Admin detection: match against comma-separated ADMIN_EMAIL env var.
+    // Uses Clerk's verified email — users cannot self-assign admin.
+    const adminEmails = (process.env.ADMIN_EMAIL ?? '')
+      .toLowerCase().split(',').map((e) => e.trim()).filter(Boolean)
+    const isAdminEmail = Boolean(email && adminEmails.includes(email.toLowerCase()))
 
     // Upsert user; always sync email/name from Clerk.
-    // If user qualifies for admin and isn't already, promote them.
+    // Role escalation to admin is only applied when the email matches — never downgraded here.
     const [user] = await sql<
-      Array<{ id: string; role: Role; learning_prefs: Record<string, unknown> }>
+      Array<{ id: string; role: Role; learning_prefs: Record<string, unknown>; was_promoted: boolean }>
     >`
       INSERT INTO users (clerk_id, email, name, role)
       VALUES (
@@ -67,8 +79,18 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
           email = EXCLUDED.email,
           name  = CASE WHEN users.name = '' OR users.name IS NULL THEN EXCLUDED.name ELSE users.name END,
           role  = CASE WHEN ${isAdminEmail}::boolean AND users.role != 'admin' THEN 'admin' ELSE users.role END
-      RETURNING id, role, learning_prefs
+      RETURNING
+        id,
+        role,
+        learning_prefs,
+        -- Flag promotion so we can audit-log it without a second query
+        (xmax = 0 OR (${isAdminEmail}::boolean AND role = 'admin')) AS was_promoted
     `
+
+    // Audit log: record whenever a user is auto-promoted to admin
+    if (user.was_promoted && user.role === 'admin') {
+      console.warn(`[auth] admin promotion: clerk_id=${clerkUserId} db_id=${user.id} email=${email}`)
+    }
 
     c.set('clerkUserId', clerkUserId)
     c.set('dbUserId', user.id)
@@ -77,7 +99,10 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
 
     await next()
   } catch (err) {
-    console.error('[auth] token verification failed:', err)
+    // Log only the error type/message — never the raw error object which may
+    // contain JWT fragments or internal stack details.
+    const message = err instanceof Error ? err.message : String(err)
+    console.warn(`[auth] token rejected: ${message}`)
     return c.json({ error: 'Unauthorized' }, 401)
   }
 })
