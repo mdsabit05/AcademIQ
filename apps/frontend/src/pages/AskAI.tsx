@@ -192,6 +192,12 @@ export default function AskAI() {
     setMessages(msgs.map((m) => ({ role: m.role, content: m.content })))
     setStreamBuffer('')
     if (session.book_ids?.length) setSelectedBookIds(session.book_ids)
+    // Clear study mode — topics belong to a specific study session only
+    setStudyMode(false)
+    setStudyTopics([])
+    setStudySyllabus(null)
+    setActiveTopicId(null)
+    setTopicPanelVisible(false)
     // Jump to bottom after the chat view renders
     setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'instant' }), 50)
   }, [getToken])
