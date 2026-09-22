@@ -181,7 +181,7 @@ export default function AskAI() {
     const token = await getToken()
     if (!token) return
     const { sessions: s } = await makeApi(token).sessions.list()
-    setSessions(s.filter((x) => !x.topic?.startsWith('test-review:')))
+    setSessions(s.filter((x) => !x.topic?.startsWith('test-review:') && x.mode !== 'general'))
   }, [getToken])
 
   const loadSession = useCallback(async (session: ChatSession) => {
