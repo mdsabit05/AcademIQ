@@ -33,7 +33,7 @@ export default function StudyTopicPanel({
   const expandedTopic = expandedId ? topics.find(t => t.id === expandedId) : null
 
   return (
-    <div className="relative flex flex-col w-52 shrink-0 border-l border-border bg-bg h-full overflow-hidden">
+    <div className="relative flex flex-col w-72 md:w-52 shrink-0 border-l border-border bg-bg h-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-2.5 py-2 border-b border-border">
         <span className="text-[11px] font-bold text-white uppercase tracking-wide truncate">{syllabusTitle}</span>

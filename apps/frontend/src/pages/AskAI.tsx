@@ -457,16 +457,32 @@ export default function AskAI() {
   if (isChatMode) {
     return (
       <div className="flex h-full overflow-hidden">
+        {/* Desktop history sidebar */}
         {historyVisible && <div className="hidden md:flex">{sidebar}</div>}
+
+        {/* Mobile history drawer */}
+        <div className={clsx('fixed inset-0 z-50 md:hidden', historyVisible ? 'pointer-events-auto' : 'pointer-events-none')}>
+          <div
+            className={clsx('absolute inset-0 bg-black/50 transition-opacity duration-300', historyVisible ? 'opacity-100' : 'opacity-0')}
+            onClick={() => setHistoryVisible(false)}
+          />
+          <div className={clsx(
+            'absolute inset-y-0 left-0 w-72 transition-transform duration-300 ease-in-out',
+            historyVisible ? 'translate-x-0' : '-translate-x-full',
+          )}>
+            {sidebar}
+          </div>
+        </div>
+
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Slim top bar */}
           <div className="shrink-0 flex items-center gap-3 px-4 lg:px-5 py-2.5 border-b border-border">
             <button onClick={() => setHistoryVisible((v) => !v)}
-              className="hidden md:flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors">
+              className="flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors">
               {historyVisible ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
-              <span>{historyVisible ? 'Hide' : 'History'}</span>
+              <span className="hidden sm:inline">{historyVisible ? 'Hide' : 'History'}</span>
             </button>
-            <div className="hidden md:block w-px h-4 bg-border" />
+            <div className="w-px h-4 bg-border" />
             <button onClick={backToSelection}
               className="flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors">
               <ArrowLeft size={13} /> Back
@@ -583,17 +599,45 @@ export default function AskAI() {
             </div>
           </div>
         </div>
-        {studyMode && topicPanelVisible && studySyllabus && (
-          <div className="hidden md:flex h-full">
-            <StudyTopicPanel
-              syllabusTitle={studySyllabus.title}
-              topics={studyTopics}
-              activeTopicId={activeTopicId}
-              onSetActive={setActiveTopicId}
-              onMarkComplete={handleMarkComplete}
-              onClose={() => setTopicPanelVisible(false)}
+        {studyMode && studySyllabus && (
+          <>
+            {/* Mobile: dim backdrop */}
+            <div
+              className={clsx(
+                'fixed inset-0 z-40 bg-black/50 md:hidden transition-opacity duration-300',
+                topicPanelVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+              )}
+              onClick={() => setTopicPanelVisible(false)}
             />
-          </div>
+            {/* Mobile: full-height slide-over from right */}
+            <div className={clsx(
+              'fixed inset-y-0 right-0 z-50 md:hidden transition-transform duration-300 ease-in-out',
+              topicPanelVisible ? 'translate-x-0' : 'translate-x-full',
+            )}>
+              <StudyTopicPanel
+                syllabusTitle={studySyllabus.title}
+                topics={studyTopics}
+                activeTopicId={activeTopicId}
+                onSetActive={setActiveTopicId}
+                onMarkComplete={handleMarkComplete}
+                onClose={() => setTopicPanelVisible(false)}
+              />
+            </div>
+            {/* Desktop: sidebar that slides width to push chat content */}
+            <div className={clsx(
+              'hidden md:block overflow-hidden transition-all duration-300 ease-in-out h-full shrink-0',
+              topicPanelVisible ? 'w-52' : 'w-0',
+            )}>
+              <StudyTopicPanel
+                syllabusTitle={studySyllabus.title}
+                topics={studyTopics}
+                activeTopicId={activeTopicId}
+                onSetActive={setActiveTopicId}
+                onMarkComplete={handleMarkComplete}
+                onClose={() => setTopicPanelVisible(false)}
+              />
+            </div>
+          </>
         )}
       </div>
     )
@@ -603,6 +647,20 @@ export default function AskAI() {
   return (
     <div className="flex h-full overflow-hidden">
       {historyVisible && <div className="hidden md:flex">{sidebar}</div>}
+
+      {/* Mobile history drawer (selection screen) */}
+      <div className={clsx('fixed inset-0 z-50 md:hidden', historyVisible ? 'pointer-events-auto' : 'pointer-events-none')}>
+        <div
+          className={clsx('absolute inset-0 bg-black/50 transition-opacity duration-300', historyVisible ? 'opacity-100' : 'opacity-0')}
+          onClick={() => setHistoryVisible(false)}
+        />
+        <div className={clsx(
+          'absolute inset-y-0 left-0 w-72 transition-transform duration-300 ease-in-out',
+          historyVisible ? 'translate-x-0' : '-translate-x-full',
+        )}>
+          {sidebar}
+        </div>
+      </div>
 
       {studyMode ? (
         <div className="flex flex-col flex-1 overflow-hidden min-w-0">
@@ -803,6 +861,10 @@ export default function AskAI() {
 
           {/* Mobile toolbar */}
           <div className="flex md:hidden items-center gap-2">
+            <button onClick={() => setHistoryVisible((v) => !v)}
+              className="flex items-center gap-1 text-xs text-muted hover:text-white transition-colors">
+              <PanelLeftOpen size={15} />
+            </button>
             <span className="text-sm font-black text-white">AI Tutor</span>
             {selectedBookIds.length > 0 && (
               <span className="text-[10px] font-black px-2 py-0.5 rounded"
@@ -898,44 +960,25 @@ export default function AskAI() {
           {/* ── MOBILE layout ───────────────────────────────────────────────────── */}
           <div className="md:hidden flex flex-col px-4 py-4 gap-4">
 
-            {/* Recent Chats */}
-            {sessions.length > 0 && (
-              <div className="rounded-2xl border border-border bg-surface p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                      style={{ background: 'rgba(34,211,238,0.12)' }}>
-                      <MessageSquare size={14} style={{ color: '#22D3EE' }} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white leading-none">Recent Chats</p>
-                      <p className="text-[11px] text-muted mt-0.5">Continue your learning conversation</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-semibold text-primary flex items-center gap-0.5">
-                    View All <ChevronRight size={12} />
-                  </span>
+            {/* Study Mode banner — top so it's always visible */}
+            <div className="rounded-2xl border overflow-hidden"
+              style={{ background: 'linear-gradient(135deg, rgba(34,211,238,0.10) 0%, rgba(168,85,247,0.07) 100%)', borderColor: 'rgba(34,211,238,0.30)' }}>
+              <div className="flex items-center gap-3 p-3.5">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(34,211,238,0.15)', border: '1px solid rgba(34,211,238,0.3)' }}>
+                  <BookMarked size={16} style={{ color: '#22D3EE' }} />
                 </div>
-                <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-0.5 -mx-1 px-1">
-                  {sessions.slice(0, 8).map((s) => {
-                    const title = s.topic ?? s.title ?? 'Untitled Chat'
-                    const bookTitle = s.book_titles?.length ? s.book_titles[0] : 'General'
-                    return (
-                      <button key={s.id} onClick={() => loadSession(s)}
-                        className="flex-none w-32 rounded-xl border border-border bg-bg p-2.5 text-left hover:border-primary/40 transition-colors">
-                        <div className="w-6 h-6 rounded-lg flex items-center justify-center mb-1.5"
-                          style={{ background: 'rgba(34,211,238,0.10)' }}>
-                          <MessageSquare size={11} style={{ color: '#22D3EE' }} />
-                        </div>
-                        <p className="text-[11px] font-semibold text-white leading-snug line-clamp-2 mb-1">{title}</p>
-                        <p className="text-[10px] text-muted truncate">{bookTitle}</p>
-                        <p className="text-[10px] text-muted/50 mt-0.5">{timeAgo(s.updated_at || s.created_at)}</p>
-                      </button>
-                    )
-                  })}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white leading-none">Study Mode</p>
+                  <p className="text-[11px] text-muted mt-0.5">Follow syllabus topics · AI teaches · track progress</p>
                 </div>
+                <button onClick={enterStudyMode}
+                  className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors"
+                  style={{ background: '#22D3EE', color: '#0a0f1a' }}>
+                  Start
+                </button>
               </div>
-            )}
+            </div>
 
             {/* AI Tutor empty state */}
             <div className="flex flex-col items-center text-center py-4">
@@ -964,25 +1007,45 @@ export default function AskAI() {
               )}
             </div>
 
-            {/* Study Mode banner */}
-            <div className="rounded-2xl border border-border overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, rgba(34,211,238,0.08) 0%, rgba(168,85,247,0.06) 100%)', borderColor: 'rgba(34,211,238,0.25)' }}>
-              <div className="flex items-center gap-3 p-3.5">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: 'rgba(34,211,238,0.15)', border: '1px solid rgba(34,211,238,0.3)' }}>
-                  <BookMarked size={16} style={{ color: '#22D3EE' }} />
+            {/* Recent Chats */}
+            {sessions.length > 0 && (
+              <div className="rounded-2xl border border-border bg-surface p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: 'rgba(34,211,238,0.12)' }}>
+                      <MessageSquare size={14} style={{ color: '#22D3EE' }} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white leading-none">Recent Chats</p>
+                      <p className="text-[11px] text-muted mt-0.5">Continue your learning conversation</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setHistoryVisible(true)}
+                    className="text-xs font-semibold text-primary flex items-center gap-0.5">
+                    View All <ChevronRight size={12} />
+                  </button>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-white leading-none">Study Mode</p>
-                  <p className="text-[11px] text-muted mt-0.5">Follow syllabus topics · AI teaches · track progress</p>
+                <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-0.5 -mx-1 px-1">
+                  {sessions.slice(0, 8).map((s) => {
+                    const title = s.topic ?? s.title ?? 'Untitled Chat'
+                    const bookTitle = s.book_titles?.length ? s.book_titles[0] : 'General'
+                    return (
+                      <button key={s.id} onClick={() => loadSession(s)}
+                        className="flex-none w-32 rounded-xl border border-border bg-bg p-2.5 text-left hover:border-primary/40 transition-colors">
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center mb-1.5"
+                          style={{ background: 'rgba(34,211,238,0.10)' }}>
+                          <MessageSquare size={11} style={{ color: '#22D3EE' }} />
+                        </div>
+                        <p className="text-[11px] font-semibold text-white leading-snug line-clamp-2 mb-1">{title}</p>
+                        <p className="text-[10px] text-muted truncate">{bookTitle}</p>
+                        <p className="text-[10px] text-muted/50 mt-0.5">{timeAgo(s.updated_at || s.created_at)}</p>
+                      </button>
+                    )
+                  })}
                 </div>
-                <button onClick={enterStudyMode}
-                  className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors"
-                  style={{ background: '#22D3EE', color: '#0a0f1a' }}>
-                  Start
-                </button>
               </div>
-            </div>
+            )}
 
             {/* Quick actions */}
             <div className="grid grid-cols-2 gap-2.5">
