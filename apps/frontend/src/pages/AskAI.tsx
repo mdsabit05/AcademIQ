@@ -1066,29 +1066,30 @@ export default function AskAI() {
                 <Sparkles size={28} className="text-muted" />
               </div>
               {selectedBookIds.length > 0 ? (
-                <>
-                  <h3 className="text-base font-black text-white mb-1">
-                    <span style={{ color: '#22D3EE' }}>{selectedBookIds.length}</span> document{selectedBookIds.length > 1 ? 's' : ''} selected
-                  </h3>
-                  <p className="text-sm text-muted mb-6 max-w-xs">
-                    Type a question below or use a quick action to start your AI-powered study session.
-                  </p>
-                </>
+                <h3 className="text-base font-black text-white mb-6">
+                  <span style={{ color: '#22D3EE' }}>{selectedBookIds.length}</span> document{selectedBookIds.length > 1 ? 's' : ''} selected — ask anything below
+                </h3>
               ) : (
-                <>
-                  <h3 className="text-base font-black text-white mb-1">Select your study materials</h3>
-                  <p className="text-sm text-muted mb-6 max-w-xs">
-                    Choose one or more documents above to start an AI-powered study session.
-                  </p>
-                </>
+                <h3 className="text-base font-black text-white mb-6">Your AI Study Assistant</h3>
               )}
-              <div className="flex flex-wrap justify-center gap-2 w-full max-w-lg">
-                {QUICK_ACTIONS.map(({ label, prompt }) => (
-                  <button key={label} onClick={() => handleSend(prompt)}
-                    disabled={selectedBookIds.length === 0}
-                    className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-muted hover:text-white hover:border-primary/50 hover:bg-primary/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-                    {label}
-                  </button>
+              <div className="w-full max-w-sm text-left space-y-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-muted mb-3">How to use</p>
+                {[
+                  { num: '1', title: 'Select your books', desc: 'Pick one or more documents from the shelf above to give the AI context.' },
+                  { num: '2', title: 'Ask any question', desc: 'Type your question in the chat box — get explanations, summaries, or practice questions.' },
+                  { num: '3', title: 'Use Study Mode', desc: 'Click "Enter Study Mode" to follow your syllabus topic by topic with AI guidance.' },
+                  { num: '4', title: 'Track your history', desc: 'Click the panel icon (top-left) to browse and continue previous conversations.' },
+                ].map(({ num, title, desc }) => (
+                  <div key={num} className="flex items-start gap-3">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black mt-0.5"
+                      style={{ background: 'rgba(34,211,238,0.12)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.3)' }}>
+                      {num}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-white leading-snug">{title}</p>
+                      <p className="text-[11px] text-muted leading-relaxed mt-0.5">{desc}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
