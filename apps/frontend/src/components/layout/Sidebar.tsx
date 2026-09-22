@@ -16,8 +16,6 @@ import {
   Sparkles,
   LayoutDashboard,
   LogOut,
-  Sun,
-  Moon,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -25,7 +23,6 @@ import Logo from '../Logo.tsx'
 import { useCurrentUser } from '../../lib/useCurrentUser.ts'
 import { isAdmin } from '../../lib/rbac.ts'
 import { useMode } from '../../lib/modeContext.tsx'
-import { useTheme } from '../../lib/theme.tsx'
 import { useClerk, useUser } from '@clerk/clerk-react'
 
 interface NavItem {
@@ -87,9 +84,8 @@ export default function Sidebar() {
   const { user } = useCurrentUser()
   const { user: clerkUser } = useUser()
   const { signOut } = useClerk()
-  const { theme, toggle } = useTheme()
   const navigate = useNavigate()
-  const { mode } = useMode()
+  const { mode, setMode } = useMode()
   const role = user?.role
 
   const imageUrl = clerkUser?.imageUrl
