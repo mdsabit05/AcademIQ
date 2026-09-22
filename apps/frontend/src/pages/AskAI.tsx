@@ -128,6 +128,7 @@ export default function AskAI() {
   const { setCollapsed: setNavCollapsed } = useSidebar()
   const [searchParams] = useSearchParams()
   const preselectedBookId = searchParams.get('bookId')
+  const prefilledQuery = searchParams.get('q')
 
   const [books, setBooks] = useState<Book[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
@@ -370,10 +371,11 @@ export default function AskAI() {
         if (preselectedBookId && ready.some((b) => b.id === preselectedBookId))
           setSelectedBookIds([preselectedBookId])
       }
+      if (prefilledQuery) setInput(prefilledQuery)
       if (subjectsRes.status === 'fulfilled') setSubjects(subjectsRes.value.subjects)
     }
     load().catch(console.error)
-  }, [getToken, preselectedBookId])
+  }, [getToken, preselectedBookId, prefilledQuery])
 
   useEffect(() => { refreshHistory() }, [refreshHistory])
 
@@ -754,9 +756,9 @@ export default function AskAI() {
                     <p className="text-xs text-muted mt-1">Upload a syllabus from the Syllabus page first.</p>
                   </div>
                 ) : (
-                  <div className="flex gap-4 items-start">
+                  <div className="flex flex-col md:flex-row gap-4 items-start">
                     {/* Left: Syllabus list */}
-                    <div className="w-56 shrink-0 space-y-2">
+                    <div className="w-full md:w-56 md:shrink-0 space-y-2">
                       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted mb-2">Syllabi</p>
                       {studySyllabi.map((s) => (
                         <button

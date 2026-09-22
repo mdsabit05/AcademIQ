@@ -6,8 +6,9 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useAuth } from '@clerk/clerk-react'
+import { useNavigate } from 'react-router-dom'
 import {
-  Send, Sparkles, PanelLeftOpen, PanelLeftClose, Plus, Trash2, Mic,
+  Send, Sparkles, PanelLeftOpen, PanelLeftClose, Plus, Trash2, Mic, BookOpen,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { makeApi } from '../lib/api.ts'
@@ -19,6 +20,7 @@ interface LocalMessage { role: 'user' | 'assistant'; content: string }
 
 export default function GeneralAI() {
   const { getToken } = useAuth()
+  const navigate = useNavigate()
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<LocalMessage[]>([])
@@ -162,12 +164,27 @@ export default function GeneralAI() {
           </div>
           <div className="ml-auto flex items-center gap-2">
             {messages.length > 0 && (
-              <button
-                onClick={startNewChat}
-                className="flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors"
-              >
-                <Plus size={13} /> New chat
-              </button>
+              <>
+                {/* Handoff: take the last user message to AI Tutor */}
+                <button
+                  onClick={() => {
+                    const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
+                    const q = lastUserMsg?.content ?? ''
+                    navigate(`/tutor${q ? `?q=${encodeURIComponent(q.slice(0, 200))}` : ''}`)
+                  }}
+                  className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg border border-border text-muted hover:text-white hover:border-primary/50 transition-colors"
+                  title="Continue this topic in AI Tutor with your books"
+                >
+                  <BookOpen size={12} /> Use with Books
+                </button>
+                <div className="hidden sm:block w-px h-4 bg-border" />
+                <button
+                  onClick={startNewChat}
+                  className="flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors"
+                >
+                  <Plus size={13} /> New chat
+                </button>
+              </>
             )}
             {sessionId && (
               <>
