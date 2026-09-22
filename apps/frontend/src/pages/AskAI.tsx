@@ -198,9 +198,10 @@ export default function AskAI() {
 
   const startNewChat = useCallback(() => {
     if (studyMode) {
-      // In study mode, "new chat" goes back to step 3 (pick a topic again)
+      // In study mode, "new chat" goes back to step 2 (pick a topic again)
       setSessionId(null); setMessages([]); setStreamBuffer('')
-      setStudyStep(3)
+      setStudyStep(2)
+      setActiveTopicId(null)
       setTopicPanelVisible(false)
       return
     }
@@ -364,7 +365,7 @@ export default function AskAI() {
   function clearSelection() { setSelectedBookIds([]); setSessionId(null); setMessages([]); setStreamBuffer('') }
   function backToSelection() {
     if (studyMode) {
-      setStudyStep(3)
+      setStudyStep(2)
     }
     setSessionId(null)
     setMessages([])
@@ -654,7 +655,7 @@ export default function AskAI() {
           {/* Study Mode Wizard header */}
           <div className="shrink-0 border-b border-border px-4 lg:px-5 py-2.5 flex items-center gap-2">
             <button
-              onClick={() => studyStep === 1 ? exitStudyMode() : setStudyStep((s) => (s - 1) as 1 | 2 | 3)}
+              onClick={() => studyStep === 1 ? exitStudyMode() : setStudyStep(1)}
               className="flex items-center gap-1 text-xs text-muted hover:text-white transition-colors mr-1"
             >
               <ArrowLeft size={13} /> {studyStep === 1 ? 'Exit' : 'Back'}
@@ -663,7 +664,7 @@ export default function AskAI() {
             <BookMarked size={15} className="text-primary" />
             <span className="text-sm font-semibold text-white">Study Mode</span>
             <span className="text-xs text-muted hidden sm:inline">
-              — Step {studyStep} of 3: {studyStep === 1 ? 'Pick a Book' : studyStep === 2 ? 'Pick a Syllabus' : 'Pick a Topic'}
+              — Step {studyStep} of 2: {studyStep === 1 ? 'Pick a Book' : 'Pick a Syllabus & Topic'}
             </span>
             <div className="ml-auto flex items-center gap-3">
               <button onClick={exitStudyMode} className="text-xs text-muted hover:text-white transition-colors hidden sm:block">
@@ -679,8 +680,8 @@ export default function AskAI() {
                   Next →
                 </button>
               )}
-              {/* Step 3: Start Studying */}
-              {studyStep === 3 && (
+              {/* Step 2: Start Studying (enabled when topic selected) */}
+              {studyStep === 2 && (
                 <button
                   onClick={startStudySession}
                   disabled={!activeTopicId || loadingStudy}
@@ -718,71 +719,83 @@ export default function AskAI() {
               </div>
             )}
 
-            {/* Step 2: Pick a Syllabus */}
+            {/* Step 2: Pick a Syllabus + Topic (inline) */}
             {studyStep === 2 && (
-              <div className="space-y-3 max-w-3xl mx-auto">
-                <p className="text-sm text-muted">Choose a syllabus to guide your study session.</p>
+              <div className="max-w-3xl mx-auto">
                 {studySyllabi.length === 0 ? (
                   <div className="rounded-xl border border-border bg-surface p-8 text-center">
                     <p className="text-sm text-white font-medium">No syllabi found</p>
                     <p className="text-xs text-muted mt-1">Upload a syllabus from the Syllabus page first.</p>
                   </div>
                 ) : (
-                  <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
-                    {studySyllabi.map((s) => (
-                      <button
-                        key={s.id}
-                        onClick={async () => {
-                          setStudySyllabus({ id: s.id, title: s.title })
-                          await loadStudyTopics(s.id)
-                          setStudyStep(3)
-                        }}
-                        className="text-left rounded-xl border p-4 transition-colors border-border bg-surface hover:border-primary/40"
-                      >
-                        <p className="text-sm font-semibold text-white">{s.title}</p>
-                        <p className="text-xs text-muted mt-0.5">{new Date(s.created_at).toLocaleDateString()}</p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                  <div className="flex gap-4 items-start">
+                    {/* Left: Syllabus list */}
+                    <div className="w-56 shrink-0 space-y-2">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted mb-2">Syllabi</p>
+                      {studySyllabi.map((s) => (
+                        <button
+                          key={s.id}
+                          onClick={async () => {
+                            setStudySyllabus({ id: s.id, title: s.title })
+                            setActiveTopicId(null)
+                            await loadStudyTopics(s.id)
+                          }}
+                          className={`w-full text-left rounded-xl border p-3 transition-colors ${
+                            studySyllabus?.id === s.id
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border bg-surface hover:border-primary/40'
+                          }`}
+                        >
+                          <p className="text-sm font-semibold text-white leading-snug">{s.title}</p>
+                          <p className="text-xs text-muted mt-0.5">{new Date(s.created_at).toLocaleDateString()}</p>
+                        </button>
+                      ))}
+                    </div>
 
-            {/* Step 3: Pick a Topic */}
-            {studyStep === 3 && (
-              <div className="space-y-3 max-w-3xl mx-auto">
-                <p className="text-sm text-muted">Select the topic you want to start with.</p>
-                {loadingStudy ? (
-                  <div className="text-sm text-muted animate-pulse">Loading topics…</div>
-                ) : (
-                  <div className="space-y-4">
-                    {Array.from(new Set(studyTopics.map((t) => t.unit ?? 'General'))).map((unit) => (
-                      <div key={unit}>
-                        <p className="text-xs font-black uppercase tracking-widest text-muted mb-2">{unit}</p>
-                        <div className="space-y-1.5">
-                          {studyTopics.filter((t) => (t.unit ?? 'General') === unit).map((topic) => (
-                            <button
-                              key={topic.id}
-                              onClick={() => setActiveTopicId(topic.id)}
-                              className={`w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors flex items-center gap-3 ${
-                                activeTopicId === topic.id
-                                  ? 'border-primary bg-primary/10 text-white'
-                                  : topic.completed
-                                    ? 'border-border bg-surface/50 text-muted/50'
-                                    : 'border-border bg-surface hover:border-primary/40 text-white'
-                              }`}
-                            >
-                              <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 text-[9px] ${
-                                topic.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-border'
-                              }`}>
-                                {topic.completed ? '✓' : ''}
-                              </span>
-                              <span className="flex-1 truncate">{topic.topic}</span>
-                            </button>
+                    {/* Right: Topics for selected syllabus */}
+                    <div className="flex-1 min-w-0">
+                      {!studySyllabus ? (
+                        <div className="rounded-xl border border-dashed border-border bg-surface/30 p-8 flex flex-col items-center justify-center text-center gap-2">
+                          <BookMarked size={22} className="text-muted/40" />
+                          <p className="text-sm text-muted/60">Select a syllabus to see its topics</p>
+                        </div>
+                      ) : loadingStudy ? (
+                        <div className="text-sm text-muted animate-pulse py-4">Loading topics…</div>
+                      ) : (
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted">
+                            Topics — {studySyllabus.title}
+                          </p>
+                          {Array.from(new Set(studyTopics.map((t) => t.unit ?? 'General'))).map((unit) => (
+                            <div key={unit}>
+                              <p className="text-xs font-black uppercase tracking-widest text-muted mb-2">{unit}</p>
+                              <div className="space-y-1.5">
+                                {studyTopics.filter((t) => (t.unit ?? 'General') === unit).map((topic) => (
+                                  <button
+                                    key={topic.id}
+                                    onClick={() => setActiveTopicId(topic.id)}
+                                    className={`w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors flex items-center gap-3 ${
+                                      activeTopicId === topic.id
+                                        ? 'border-primary bg-primary/10 text-white'
+                                        : topic.completed
+                                          ? 'border-border bg-surface/50 text-muted/50'
+                                          : 'border-border bg-surface hover:border-primary/40 text-white'
+                                    }`}
+                                  >
+                                    <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 text-[9px] ${
+                                      topic.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-border'
+                                    }`}>
+                                      {topic.completed ? '✓' : ''}
+                                    </span>
+                                    <span className="flex-1 truncate">{topic.topic}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
                           ))}
                         </div>
-                      </div>
-                    ))}
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
