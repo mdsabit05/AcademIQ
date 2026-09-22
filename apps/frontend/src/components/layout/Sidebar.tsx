@@ -1,5 +1,5 @@
 import { useSidebar } from '../../lib/sidebarContext.tsx'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Home,
   BookOpen,
@@ -15,6 +15,9 @@ import {
   CalendarDays,
   Sparkles,
   LayoutDashboard,
+  LogOut,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -22,6 +25,8 @@ import Logo from '../Logo.tsx'
 import { useCurrentUser } from '../../lib/useCurrentUser.ts'
 import { isAdmin } from '../../lib/rbac.ts'
 import { useMode } from '../../lib/modeContext.tsx'
+import { useTheme } from '../../lib/theme.tsx'
+import { useClerk, useUser } from '@clerk/clerk-react'
 
 interface NavItem {
   to: string
@@ -80,8 +85,17 @@ function NavItem({
 export default function Sidebar() {
   const { collapsed, setCollapsed } = useSidebar()
   const { user } = useCurrentUser()
+  const { user: clerkUser } = useUser()
+  const { signOut } = useClerk()
+  const { theme, toggle } = useTheme()
+  const navigate = useNavigate()
   const { mode } = useMode()
   const role = user?.role
+
+  const imageUrl = clerkUser?.imageUrl
+  const initials = user?.name
+    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'U'
 
   const STUDENT_ITEMS: NavItem[] = [
     { to: '/dashboard',  icon: Home,         label: 'Dashboard'   },
@@ -131,16 +145,70 @@ export default function Sidebar() {
         </div>
       </nav>
 
-      {/* ── Fixed bottom: Admin → Settings ── */}
-      <div className="shrink-0 px-2">
-        {/* ADMIN section — invisible for non-admin (space preserved) */}
+      {/* ── Bottom section ── */}
+      <div className="shrink-0 px-2 pb-2">
+        {/* Admin section */}
         <div className={clsx(!isAdmin(role) && 'hidden')}>
           <SectionLabel label="Admin" collapsed={collapsed} />
           <NavItem to="/admin/users" icon={Shield} label="User Management" collapsed={collapsed} />
         </div>
 
-        {/* Settings — always visible */}
+        <div className="h-px bg-border/50 mx-1 my-2" />
+
+        {/* Settings */}
         <NavItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed} />
+
+        {/* Theme toggle */}
+        <button
+          onClick={toggle}
+          style={{ paddingTop: '0.7rem', paddingBottom: '0.7rem' }}
+          className={clsx(
+            'w-full flex items-center gap-3 text-sm font-medium text-muted hover:text-white hover:bg-white/5 transition-colors rounded-lg',
+            collapsed ? 'justify-center px-2' : 'pl-4 pr-3',
+          )}
+        >
+          {theme === 'dark' ? <Sun size={16} className="shrink-0" /> : <Moon size={16} className="shrink-0" />}
+          {!collapsed && <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}
+        </button>
+
+        {/* Sign Out */}
+        <button
+          onClick={() => signOut(() => navigate('/'))}
+          style={{ paddingTop: '0.7rem', paddingBottom: '0.7rem' }}
+          className={clsx(
+            'w-full flex items-center gap-3 text-sm font-medium text-muted hover:text-red-400 hover:bg-red-500/5 transition-colors rounded-lg',
+            collapsed ? 'justify-center px-2' : 'pl-4 pr-3',
+          )}
+        >
+          <LogOut size={16} className="shrink-0" />
+          {!collapsed && <span>Sign Out</span>}
+        </button>
+
+        {/* User info */}
+        {!collapsed && (
+          <div className="mt-2 mx-1 flex items-center gap-2.5 px-2 py-2 rounded-lg bg-bg border border-border/50">
+            <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 border border-border">
+              {imageUrl
+                ? <img src={imageUrl} alt="avatar" className="w-full h-full object-cover" />
+                : <div className="w-full h-full bg-primary flex items-center justify-center text-bg text-[10px] font-bold">{initials}</div>
+              }
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-white truncate leading-none">{user?.name ?? 'Student'}</p>
+              <p className="text-[10px] text-muted capitalize mt-0.5">{user?.role ?? 'student'}</p>
+            </div>
+          </div>
+        )}
+        {collapsed && (
+          <div className="flex justify-center mt-2">
+            <div className="w-7 h-7 rounded-full overflow-hidden border border-border">
+              {imageUrl
+                ? <img src={imageUrl} alt="avatar" className="w-full h-full object-cover" />
+                : <div className="w-full h-full bg-primary flex items-center justify-center text-bg text-[10px] font-bold">{initials}</div>
+              }
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Collapse toggle ── */}

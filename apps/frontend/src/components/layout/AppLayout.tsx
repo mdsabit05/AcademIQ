@@ -3,7 +3,6 @@ import { Outlet, useNavigate } from 'react-router-dom'
 import { Sun, Moon, LogOut, Settings } from 'lucide-react'
 import { useUser, useClerk } from '@clerk/clerk-react'
 import Sidebar from './Sidebar.tsx'
-import TopBar from './TopBar.tsx'
 import MobileBottomNav from './MobileBottomNav.tsx'
 import { SidebarProvider } from '../../lib/sidebarContext.tsx'
 import { ModeProvider, useMode } from '../../lib/modeContext.tsx'
@@ -106,32 +105,55 @@ function MobileTopBar() {
 }
 
 // ── App Layout ─────────────────────────────────────────────────────────────────
+function FloatingModeToggle() {
+  const { mode, setMode } = useMode()
+  const navigate = useNavigate()
+
+  return (
+    <div className="hidden md:flex fixed bottom-5 right-5 z-50 items-center rounded-xl border border-border bg-surface/90 backdrop-blur shadow-lg p-1 gap-0.5">
+      <button
+        onClick={() => { setMode('student'); navigate('/dashboard') }}
+        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+          mode === 'student' ? 'bg-primary text-bg shadow-sm' : 'text-muted hover:text-white'
+        }`}
+      >
+        Student
+      </button>
+      <button
+        onClick={() => { setMode('teacher'); navigate('/dashboard') }}
+        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+          mode === 'teacher' ? 'bg-primary text-bg shadow-sm' : 'text-muted hover:text-white'
+        }`}
+      >
+        Teacher
+      </button>
+    </div>
+  )
+}
+
 function AppLayoutInner() {
   const { hidden: topBarHidden } = useTopBar()
 
   return (
-        <div className="flex h-screen overflow-hidden bg-bg">
+    <div className="flex h-screen overflow-hidden bg-bg">
+      {/* Sidebar — desktop only */}
+      <div className="hidden md:flex">
+        <Sidebar />
+      </div>
 
-          {/* Sidebar — tablet + desktop */}
-          <div className="hidden md:flex">
-            <Sidebar />
-          </div>
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Mobile top bar — mobile only */}
+        {!topBarHidden && <MobileTopBar />}
 
-          <div className="flex flex-col flex-1 min-w-0">
-            {/* TopBar — tablet + desktop */}
-            <div className="hidden md:block">
-              <TopBar />
-            </div>
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+          <Outlet />
+        </main>
+      </div>
 
-            {/* Mobile top bar — mobile only */}
-            {!topBarHidden && <MobileTopBar />}
-
-            {/* Main content — extra bottom padding on mobile for bottom nav */}
-            <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
-              <Outlet />
-            </main>
-          </div>
-        </div>
+      {/* Floating Student/Teacher toggle — desktop only */}
+      <FloatingModeToggle />
+    </div>
   )
 }
 
