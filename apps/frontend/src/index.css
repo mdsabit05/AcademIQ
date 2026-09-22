@@ -227,12 +227,47 @@ html.light .bg-red-500       { background-color: #dc2626 !important; }
 
 /* Code blocks */
 .ai-md pre {
+  position: relative;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgb(var(--color-border));
   border-radius: 6px;
   padding: 0.75rem 1rem;
   overflow-x: auto;
   margin-bottom: 0.65rem;
+}
+
+/* Copy button injected by StreamingText */
+.copy-code-btn {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1.5;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.4);
+  border: 1px solid rgba(255,255,255,0.12);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.copy-code-btn:hover {
+  background: rgba(34,211,238,0.15);
+  color: #22d3ee;
+  border-color: rgba(34,211,238,0.3);
+}
+html.light .copy-code-btn {
+  background: rgba(0,0,0,0.05);
+  color: rgb(100,116,139);
+  border-color: rgba(0,0,0,0.10);
+}
+html.light .copy-code-btn:hover {
+  background: rgba(8,145,178,0.10);
+  color: #0891b2;
+  border-color: rgba(8,145,178,0.3);
 }
 .ai-md pre code {
   background: none;

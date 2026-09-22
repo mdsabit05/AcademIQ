@@ -9,11 +9,13 @@ import { useAuth } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
 import {
   Send, Sparkles, PanelLeftOpen, PanelLeftClose, Plus, Trash2, Mic, BookOpen,
+  ThumbsUp, ThumbsDown, ChevronDown,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { makeApi } from '../lib/api.ts'
 import StreamingText from '../components/StreamingText.tsx'
 import ChatHistorySidebar from '../components/ChatHistorySidebar.tsx'
+import { useVoiceInput } from '../lib/voice.ts'
 import type { ChatSession } from 'shared'
 
 interface LocalMessage { role: 'user' | 'assistant'; content: string }
@@ -28,7 +30,11 @@ export default function GeneralAI() {
   const [streaming, setStreaming] = useState(false)
   const [streamBuffer, setStreamBuffer] = useState('')
   const [historyVisible, setHistoryVisible] = useState(() => window.innerWidth >= 768)
+  const [feedback, setFeedback] = useState<Record<number, 'up' | 'down'>>({})
+  const [showScrollBtn, setShowScrollBtn] = useState(false)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const endRef = useRef<HTMLDivElement>(null)
+  const { listening, supported: micSupported, toggle: toggleMic } = useVoiceInput((t) => setInput(t))
 
   const refreshHistory = useCallback(async () => {
     const token = await getToken()
@@ -46,6 +52,7 @@ export default function GeneralAI() {
     setSessionId(session.id)
     setMessages(msgs.map((m) => ({ role: m.role, content: m.content })))
     setStreamBuffer('')
+    setFeedback({})
     setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'instant' }), 50)
   }, [getToken])
 
@@ -54,6 +61,7 @@ export default function GeneralAI() {
     setMessages([])
     setStreamBuffer('')
     setInput('')
+    setFeedback({})
   }, [])
 
   const deleteSession = useCallback(async (id: string) => {
@@ -147,7 +155,7 @@ export default function GeneralAI() {
         </div>
       </div>
 
-      <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+      <div className="relative flex flex-col flex-1 overflow-hidden min-w-0">
         {/* Top bar */}
         <div className="shrink-0 flex items-center gap-3 px-4 lg:px-5 py-2.5 border-b border-border">
           <button
@@ -213,7 +221,14 @@ export default function GeneralAI() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-5 min-h-0">
+        <div
+          ref={messagesContainerRef}
+          onScroll={() => {
+            const el = messagesContainerRef.current
+            if (el) setShowScrollBtn(el.scrollHeight - el.scrollTop - el.clientHeight > 120)
+          }}
+          className="flex-1 overflow-y-auto px-4 lg:px-6 py-5 min-h-0"
+        >
           <div className={clsx('mx-auto space-y-5 transition-all duration-300', historyVisible ? 'max-w-2xl' : 'max-w-4xl')}>
 
             {messages.length === 0 && !streamBuffer && (
@@ -232,19 +247,39 @@ export default function GeneralAI() {
             )}
 
             {messages.map((msg, i) => (
-              <div key={i} className={clsx('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-                {msg.role === 'assistant' && (
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mr-2.5 mt-0.5"
-                    style={{ background: 'rgba(34,211,238,0.15)', border: '1px solid rgba(34,211,238,0.3)' }}>
-                    <Sparkles size={13} style={{ color: '#22D3EE' }} />
+              <div key={i} className={clsx('flex flex-col', msg.role === 'user' ? 'items-end' : 'items-start')}>
+                <div className={clsx('flex w-full', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
+                  {msg.role === 'assistant' && (
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mr-2.5 mt-0.5"
+                      style={{ background: 'rgba(34,211,238,0.15)', border: '1px solid rgba(34,211,238,0.3)' }}>
+                      <Sparkles size={13} style={{ color: '#22D3EE' }} />
+                    </div>
+                  )}
+                  <div className={clsx(
+                    'max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
+                    msg.role === 'user' ? 'font-medium' : 'border border-border bg-surface text-white',
+                  )} style={msg.role === 'user' ? { background: '#22D3EE', color: '#0a0f1a' } : {}}>
+                    {msg.role === 'assistant' ? <StreamingText text={msg.content} /> : msg.content}
+                  </div>
+                </div>
+                {msg.role === 'assistant' && !streaming && (
+                  <div className="flex items-center gap-1 mt-1 ml-9">
+                    <button
+                      onClick={() => setFeedback((p) => ({ ...p, [i]: p[i] === 'up' ? undefined as unknown as 'up' : 'up' }))}
+                      className={`transition-colors ${feedback[i] === 'up' ? 'text-emerald-400' : 'text-muted/30 hover:text-muted'}`}
+                      title="Helpful"
+                    >
+                      <ThumbsUp size={12} />
+                    </button>
+                    <button
+                      onClick={() => setFeedback((p) => ({ ...p, [i]: p[i] === 'down' ? undefined as unknown as 'down' : 'down' }))}
+                      className={`transition-colors ${feedback[i] === 'down' ? 'text-red-400' : 'text-muted/30 hover:text-muted'}`}
+                      title="Not helpful"
+                    >
+                      <ThumbsDown size={12} />
+                    </button>
                   </div>
                 )}
-                <div className={clsx(
-                  'max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
-                  msg.role === 'user' ? 'font-medium' : 'border border-border bg-surface text-white',
-                )} style={msg.role === 'user' ? { background: '#22D3EE', color: '#0a0f1a' } : {}}>
-                  {msg.role === 'assistant' ? <StreamingText text={msg.content} /> : msg.content}
-                </div>
               </div>
             ))}
 
@@ -276,11 +311,23 @@ export default function GeneralAI() {
           </div>
         </div>
 
+        {/* Jump to bottom */}
+        {showScrollBtn && (
+          <button
+            onClick={() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); setShowScrollBtn(false) }}
+            className="absolute bottom-24 right-4 z-10 w-9 h-9 rounded-full border border-border bg-surface shadow-lg flex items-center justify-center text-muted hover:text-white transition-colors"
+          >
+            <ChevronDown size={15} />
+          </button>
+        )}
+
         {/* Input */}
         <div className="shrink-0 border-t border-border px-4 lg:px-5 py-3">
           <div className={clsx('mx-auto transition-all duration-300', historyVisible ? 'max-w-2xl' : 'max-w-4xl')}>
             <div className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 focus-within:border-primary/50 transition-colors">
-              <Mic size={16} className="text-muted shrink-0" />
+              <button onClick={toggleMic} disabled={!micSupported} title={listening ? 'Stop recording' : 'Voice input'} className="shrink-0 transition-colors disabled:opacity-30">
+                <Mic size={16} className={listening ? 'text-red-400 animate-pulse' : 'text-muted hover:text-white'} />
+              </button>
               <input
                 type="text"
                 value={input}

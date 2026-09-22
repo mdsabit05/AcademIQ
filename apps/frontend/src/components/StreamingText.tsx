@@ -9,6 +9,7 @@ interface StreamingTextProps {
 }
 
 export default memo(function StreamingText({ text, streaming, className }: StreamingTextProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -17,9 +18,30 @@ export default memo(function StreamingText({ text, streaming, className }: Strea
 
   const html = marked.parse(text, { gfm: true, breaks: false }) as string
 
+  // Inject copy buttons into every <pre> block after render
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    container.querySelectorAll('pre').forEach((pre) => {
+      if (pre.querySelector('.copy-code-btn')) return
+      const btn = document.createElement('button')
+      btn.className = 'copy-code-btn'
+      btn.setAttribute('aria-label', 'Copy code')
+      btn.textContent = 'Copy'
+      btn.onclick = () => {
+        const code = pre.querySelector('code')?.textContent ?? ''
+        navigator.clipboard.writeText(code).then(() => {
+          btn.textContent = 'Copied!'
+          setTimeout(() => { btn.textContent = 'Copy' }, 2000)
+        }).catch(() => {})
+      }
+      pre.appendChild(btn)
+    })
+  }, [html])
+
   return (
     <div className={clsx('ai-md text-sm leading-relaxed', className)}>
-      <div dangerouslySetInnerHTML={{ __html: html }} />
+      <div ref={containerRef} dangerouslySetInnerHTML={{ __html: html }} />
       {streaming && !text && (
         <span className="inline-flex items-center gap-1 py-1">
           <span className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:0ms]" />
