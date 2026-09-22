@@ -307,12 +307,15 @@ export default function AskAI() {
 
   async function handleMarkComplete(topicId: string) {
     if (!studySyllabus) return
+    const topic = studyTopics.find((t) => t.id === topicId)
+    if (!topic) return
+    const newCompleted = !topic.completed
     setStudyTopics((prev) =>
-      prev.map((t) => (t.id === topicId ? { ...t, completed: true } : t))
+      prev.map((t) => (t.id === topicId ? { ...t, completed: newCompleted } : t))
     )
     const token = await getToken()
     if (!token) return
-    await makeApi(token).syllabus.updateTopic(studySyllabus.id, topicId, true)
+    await makeApi(token).syllabus.updateTopic(studySyllabus.id, topicId, newCompleted)
   }
 
   useEffect(() => {
@@ -587,7 +590,7 @@ export default function AskAI() {
             </div>
           </div>
         </div>
-        {studyMode && studySyllabus && (
+        {studyMode && studyTopics.length > 0 && (
           <>
             {/* Mobile: dim backdrop */}
             <div
@@ -603,7 +606,7 @@ export default function AskAI() {
               topicPanelVisible ? 'translate-x-0' : 'translate-x-full',
             )}>
               <StudyTopicPanel
-                syllabusTitle={studySyllabus.title}
+                syllabusTitle={studySyllabus?.title ?? 'Topics'}
                 topics={studyTopics}
                 activeTopicId={activeTopicId}
                 onSetActive={setActiveTopicId}
@@ -617,7 +620,7 @@ export default function AskAI() {
               topicPanelVisible ? 'w-52' : 'w-0',
             )}>
               <StudyTopicPanel
-                syllabusTitle={studySyllabus.title}
+                syllabusTitle={studySyllabus?.title ?? 'Topics'}
                 topics={studyTopics}
                 activeTopicId={activeTopicId}
                 onSetActive={setActiveTopicId}

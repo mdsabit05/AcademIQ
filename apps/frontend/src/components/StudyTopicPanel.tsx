@@ -52,14 +52,14 @@ export default function StudyTopicPanel({
                     isActive ? 'bg-primary/10' : 'hover:bg-surface'
                   }`}
                 >
-                  {/* Circle — click to mark complete */}
+                  {/* Circle — click to toggle complete */}
                   <button
-                    onClick={() => !topic.completed && onMarkComplete(topic.id)}
+                    onClick={() => onMarkComplete(topic.id)}
                     className="shrink-0 transition-colors"
-                    title={topic.completed ? 'Completed' : 'Mark as read'}
+                    title={topic.completed ? 'Mark as incomplete' : 'Mark as read'}
                   >
                     {topic.completed
-                      ? <CheckCircle2 size={13} className="text-emerald-500" />
+                      ? <CheckCircle2 size={13} className="text-emerald-500 hover:text-emerald-400" />
                       : <Circle size={13} className={`${isActive ? 'text-primary' : 'text-muted/40 hover:text-emerald-400'}`} />
                     }
                   </button>
