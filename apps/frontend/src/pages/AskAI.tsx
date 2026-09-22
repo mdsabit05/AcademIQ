@@ -856,21 +856,30 @@ export default function AskAI() {
 
           {/* Mobile toolbar */}
           <div className="flex md:hidden items-center gap-2">
+            {/* ChatGPT-style history button */}
             <button onClick={() => setHistoryVisible((v) => !v)}
-              className="flex items-center gap-1 text-xs text-muted hover:text-white transition-colors">
-              <PanelLeftOpen size={15} />
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-muted hover:text-white hover:bg-white/5 transition-colors shrink-0">
+              <PanelLeftOpen size={17} />
             </button>
             <span className="text-sm font-black text-white">AI Tutor</span>
-            {selectedBookIds.length > 0 && (
-              <span className="text-[10px] font-black px-2 py-0.5 rounded"
-                style={{ background: 'rgba(34,211,238,0.15)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.3)' }}>
-                {selectedBookIds.length} Selected
-              </span>
-            )}
-            <button onClick={() => setBookSheetOpen(true)}
-              className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold"
+            <button onClick={enterStudyMode}
+              className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold shrink-0"
               style={{ background: '#22D3EE', color: '#0a0f1a' }}>
-              <BookOpen size={12} /> Select Books
+              <BookMarked size={12} /> Study Mode
+            </button>
+          </div>
+          {/* Select Books row */}
+          <div className="flex md:hidden items-center gap-2 mt-2 pt-2 border-t border-border">
+            <BookOpen size={14} className="text-muted shrink-0" />
+            <button onClick={() => setBookSheetOpen(true)}
+              className="flex-1 text-left text-sm text-muted hover:text-white transition-colors">
+              {selectedBookIds.length > 0
+                ? <span><span style={{ color: '#22D3EE' }} className="font-bold">{selectedBookIds.length}</span> book{selectedBookIds.length > 1 ? 's' : ''} selected</span>
+                : 'Select Books'}
+            </button>
+            <button onClick={() => setBookSheetOpen(true)}
+              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-border text-muted hover:text-white hover:border-primary/50 transition-colors">
+              {selectedBookIds.length > 0 ? 'Change' : 'Browse'}
             </button>
           </div>
         </div>
@@ -956,34 +965,15 @@ export default function AskAI() {
           <div className="md:hidden flex flex-col px-4 py-4 gap-4">
 
             {/* Study Mode banner — top so it's always visible */}
-            <div className="rounded-2xl border overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, rgba(34,211,238,0.10) 0%, rgba(168,85,247,0.07) 100%)', borderColor: 'rgba(34,211,238,0.30)' }}>
-              <div className="flex items-center gap-3 p-3.5">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: 'rgba(34,211,238,0.15)', border: '1px solid rgba(34,211,238,0.3)' }}>
-                  <BookMarked size={16} style={{ color: '#22D3EE' }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-white leading-none">Study Mode</p>
-                  <p className="text-[11px] text-muted mt-0.5">Follow syllabus topics · AI teaches · track progress</p>
-                </div>
-                <button onClick={enterStudyMode}
-                  className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors"
-                  style={{ background: '#22D3EE', color: '#0a0f1a' }}>
-                  Start
-                </button>
-              </div>
-            </div>
-
             {/* Instructions */}
             <div className="rounded-2xl border border-border bg-surface p-4">
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-muted mb-3">How to use</p>
               <div className="space-y-3">
                 {[
-                  { num: '1', title: 'Select your books', desc: 'Tap "Select Books" above to choose study materials.' },
+                  { num: '1', title: 'Select your books', desc: 'Tap "Browse" next to Select Books above to choose study materials.' },
                   { num: '2', title: 'Ask any question', desc: 'Type in the chat box — get explanations, summaries, or practice questions.' },
-                  { num: '3', title: 'Use Study Mode', desc: 'Tap "Start" above to follow your syllabus topic by topic with AI guidance.' },
-                  { num: '4', title: 'Browse history', desc: 'Tap "View All" in Recent Chats to continue a previous conversation.' },
+                  { num: '3', title: 'Use Study Mode', desc: 'Tap "Study Mode" in the top bar to follow your syllabus topic by topic with AI guidance.' },
+                  { num: '4', title: 'Browse history', desc: 'Tap the panel icon (top-left) to see and continue previous conversations.' },
                 ].map(({ num, title, desc }) => (
                   <div key={num} className="flex items-start gap-3">
                     <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black mt-0.5"
@@ -999,44 +989,20 @@ export default function AskAI() {
               </div>
             </div>
 
-            {/* Recent Chats */}
+            {/* Recent Chats — ChatGPT-style open-drawer button */}
             {sessions.length > 0 && (
-              <div className="rounded-2xl border border-border bg-surface p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                      style={{ background: 'rgba(34,211,238,0.12)' }}>
-                      <MessageSquare size={14} style={{ color: '#22D3EE' }} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white leading-none">Recent Chats</p>
-                      <p className="text-[11px] text-muted mt-0.5">Continue your learning conversation</p>
-                    </div>
-                  </div>
-                  <button onClick={() => setHistoryVisible(true)}
-                    className="text-xs font-semibold text-primary flex items-center gap-0.5">
-                    View All <ChevronRight size={12} />
-                  </button>
+              <button onClick={() => setHistoryVisible(true)}
+                className="w-full flex items-center gap-3 rounded-2xl border border-border bg-surface p-4 text-left hover:border-primary/40 transition-colors">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(34,211,238,0.12)' }}>
+                  <MessageSquare size={16} style={{ color: '#22D3EE' }} />
                 </div>
-                <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-0.5 -mx-1 px-1">
-                  {sessions.slice(0, 8).map((s) => {
-                    const title = s.topic ?? s.title ?? 'Untitled Chat'
-                    const bookTitle = s.book_titles?.length ? s.book_titles[0] : 'General'
-                    return (
-                      <button key={s.id} onClick={() => loadSession(s)}
-                        className="flex-none w-32 rounded-xl border border-border bg-bg p-2.5 text-left hover:border-primary/40 transition-colors">
-                        <div className="w-6 h-6 rounded-lg flex items-center justify-center mb-1.5"
-                          style={{ background: 'rgba(34,211,238,0.10)' }}>
-                          <MessageSquare size={11} style={{ color: '#22D3EE' }} />
-                        </div>
-                        <p className="text-[11px] font-semibold text-white leading-snug line-clamp-2 mb-1">{title}</p>
-                        <p className="text-[10px] text-muted truncate">{bookTitle}</p>
-                        <p className="text-[10px] text-muted/50 mt-0.5">{timeAgo(s.updated_at || s.created_at)}</p>
-                      </button>
-                    )
-                  })}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white leading-none">Recent Chats</p>
+                  <p className="text-[11px] text-muted mt-0.5">{sessions.length} conversation{sessions.length > 1 ? 's' : ''} · tap to browse</p>
                 </div>
-              </div>
+                <ChevronRight size={16} className="text-muted shrink-0" />
+              </button>
             )}
 
           </div>
