@@ -315,17 +315,34 @@ interface CardProps {
   subject?: Subject
   subjectIndex: number
   onDelete: (book: Book) => void
+  onRename: (id: string, newTitle: string) => void
   onAskAI: (book: Book) => void
   onCreateTest: (book: Book) => void
   onView: (book: Book) => void
 }
 
-function DocumentCard({ book, subject, subjectIndex, onDelete, onAskAI, onCreateTest, onView }: CardProps) {
+function DocumentCard({ book, subject, subjectIndex, onDelete, onRename, onAskAI, onCreateTest, onView }: CardProps) {
   const isReady = book.status === 'READY'
   const isFailed = book.status === 'FAILED'
   const isProcessing = PROCESSING_STATUSES.has(book.status)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [renameVal, setRenameVal] = useState(book.title)
+  const renameRef = useRef<HTMLInputElement>(null)
   const sColor = subject ? subjectColor(subjectIndex) : '#94A3B8'
+
+  function startRename() {
+    setRenameVal(book.title)
+    setRenaming(true)
+    setMenuOpen(false)
+    setTimeout(() => { renameRef.current?.select() }, 0)
+  }
+
+  function commitRename() {
+    const t = renameVal.trim()
+    setRenaming(false)
+    if (t && t !== book.title) onRename(book.id, t)
+  }
 
   return (
     <div className="flex flex-col rounded-xl border border-border bg-surface hover:border-border/80 transition-all duration-200 relative overflow-hidden">
@@ -353,6 +370,13 @@ function DocumentCard({ book, subject, subjectIndex, onDelete, onAskAI, onCreate
             {menuOpen && (
               <div className="absolute right-0 top-full mt-1 w-36 rounded-lg border border-border bg-surface shadow-xl z-20 py-1 overflow-hidden">
                 <button
+                  onClick={startRename}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <Tag size={12} /> Rename
+                </button>
+                <div className="h-px bg-border/50 mx-2 my-0.5" />
+                <button
                   onClick={() => { setMenuOpen(false); onDelete(book) }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-950/30 transition-colors"
                 >
@@ -363,10 +387,24 @@ function DocumentCard({ book, subject, subjectIndex, onDelete, onAskAI, onCreate
           </div>
         </div>
 
-        {/* Title */}
+        {/* Title — inline rename or static */}
+        {renaming ? (
+          <input
+            ref={renameRef}
+            value={renameVal}
+            onChange={(e) => setRenameVal(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitRename()
+              if (e.key === 'Escape') setRenaming(false)
+            }}
+            className="mb-2 w-full rounded border border-primary bg-bg px-2 py-1 text-sm font-bold text-white focus:outline-none"
+          />
+        ) : (
         <h3 className="text-sm font-bold text-white leading-tight mb-2 line-clamp-2" title={book.title}>
           {book.title}
         </h3>
+        )}
 
         {/* Subject badge */}
         {subject && (
@@ -459,11 +497,26 @@ function DocumentCard({ book, subject, subjectIndex, onDelete, onAskAI, onCreate
 
 // ── Document Row (List view — card style) ─────────────────────────────────────
 
-function DocumentRow({ book, subject, subjectIndex, onDelete, onAskAI, onCreateTest, onView }: CardProps) {
+function DocumentRow({ book, subject, subjectIndex, onDelete, onRename, onAskAI, onCreateTest, onView }: CardProps) {
   const isReady = book.status === 'READY'
   const isFailed = book.status === 'FAILED'
   const isProcessing = PROCESSING_STATUSES.has(book.status)
   const sColor = subject ? subjectColor(subjectIndex) : '#94A3B8'
+  const [renaming, setRenaming] = useState(false)
+  const [renameVal, setRenameVal] = useState(book.title)
+  const renameRef = useRef<HTMLInputElement>(null)
+
+  function startRename() {
+    setRenameVal(book.title)
+    setRenaming(true)
+    setTimeout(() => { renameRef.current?.select() }, 0)
+  }
+
+  function commitRename() {
+    const t = renameVal.trim()
+    setRenaming(false)
+    if (t && t !== book.title) onRename(book.id, t)
+  }
 
   return (
     <div className="rounded-xl border border-border bg-surface overflow-hidden">
@@ -477,16 +530,44 @@ function DocumentRow({ book, subject, subjectIndex, onDelete, onAskAI, onCreateT
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-sm font-bold text-white leading-tight line-clamp-2 flex-1">
+            {renaming ? (
+              <input
+                ref={renameRef}
+                value={renameVal}
+                onChange={(e) => setRenameVal(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitRename()
+                  if (e.key === 'Escape') setRenaming(false)
+                }}
+                className="flex-1 rounded border border-primary bg-bg px-2 py-0.5 text-sm font-bold text-white focus:outline-none"
+              />
+            ) : (
+            <h3
+              className="text-sm font-bold text-white leading-tight line-clamp-2 flex-1 cursor-text"
+              onDoubleClick={startRename}
+              title="Double-click to rename"
+            >
               {book.title}
             </h3>
-            {/* Delete button */}
-            <button
-              onClick={() => onDelete(book)}
-              className="shrink-0 rounded-lg p-1 text-muted hover:text-red-400 hover:bg-red-950/30 transition-all"
-            >
-              <Trash2 size={13} />
-            </button>
+            )}
+            {/* Actions: rename + delete */}
+            <div className="shrink-0 flex items-center gap-0.5">
+              <button
+                onClick={startRename}
+                className="rounded-lg p-1 text-muted hover:text-white hover:bg-white/5 transition-all"
+                title="Rename"
+              >
+                <Tag size={13} />
+              </button>
+              <button
+                onClick={() => onDelete(book)}
+                className="rounded-lg p-1 text-muted hover:text-red-400 hover:bg-red-950/30 transition-all"
+                title="Delete"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
           </div>
 
           {/* Meta row */}
@@ -686,6 +767,22 @@ export default function Books() {
       setBooks((prev) => [...prev, bookToDelete].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()))
     } finally {
       setDeleting(false)
+    }
+  }
+
+  async function handleRename(id: string, newTitle: string) {
+    const prev = books.find((b) => b.id === id)
+    if (!prev) return
+    // Optimistic update
+    setBooks((bs) => bs.map((b) => b.id === id ? { ...b, title: newTitle } : b))
+    try {
+      const token = await getToken()
+      if (!token) throw new Error('Not authenticated')
+      await makeApi(token).books.update(id, { title: newTitle })
+    } catch (e) {
+      console.error('[Books] rename error:', e)
+      // Revert
+      setBooks((bs) => bs.map((b) => b.id === id ? { ...b, title: prev.title } : b))
     }
   }
 
@@ -896,6 +993,7 @@ export default function Books() {
                 subject={book.subject_id ? subjectMap[book.subject_id] : undefined}
                 subjectIndex={book.subject_id ? (subjectIndexMap[book.subject_id] ?? 0) : 0}
                 onDelete={setDeleteTarget}
+                onRename={handleRename}
                 onAskAI={handleAskAI}
                 onCreateTest={handleCreateTest}
                 onView={handleView}
@@ -945,6 +1043,7 @@ export default function Books() {
                 subject={book.subject_id ? subjectMap[book.subject_id] : undefined}
                 subjectIndex={book.subject_id ? (subjectIndexMap[book.subject_id] ?? 0) : 0}
                 onDelete={setDeleteTarget}
+                onRename={handleRename}
                 onAskAI={handleAskAI}
                 onCreateTest={handleCreateTest}
                 onView={handleView}
