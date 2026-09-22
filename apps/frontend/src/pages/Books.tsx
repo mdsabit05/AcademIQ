@@ -671,16 +671,19 @@ export default function Books() {
 
   async function confirmDelete() {
     if (!deleteTarget || deleting) return
+    const bookToDelete = deleteTarget
+    // Optimistic: remove immediately
+    setBooks((prev) => prev.filter((b) => b.id !== bookToDelete.id))
+    setDeleteTarget(null)
     setDeleting(true)
     try {
       const token = await getToken()
       if (!token) return
-      await makeApi(token).books.delete(deleteTarget.id)
-      setBooks((prev) => prev.filter((b) => b.id !== deleteTarget.id))
-      setDeleteTarget(null)
+      await makeApi(token).books.delete(bookToDelete.id)
     } catch (e) {
       console.error('[Books] delete error:', e)
-      setDeleteTarget(null)
+      // Revert on failure
+      setBooks((prev) => [...prev, bookToDelete].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()))
     } finally {
       setDeleting(false)
     }

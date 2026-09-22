@@ -23,6 +23,8 @@ import { useVoiceInput } from '../lib/voice.ts'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const DRAFT_KEY = 'academiq-draft-tutor'
+
 const SUBJECT_COLORS = [
   '#22C55E','#22D3EE','#A855F7','#F97316','#EF4444',
   '#FBBF24','#EC4899','#6366F1','#14B8A6','#F43F5E',
@@ -162,6 +164,7 @@ export default function AskAI() {
   const [feedback, setFeedback] = useState<Record<number, 'up' | 'down'>>({})
   const [showScrollBtn, setShowScrollBtn] = useState(false)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const prefetchCache = useRef(new Map<string, LocalMessage[]>())
   const { listening, supported: micSupported, toggle: toggleMic } = useVoiceInput((t) => setInput(t))
 
   const endRef = useRef<HTMLDivElement>(null)
@@ -191,13 +194,30 @@ export default function AskAI() {
     setSessions(s.filter((x) => !x.topic?.startsWith('test-review:') && x.mode !== 'general'))
   }, [getToken])
 
+  const handlePrefetch = useCallback(async (session: ChatSession) => {
+    if (prefetchCache.current.has(session.id)) return
+    const token = await getToken()
+    if (!token) return
+    try {
+      const { messages: msgs } = await makeApi(token).sessions.get(session.id)
+      prefetchCache.current.set(session.id, msgs.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })))
+    } catch { /* silent */ }
+  }, [getToken])
+
   const loadSession = useCallback(async (session: ChatSession) => {
     const token = await getToken()
     if (!token) return
     const api = makeApi(token)
-    const { messages: msgs } = await api.sessions.get(session.id)
+    const cachedMsgs = prefetchCache.current.get(session.id)
+    let msgs: Array<{ role: string; content: string }>
+    if (cachedMsgs) {
+      msgs = cachedMsgs
+    } else {
+      const res = await api.sessions.get(session.id)
+      msgs = res.messages
+    }
     setSessionId(session.id)
-    setMessages(msgs.map((m) => ({ role: m.role, content: m.content })))
+    setMessages(msgs.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })))
     setStreamBuffer('')
     if (session.book_ids?.length) setSelectedBookIds(session.book_ids)
 
@@ -388,6 +408,18 @@ export default function AskAI() {
 
   useEffect(() => { refreshHistory() }, [refreshHistory])
 
+  // Load saved draft on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(DRAFT_KEY)
+    if (saved && !prefilledQuery) setInput(saved)
+  }, []) // eslint-disable-line
+
+  // Save draft on every input change
+  useEffect(() => {
+    if (input) localStorage.setItem(DRAFT_KEY, input)
+    else localStorage.removeItem(DRAFT_KEY)
+  }, [input])
+
   const subjectMap = Object.fromEntries(subjects.map((s, i) => [s.id, { name: s.name, color: subjectColor(i) }]))
   const filteredBooks = books.filter((b) => {
     if (filterSubject && b.subject_id !== filterSubject) return false
@@ -422,6 +454,7 @@ export default function AskAI() {
     const content = (text ?? input).trim()
     if (!content || streaming || selectedBookIds.length === 0) return
     setInput('')
+    localStorage.removeItem(DRAFT_KEY)
     setMessages((prev) => [...prev, { role: 'user', content }])
     setStreaming(true); setStreamBuffer('')
     setNavCollapsed(true)
@@ -475,6 +508,7 @@ export default function AskAI() {
       onNewChat={startNewChat}
       onSelectSession={loadSession}
       onDeleteSession={deleteSession}
+      onPrefetch={handlePrefetch}
     />
   )
 

@@ -572,6 +572,12 @@ export default function Tests() {
               </div>
               <p className="text-base font-bold text-white">No tests yet</p>
               <p className="mt-1 text-sm text-muted">Create your first test to start practising.</p>
+              <button
+                onClick={() => navigate('/test/new')}
+                className="mt-4 flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-bg hover:bg-primary-hover transition-colors"
+              >
+                <Plus size={15} /> Create First Test
+              </button>
             </div>
           ) : mobileFiltered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">

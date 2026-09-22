@@ -20,6 +20,8 @@ import type { ChatSession } from 'shared'
 
 interface LocalMessage { role: 'user' | 'assistant'; content: string }
 
+const DRAFT_KEY = 'academiq-draft-general'
+
 export default function GeneralAI() {
   const { getToken } = useAuth()
   const navigate = useNavigate()
@@ -33,6 +35,7 @@ export default function GeneralAI() {
   const [feedback, setFeedback] = useState<Record<number, 'up' | 'down'>>({})
   const [showScrollBtn, setShowScrollBtn] = useState(false)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const prefetchCache = useRef(new Map<string, LocalMessage[]>())
   const endRef = useRef<HTMLDivElement>(null)
   const { listening, supported: micSupported, toggle: toggleMic } = useVoiceInput((t) => setInput(t))
 
@@ -45,12 +48,41 @@ export default function GeneralAI() {
 
   useEffect(() => { refreshHistory() }, [refreshHistory])
 
+  // Load saved draft on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(DRAFT_KEY)
+    if (saved) setInput(saved)
+  }, []) // eslint-disable-line
+
+  // Save draft on every input change
+  useEffect(() => {
+    if (input) localStorage.setItem(DRAFT_KEY, input)
+    else localStorage.removeItem(DRAFT_KEY)
+  }, [input])
+
+  const handlePrefetch = useCallback(async (session: ChatSession) => {
+    if (prefetchCache.current.has(session.id)) return
+    const token = await getToken()
+    if (!token) return
+    try {
+      const { messages: msgs } = await makeApi(token).sessions.get(session.id)
+      prefetchCache.current.set(session.id, msgs.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })))
+    } catch { /* silent */ }
+  }, [getToken])
+
   const loadSession = useCallback(async (session: ChatSession) => {
     const token = await getToken()
     if (!token) return
-    const { messages: msgs } = await makeApi(token).sessions.get(session.id)
+    const cachedMsgs = prefetchCache.current.get(session.id)
+    let msgs: Array<{ role: string; content: string }>
+    if (cachedMsgs) {
+      msgs = cachedMsgs
+    } else {
+      const res = await makeApi(token).sessions.get(session.id)
+      msgs = res.messages
+    }
     setSessionId(session.id)
-    setMessages(msgs.map((m) => ({ role: m.role, content: m.content })))
+    setMessages(msgs.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })))
     setStreamBuffer('')
     setFeedback({})
     setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'instant' }), 50)
@@ -76,6 +108,7 @@ export default function GeneralAI() {
     const content = input.trim()
     if (!content || streaming) return
     setInput('')
+    localStorage.removeItem(DRAFT_KEY)
     setMessages((prev) => [...prev, { role: 'user', content }])
     setStreaming(true)
     setStreamBuffer('')
@@ -133,6 +166,7 @@ export default function GeneralAI() {
       onNewChat={startNewChat}
       onSelectSession={loadSession}
       onDeleteSession={deleteSession}
+      onPrefetch={handlePrefetch}
     />
   )
 

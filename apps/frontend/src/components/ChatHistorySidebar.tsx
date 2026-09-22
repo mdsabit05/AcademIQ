@@ -1,19 +1,25 @@
 /**
- * ChatHistorySidebar — collapsible left rail showing past AI Tutor sessions.
+ * ChatHistorySidebar — collapsible left rail showing past AI sessions.
  * Grouped by recency (Today / Yesterday / Last 7 days / Older).
+ * Supports pinned/starred sessions (stored in localStorage) and
+ * prefetch on hover for instant session loading.
  */
 
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Trash2, MoreHorizontal, MessageSquare } from 'lucide-react'
+import { Plus, Trash2, MoreHorizontal, MessageSquare, Star } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { ChatSession } from 'shared'
 
-interface Props {
-  sessions: ChatSession[]
-  activeSessionId: string | null
-  onNewChat: () => void
-  onSelectSession: (session: ChatSession) => void
-  onDeleteSession: (id: string) => void
+// ── Starred sessions (localStorage) ──────────────────────────────────────────
+
+const STARS_KEY = 'academiq-starred-sessions'
+
+function loadStarred(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(STARS_KEY) ?? '[]') as string[]) }
+  catch { return new Set() }
+}
+function saveStarred(set: Set<string>) {
+  localStorage.setItem(STARS_KEY, JSON.stringify([...set]))
 }
 
 // ── Grouping helpers ──────────────────────────────────────────────────────────
@@ -51,13 +57,19 @@ function groupSessions(sessions: ChatSession[]) {
 function SessionRow({
   session,
   isActive,
+  starred,
   onSelect,
   onDelete,
+  onStar,
+  onPrefetch,
 }: {
   session: ChatSession
   isActive: boolean
+  starred: boolean
   onSelect: () => void
   onDelete: () => void
+  onStar: () => void
+  onPrefetch?: () => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -74,8 +86,8 @@ function SessionRow({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const title       = session.title ?? session.topic ?? 'Untitled chat'
-  const bookTitle   = (session.book_titles ?? [])[0] ?? null
+  const title     = session.title ?? session.topic ?? 'Untitled chat'
+  const bookTitle = (session.book_titles ?? [])[0] ?? null
 
   return (
     <div
@@ -86,6 +98,7 @@ function SessionRow({
           : 'hover:bg-white/5 border border-transparent',
       )}
       onClick={onSelect}
+      onMouseEnter={onPrefetch}
     >
       {/* Active left accent */}
       {isActive && (
@@ -93,22 +106,27 @@ function SessionRow({
       )}
 
       <div className="flex items-start justify-between gap-1 min-w-0">
-        <div className="min-w-0 flex-1">
-          <p className={clsx(
-            'text-[12px] font-medium leading-snug truncate',
-            isActive ? 'text-primary' : 'text-white',
-          )}>
-            {title}
-          </p>
-          {bookTitle && (
-            <p className="mt-0.5 text-[10px] text-muted truncate flex items-center gap-1">
-              <MessageSquare size={9} className="shrink-0" />
-              {bookTitle}
-            </p>
+        <div className="min-w-0 flex-1 flex items-start gap-1.5">
+          {starred && (
+            <Star size={10} className="text-yellow-400 shrink-0 mt-0.5 fill-yellow-400" />
           )}
+          <div className="min-w-0 flex-1">
+            <p className={clsx(
+              'text-[12px] font-medium leading-snug truncate',
+              isActive ? 'text-primary' : 'text-white',
+            )}>
+              {title}
+            </p>
+            {bookTitle && (
+              <p className="mt-0.5 text-[10px] text-muted truncate flex items-center gap-1">
+                <MessageSquare size={9} className="shrink-0" />
+                {bookTitle}
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* ... menu — only shows on hover */}
+        {/* Menu — visible on hover */}
         <div
           ref={menuRef}
           className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -142,12 +160,22 @@ function SessionRow({
                   </div>
                 </div>
               ) : (
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-950/30 transition-colors"
-                >
-                  <Trash2 size={12} /> Delete
-                </button>
+                <>
+                  <button
+                    onClick={() => { onStar(); setMenuOpen(false) }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted hover:text-white hover:bg-white/5 transition-colors"
+                  >
+                    <Star size={12} className={starred ? 'fill-yellow-400 text-yellow-400' : ''} />
+                    {starred ? 'Unpin' : 'Pin to top'}
+                  </button>
+                  <div className="h-px bg-border/50 mx-2 my-0.5" />
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-950/30 transition-colors"
+                  >
+                    <Trash2 size={12} /> Delete
+                  </button>
+                </>
               )}
             </div>
           )}
@@ -159,14 +187,38 @@ function SessionRow({
 
 // ── Main sidebar ──────────────────────────────────────────────────────────────
 
+interface Props {
+  sessions: ChatSession[]
+  activeSessionId: string | null
+  onNewChat: () => void
+  onSelectSession: (session: ChatSession) => void
+  onDeleteSession: (id: string) => void
+  onPrefetch?: (session: ChatSession) => void
+}
+
 export default function ChatHistorySidebar({
   sessions,
   activeSessionId,
   onNewChat,
   onSelectSession,
   onDeleteSession,
+  onPrefetch,
 }: Props) {
-  const groups = groupSessions(sessions)
+  const [starred, setStarred] = useState<Set<string>>(loadStarred)
+
+  const toggleStar = (id: string) => {
+    setStarred((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      saveStarred(next)
+      return next
+    })
+  }
+
+  const starredSessions = sessions.filter((s) => starred.has(s.id))
+  const unstarredSessions = sessions.filter((s) => !starred.has(s.id))
+  const groups = groupSessions(unstarredSessions)
 
   return (
     <div className="flex h-full w-[280px] shrink-0 flex-col border-r border-border bg-surface">
@@ -183,31 +235,64 @@ export default function ChatHistorySidebar({
 
       {/* Session list */}
       <div className="flex-1 overflow-y-auto px-2 pb-3 space-y-3">
-        {groups.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-center px-4">
-            <MessageSquare size={24} className="text-muted/30 mb-2" />
-            <p className="text-xs text-muted/50">No conversations yet</p>
+        {sessions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-40 text-center px-4 gap-2">
+            <div className="w-10 h-10 rounded-full border border-dashed border-border flex items-center justify-center">
+              <MessageSquare size={18} className="text-muted/30" />
+            </div>
+            <p className="text-xs font-semibold text-white/60">No conversations yet</p>
+            <p className="text-[11px] text-muted/40 leading-snug">Start a new chat to begin studying</p>
           </div>
         ) : (
-          groups.map((group) => (
-            <div key={group.label}>
-              <p className="px-2.5 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.15em] text-muted/60">
-                {group.label}
-              </p>
-              <div className="space-y-0.5">
-                {group.items.map((s) => (
-                  <SessionRow
-                    key={s.id}
-                    session={s}
-                    isActive={s.id === activeSessionId}
-                    onSelect={() => onSelectSession(s)}
-                    onDelete={() => onDeleteSession(s.id)}
-                  />
-                ))}
+          <>
+            {/* Pinned / starred */}
+            {starredSessions.length > 0 && (
+              <div>
+                <p className="px-2.5 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.15em] text-yellow-400/70 flex items-center gap-1">
+                  <Star size={9} className="fill-yellow-400/70 text-yellow-400/70" /> Pinned
+                </p>
+                <div className="space-y-0.5">
+                  {starredSessions.map((s) => (
+                    <SessionRow
+                      key={s.id}
+                      session={s}
+                      isActive={s.id === activeSessionId}
+                      starred={true}
+                      onSelect={() => onSelectSession(s)}
+                      onDelete={() => onDeleteSession(s.id)}
+                      onStar={() => toggleStar(s.id)}
+                      onPrefetch={onPrefetch ? () => onPrefetch(s) : undefined}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))
+            )}
+
+            {/* Regular groups */}
+            {groups.map((group) => (
+              <div key={group.label}>
+                <p className="px-2.5 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.15em] text-muted/60">
+                  {group.label}
+                </p>
+                <div className="space-y-0.5">
+                  {group.items.map((s) => (
+                    <SessionRow
+                      key={s.id}
+                      session={s}
+                      isActive={s.id === activeSessionId}
+                      starred={false}
+                      onSelect={() => onSelectSession(s)}
+                      onDelete={() => onDeleteSession(s.id)}
+                      onStar={() => toggleStar(s.id)}
+                      onPrefetch={onPrefetch ? () => onPrefetch(s) : undefined}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </>
         )}
+
       </div>
     </div>
   )
