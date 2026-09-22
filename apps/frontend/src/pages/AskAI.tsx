@@ -149,7 +149,7 @@ export default function AskAI() {
   const [streamBuffer, setStreamBuffer] = useState('')
   const [webSearch, setWebSearch] = useState(false)
   const [deepReason, setDeepReason] = useState(false)
-  const [historyVisible, setHistoryVisible] = useState(false)
+  const [historyVisible, setHistoryVisible] = useState(() => window.innerWidth >= 768)
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [bookSheetOpen, setBookSheetOpen] = useState(false)
 
