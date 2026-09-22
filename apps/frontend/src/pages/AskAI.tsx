@@ -9,7 +9,7 @@ import { useAuth } from '@clerk/clerk-react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Send, Search, Plus, FileText, ChevronDown, ChevronRight,
-  Mic, Sparkles, Lightbulb, AlignLeft, GitCompare,
+  Mic, Sparkles,
   MessageSquare, Trash2, BookOpen, ArrowLeft, PanelLeftClose, PanelLeftOpen, X, BookMarked,
 } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -56,12 +56,6 @@ function timeAgo(iso: string) {
 
 interface LocalMessage { role: 'user' | 'assistant'; content: string }
 
-const QUICK_ACTIONS = [
-  { label: 'Ask a Question',      desc: 'Get answers from your documents',   icon: <MessageSquare size={15} style={{ color: '#22D3EE' }} />, prompt: 'Ask a question about this topic' },
-  { label: 'Summarize Documents', desc: 'Walk through key points',            icon: <AlignLeft     size={15} style={{ color: '#A855F7' }} />, prompt: 'Summarize this topic' },
-  { label: 'Find Key Concepts',   desc: 'Extract important concepts',         icon: <Lightbulb     size={15} style={{ color: '#FBBF24' }} />, prompt: 'What are the key concepts in this material?' },
-  { label: 'Compare Materials',   desc: 'Analyze and compare content',        icon: <GitCompare    size={15} style={{ color: '#F97316' }} />, prompt: 'Compare the main concepts across my documents' },
-]
 
 const HOW_IT_WORKS = [
   { step: 1, title: 'Select documents', desc: 'Choose one or more study materials from the book shelf above', color: '#22D3EE' },
@@ -981,26 +975,28 @@ export default function AskAI() {
               </div>
             </div>
 
-            {/* AI Tutor empty state */}
-            <div className="flex flex-col items-center text-center py-4">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-3 border-2 border-dashed border-border">
-                {selectedBookIds.length > 0
-                  ? <Sparkles size={22} style={{ color: '#22D3EE' }} />
-                  : <Plus size={26} className="text-muted" />}
+            {/* Instructions */}
+            <div className="rounded-2xl border border-border bg-surface p-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-muted mb-3">How to use</p>
+              <div className="space-y-3">
+                {[
+                  { num: '1', title: 'Select your books', desc: 'Tap "Select Books" above to choose study materials.' },
+                  { num: '2', title: 'Ask any question', desc: 'Type in the chat box — get explanations, summaries, or practice questions.' },
+                  { num: '3', title: 'Use Study Mode', desc: 'Tap "Start" above to follow your syllabus topic by topic with AI guidance.' },
+                  { num: '4', title: 'Browse history', desc: 'Tap "View All" in Recent Chats to continue a previous conversation.' },
+                ].map(({ num, title, desc }) => (
+                  <div key={num} className="flex items-start gap-3">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black mt-0.5"
+                      style={{ background: 'rgba(34,211,238,0.12)', color: '#22D3EE', border: '1px solid rgba(34,211,238,0.3)' }}>
+                      {num}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-white leading-snug">{title}</p>
+                      <p className="text-[11px] text-muted leading-relaxed mt-0.5">{desc}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-              {selectedBookIds.length > 0 ? (
-                <>
-                  <h3 className="text-base font-black text-white mb-1">
-                    <span style={{ color: '#22D3EE' }}>{selectedBookIds.length}</span> book{selectedBookIds.length > 1 ? 's' : ''} selected
-                  </h3>
-                  <p className="text-sm text-muted mb-4 max-w-xs">Type a question below or pick a quick action.</p>
-                </>
-              ) : (
-                <>
-                  <h3 className="text-base font-black text-white mb-1">Select your study materials</h3>
-                  <p className="text-sm text-muted mb-4 max-w-xs">Tap <strong className="text-white">Select Books</strong> above to start an AI-powered study session.</p>
-                </>
-              )}
             </div>
 
             {/* Recent Chats */}
@@ -1043,19 +1039,6 @@ export default function AskAI() {
               </div>
             )}
 
-            {/* Quick actions */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {QUICK_ACTIONS.map(({ label, icon, prompt }) => (
-                <button key={label} onClick={() => handleSend(prompt)}
-                  disabled={selectedBookIds.length === 0}
-                  className="flex items-center gap-2.5 rounded-xl border border-border bg-surface p-3 text-left transition-all hover:border-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
-                  <div className="w-7 h-7 rounded-lg border border-border flex items-center justify-center shrink-0">
-                    {icon}
-                  </div>
-                  <p className="text-xs font-semibold text-white leading-snug">{label}</p>
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* ── DESKTOP layout ───────────────────────────────────────────────────── */}
