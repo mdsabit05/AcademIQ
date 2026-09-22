@@ -1,11 +1,10 @@
 import { useRef, useState, useEffect } from 'react'
-import { Search, Sun, Moon, ChevronDown, LogOut, Settings } from 'lucide-react'
+import { Sun, Moon, ChevronDown, LogOut, Settings } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useClerk, useUser } from '@clerk/clerk-react'
 import { useTheme } from '../../lib/theme.tsx'
 import { useCurrentUser } from '../../lib/useCurrentUser.ts'
 import { useMode } from '../../lib/modeContext.tsx'
-import SearchSpotlight from '../SearchSpotlight.tsx'
 
 export default function TopBar() {
   const { theme, toggle } = useTheme()
@@ -15,7 +14,6 @@ export default function TopBar() {
   const navigate = useNavigate()
   const { mode, setMode } = useMode()
   const [open, setOpen] = useState(false)
-  const [spotlightOpen, setSpotlightOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const isTeacher = true // show mode toggle for all users
@@ -36,36 +34,9 @@ export default function TopBar() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  // Ctrl+K opens spotlight
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault()
-        setSpotlightOpen(true)
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
-
   return (
     <>
-    <SearchSpotlight open={spotlightOpen} onClose={() => setSpotlightOpen(false)} />
     <header className="h-14 flex items-center gap-4 border-b border-border bg-surface/80 backdrop-blur px-5 shrink-0 relative" style={{ zIndex: 100 }}>
-      {/* Search */}
-      <button
-        onClick={() => setSpotlightOpen(true)}
-        className="flex-1 relative max-w-2xl text-left group"
-      >
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-        <div className="w-full bg-bg border border-border group-hover:border-primary/40 rounded-lg pl-9 pr-20 py-2 text-sm text-muted transition-colors">
-          Search books, topics, tests, or ask anything...
-        </div>
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted bg-border/40 rounded px-1.5 py-0.5 font-mono select-none">
-          Ctrl K
-        </span>
-      </button>
-
       <div className="ml-auto flex items-center gap-1.5">
         {/* Theme */}
         <button
