@@ -158,18 +158,36 @@ export default function Sidebar() {
         {/* Settings */}
         <NavItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed} />
 
-        {/* Theme toggle */}
-        <button
-          onClick={toggle}
-          style={{ paddingTop: '0.7rem', paddingBottom: '0.7rem' }}
-          className={clsx(
-            'w-full flex items-center gap-3 text-sm font-medium text-muted hover:text-white hover:bg-white/5 transition-colors rounded-lg',
-            collapsed ? 'justify-center px-2' : 'pl-4 pr-3',
-          )}
-        >
-          {theme === 'dark' ? <Sun size={16} className="shrink-0" /> : <Moon size={16} className="shrink-0" />}
-          {!collapsed && <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}
-        </button>
+        {/* Student / Teacher toggle */}
+        {!collapsed ? (
+          <div className="mx-1 my-1 flex items-center rounded-lg border border-border bg-bg p-0.5 gap-0.5">
+            <button
+              onClick={() => { setMode('student'); navigate('/dashboard') }}
+              className={`flex-1 py-1 rounded-md text-xs font-semibold transition-all ${
+                mode === 'student' ? 'bg-primary text-bg shadow-sm' : 'text-muted hover:text-white'
+              }`}
+            >
+              Student
+            </button>
+            <button
+              onClick={() => { setMode('teacher'); navigate('/dashboard') }}
+              className={`flex-1 py-1 rounded-md text-xs font-semibold transition-all ${
+                mode === 'teacher' ? 'bg-primary text-bg shadow-sm' : 'text-muted hover:text-white'
+              }`}
+            >
+              Teacher
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => { setMode(mode === 'student' ? 'teacher' : 'student'); navigate('/dashboard') }}
+            style={{ paddingTop: '0.7rem', paddingBottom: '0.7rem' }}
+            className="w-full flex justify-center px-2 text-xs font-bold text-primary hover:text-white transition-colors rounded-lg hover:bg-white/5"
+            title={mode === 'student' ? 'Switch to Teacher' : 'Switch to Student'}
+          >
+            {mode === 'student' ? 'S' : 'T'}
+          </button>
+        )}
 
         {/* Sign Out */}
         <button

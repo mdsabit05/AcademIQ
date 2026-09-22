@@ -105,29 +105,16 @@ function MobileTopBar() {
 }
 
 // ── App Layout ─────────────────────────────────────────────────────────────────
-function FloatingModeToggle() {
-  const { mode, setMode } = useMode()
-  const navigate = useNavigate()
+function FloatingThemeToggle() {
+  const { theme, toggle } = useTheme()
 
   return (
-    <div className="hidden md:flex fixed bottom-5 right-5 z-50 items-center rounded-xl border border-border bg-surface/90 backdrop-blur shadow-lg p-1 gap-0.5">
-      <button
-        onClick={() => { setMode('student'); navigate('/dashboard') }}
-        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-          mode === 'student' ? 'bg-primary text-bg shadow-sm' : 'text-muted hover:text-white'
-        }`}
-      >
-        Student
-      </button>
-      <button
-        onClick={() => { setMode('teacher'); navigate('/dashboard') }}
-        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-          mode === 'teacher' ? 'bg-primary text-bg shadow-sm' : 'text-muted hover:text-white'
-        }`}
-      >
-        Teacher
-      </button>
-    </div>
+    <button
+      onClick={toggle}
+      className="hidden md:flex fixed bottom-5 right-5 z-50 w-10 h-10 items-center justify-center rounded-full border border-border bg-surface/90 backdrop-blur shadow-lg text-muted hover:text-white transition-colors"
+    >
+      {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+    </button>
   )
 }
 
@@ -151,8 +138,8 @@ function AppLayoutInner() {
         </main>
       </div>
 
-      {/* Floating Student/Teacher toggle — desktop only */}
-      <FloatingModeToggle />
+      {/* Floating theme toggle — desktop only */}
+      <FloatingThemeToggle />
     </div>
   )
 }
