@@ -155,7 +155,7 @@ export default function AskAI() {
   const [streamBuffer, setStreamBuffer] = useState('')
   const [webSearch, setWebSearch] = useState(false)
   const [deepReason, setDeepReason] = useState(false)
-  const [historyVisible, setHistoryVisible] = useState(true)
+  const [historyVisible, setHistoryVisible] = useState(false)
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [bookSheetOpen, setBookSheetOpen] = useState(false)
 
@@ -812,8 +812,9 @@ export default function AskAI() {
           {/* Desktop toolbar */}
           <div className="hidden md:flex items-center gap-2 flex-wrap">
             <button onClick={() => setHistoryVisible((v) => !v)}
-              className="flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors mr-1">
-              {historyVisible ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+              title={historyVisible ? 'Hide history' : 'Show history'}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-muted hover:text-white hover:bg-white/5 transition-colors mr-1 shrink-0">
+              {historyVisible ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
             </button>
             <div className="w-px h-4 bg-border" />
             <span className="text-[11px] font-black uppercase tracking-[0.18em] text-white">Study Materials</span>
@@ -997,12 +998,7 @@ export default function AskAI() {
               ) : (
                 <>
                   <h3 className="text-base font-black text-white mb-1">Select your study materials</h3>
-                  <p className="text-sm text-muted mb-4 max-w-xs">Tap <strong className="text-white">Select Books</strong> to start an AI-powered study session.</p>
-                  <button onClick={() => setBookSheetOpen(true)}
-                    className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold mb-2"
-                    style={{ background: '#22D3EE', color: '#0a0f1a' }}>
-                    <BookOpen size={15} /> Select Books
-                  </button>
+                  <p className="text-sm text-muted mb-4 max-w-xs">Tap <strong className="text-white">Select Books</strong> above to start an AI-powered study session.</p>
                 </>
               )}
             </div>
@@ -1067,7 +1063,7 @@ export default function AskAI() {
             {/* Centre: empty state + quick actions */}
             <div className="flex-1 flex flex-col items-center justify-center text-center">
               <div className="w-20 h-20 rounded-full flex items-center justify-center mb-5 border-2 border-dashed border-border">
-                <Plus size={28} className="text-muted" />
+                <Sparkles size={28} className="text-muted" />
               </div>
               {selectedBookIds.length > 0 ? (
                 <>
@@ -1086,18 +1082,12 @@ export default function AskAI() {
                   </p>
                 </>
               )}
-              <div className="grid grid-cols-2 gap-2.5 w-full max-w-md">
-                {QUICK_ACTIONS.map(({ label, desc, icon, prompt }) => (
+              <div className="flex flex-wrap justify-center gap-2 w-full max-w-lg">
+                {QUICK_ACTIONS.map(({ label, prompt }) => (
                   <button key={label} onClick={() => handleSend(prompt)}
                     disabled={selectedBookIds.length === 0}
-                    className="flex items-start gap-2.5 rounded-xl border border-border bg-surface p-3 text-left transition-all hover:border-primary/40 disabled:opacity-75 disabled:cursor-not-allowed">
-                    <div className="w-7 h-7 rounded-lg border border-border flex items-center justify-center shrink-0">
-                      {icon}
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-white leading-snug">{label}</p>
-                      <p className="text-[11px] text-muted leading-snug mt-0.5">{desc}</p>
-                    </div>
+                    className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-muted hover:text-white hover:border-primary/50 hover:bg-primary/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                    {label}
                   </button>
                 ))}
               </div>

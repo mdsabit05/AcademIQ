@@ -143,20 +143,9 @@ export default function Sidebar() {
 
       {/* ── Bottom section ── */}
       <div className="shrink-0 px-2 pb-2">
-        {/* Admin section */}
-        <div className={clsx(!isAdmin(role) && 'hidden')}>
-          <SectionLabel label="Admin" collapsed={collapsed} />
-          <NavItem to="/admin/users" icon={Shield} label="User Management" collapsed={collapsed} />
-        </div>
-
-        <div className="h-px bg-border/50 mx-1 my-2" />
-
-        {/* Settings */}
-        <NavItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed} />
-
         {/* Student / Teacher toggle */}
         {!collapsed ? (
-          <div className="mx-1 my-1 flex items-center rounded-lg border border-border bg-bg p-0.5 gap-0.5">
+          <div className="mx-1 mb-2 flex items-center rounded-lg border border-border bg-bg p-0.5 gap-0.5">
             <button
               onClick={() => { setMode('student'); navigate('/dashboard') }}
               className={`flex-1 py-1 rounded-md text-xs font-semibold transition-all ${
@@ -184,6 +173,17 @@ export default function Sidebar() {
             {mode === 'student' ? 'S' : 'T'}
           </button>
         )}
+
+        {/* Admin section */}
+        <div className={clsx(!isAdmin(role) && 'hidden')}>
+          <SectionLabel label="Admin" collapsed={collapsed} />
+          <NavItem to="/admin/users" icon={Shield} label="User Management" collapsed={collapsed} />
+        </div>
+
+        <div className="h-px bg-border/50 mx-1 my-2" />
+
+        {/* Settings */}
+        <NavItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed} />
 
         {/* Sign Out */}
         <button
