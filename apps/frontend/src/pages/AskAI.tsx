@@ -187,18 +187,35 @@ export default function AskAI() {
   const loadSession = useCallback(async (session: ChatSession) => {
     const token = await getToken()
     if (!token) return
-    const { messages: msgs } = await makeApi(token).sessions.get(session.id)
+    const api = makeApi(token)
+    const { messages: msgs } = await api.sessions.get(session.id)
     setSessionId(session.id)
     setMessages(msgs.map((m) => ({ role: m.role, content: m.content })))
     setStreamBuffer('')
     if (session.book_ids?.length) setSelectedBookIds(session.book_ids)
-    // Clear study mode — topics belong to a specific study session only
-    setStudyMode(false)
-    setStudyTopics([])
-    setStudySyllabus(null)
-    setActiveTopicId(null)
+
+    // Restore study mode for 'learn' sessions
+    if (session.mode === 'learn' && session.topic) {
+      const { syllabi } = await api.syllabus.list()
+      const readySyllabi = syllabi.filter((s) => s.status === 'ready')
+      const results = await Promise.all(
+        readySyllabi.map((s) => api.syllabus.get(s.id).then((r) => ({ syllabus: s, topics: r.topics })))
+      )
+      const match = results.find((r) => r.topics.some((t) => t.topic === session.topic))
+      if (match) {
+        setStudyMode(true)
+        setStudySyllabus({ id: match.syllabus.id, title: match.syllabus.title })
+        setStudyTopics(match.topics)
+        setStudyBookId(session.book_ids[0] ?? null)
+        const activeTopic = match.topics.find((t) => t.topic === session.topic)
+        setActiveTopicId(activeTopic?.id ?? null)
+      } else {
+        setStudyMode(false); setStudyTopics([]); setStudySyllabus(null); setActiveTopicId(null)
+      }
+    } else {
+      setStudyMode(false); setStudyTopics([]); setStudySyllabus(null); setActiveTopicId(null)
+    }
     setTopicPanelVisible(false)
-    // Jump to bottom after the chat view renders
     setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'instant' }), 50)
   }, [getToken])
 
