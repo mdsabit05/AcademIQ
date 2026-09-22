@@ -168,7 +168,6 @@ export default function AskAI() {
   const [studySyllabi, setStudySyllabi] = useState<Syllabus[]>([])
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null)
   const [topicPanelVisible, setTopicPanelVisible] = useState(false)
-  const [topicHintActive, setTopicHintActive] = useState(false)
   const [loadingStudy, setLoadingStudy] = useState(false)
 
   const endRef = useRef<HTMLDivElement>(null)
@@ -336,15 +335,14 @@ export default function AskAI() {
     if (!streaming) hasScrolledToStream.current = false
   }, [streaming, streamBuffer])
 
-  // After 2.5 s of being in study mode with the panel hidden, pulse the Topics
-  // button once so users notice it exists.
+  // 2.5 s after study session starts, briefly show the topic panel for 2 s
+  // so the user sees it exists, then auto-hide it.
   useEffect(() => {
-    if (!studyMode || topicPanelVisible || !sessionId) return
-    setTopicHintActive(false)
-    const show = setTimeout(() => setTopicHintActive(true), 2500)
-    const hide = setTimeout(() => setTopicHintActive(false), 6000)
+    if (!studyMode || !sessionId || !studySyllabus) return
+    const show = setTimeout(() => setTopicPanelVisible(true), 2500)
+    const hide = setTimeout(() => setTopicPanelVisible(false), 4500)
     return () => { clearTimeout(show); clearTimeout(hide) }
-  }, [studyMode, topicPanelVisible, sessionId])
+  }, [studyMode, sessionId, studySyllabus])
 
   useEffect(() => {
     async function load() {
@@ -487,21 +485,13 @@ export default function AskAI() {
             {studyMode && (
               <>
                 <button
-                  onClick={() => { setTopicPanelVisible((v) => !v); setTopicHintActive(false) }}
-                  className={clsx(
-                    'shrink-0 flex items-center gap-1.5 text-xs transition-all duration-300 rounded-md px-2 py-1',
-                    topicHintActive
-                      ? 'text-primary ring-2 ring-primary/50 ring-offset-1 ring-offset-bg animate-pulse'
-                      : 'text-muted hover:text-white',
-                  )}
+                  onClick={() => setTopicPanelVisible((v) => !v)}
+                  className="shrink-0 flex items-center gap-1.5 text-xs text-muted hover:text-white transition-colors"
                 >
                   <BookMarked size={14} />
                   <span className="hidden sm:inline">Topics</span>
                   {studyTopics.filter((t) => !t.completed).length > 0 && (
-                    <span className={clsx(
-                      'rounded-full text-bg text-[10px] font-bold px-1.5 py-0.5 leading-none transition-colors',
-                      topicHintActive ? 'bg-primary scale-110' : 'bg-primary',
-                    )}>
+                    <span className="rounded-full bg-primary text-bg text-[10px] font-bold px-1.5 py-0.5 leading-none">
                       {studyTopics.filter((t) => !t.completed).length}
                     </span>
                   )}
