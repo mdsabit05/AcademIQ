@@ -28,7 +28,10 @@ export function exitGuestMode(): void {
   sessionStorage.removeItem('aq_current_user')
 }
 
-export function useAuth() {
+export function useAuth(): ReturnType<typeof useClerkAuth> & {
+  isGuest: boolean
+  guestToken: string | null
+} {
   const clerkAuth = useClerkAuth()
   const guestToken = getGuestToken()
 
@@ -63,10 +66,13 @@ export function useAuth() {
     userId: clerkAuth.userId || guestToken,
     getToken,
     signOut,
-  } as any
+  } as unknown as ReturnType<typeof useClerkAuth> & {
+    isGuest: boolean
+    guestToken: string | null
+  }
 }
 
-export function useUser() {
+export function useUser(): ReturnType<typeof useClerkUser> {
   const clerkUser = useClerkUser()
   const guestToken = getGuestToken()
   const isGuest = Boolean(!clerkUser.isSignedIn && guestToken)
@@ -82,14 +88,14 @@ export function useUser() {
         fullName: 'Guest Student',
         imageUrl: undefined,
         primaryEmailAddress: { emailAddress: `${guestToken}@guest.academiq.local` },
-      } as any,
-    } as any
+      } as unknown as ReturnType<typeof useClerkUser>['user'],
+    } as unknown as ReturnType<typeof useClerkUser>
   }
 
   return clerkUser
 }
 
-export function useClerk() {
+export function useClerk(): ReturnType<typeof useClerkOrig> {
   const clerk = useClerkOrig()
   const guestToken = getGuestToken()
   const isGuest = Boolean(!clerk.user && guestToken)
@@ -104,5 +110,5 @@ export function useClerk() {
       }
       return (clerk.signOut as any)(cb)
     },
-  } as any
+  } as unknown as ReturnType<typeof useClerkOrig>
 }

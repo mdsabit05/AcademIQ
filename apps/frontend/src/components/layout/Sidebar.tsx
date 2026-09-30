@@ -91,7 +91,7 @@ export default function Sidebar() {
 
   const imageUrl = clerkUser?.imageUrl
   const initials = user?.name
-    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+    ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U'
 
   const STUDENT_ITEMS: NavItem[] = [

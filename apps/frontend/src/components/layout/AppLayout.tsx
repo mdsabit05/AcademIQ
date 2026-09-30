@@ -20,7 +20,7 @@ function MobileTopBar() {
   const navigate = useNavigate()
   const menuRef = useRef<HTMLDivElement>(null)
   const imageUrl = user?.imageUrl
-  const initials = user?.fullName?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() ?? 'U'
+  const initials = user?.fullName?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() ?? 'U'
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
