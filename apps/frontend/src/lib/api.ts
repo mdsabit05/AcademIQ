@@ -31,13 +31,14 @@ async function apiFetch<T>(
   token: string,
   options?: RequestInit,
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(token && token !== 'null' && token !== 'undefined' ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options?.headers as Record<string, string> | undefined),
+  }
   const res = await fetch(`${BASE}${path}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...options?.headers,
-    },
+    headers,
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: '' }))

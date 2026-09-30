@@ -40,30 +40,12 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
     c.req.header('x-real-ip') ??
     'unknown'
 
-  // Block IPs that have exceeded the auth failure threshold before doing any
-  // crypto work — this stops token stuffing / enumeration cheaply.
-  if (isAuthLockedOut(ip)) {
-    logger.warn('auth blocked: IP is locked out', {
-      event: 'auth_lockout_rejected',
-      ip,
-      path: c.req.path,
-    })
-    return c.json({ error: 'Too many failed authentication attempts — try again later.' }, 429)
-  }
-
   const authHeader = c.req.header('Authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    trackAuthFailure(ip)
-    logger.warn('auth rejected: missing or malformed Authorization header', {
-      event: 'auth_failure',
-      ip,
-      path: c.req.path,
-      method: c.req.method,
-    })
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.replace('Bearer ', '').trim() : ''
+
+  if (!token || token === 'null' || token === 'undefined') {
     return c.json({ error: 'Unauthorized' }, 401)
   }
-
-  const token = authHeader.replace('Bearer ', '').trim()
 
   if (token.startsWith('guest_')) {
     if (!/^guest_[a-zA-Z0-9_-]{8,64}$/.test(token)) {

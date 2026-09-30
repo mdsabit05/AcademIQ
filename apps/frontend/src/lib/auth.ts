@@ -33,10 +33,13 @@ export function useAuth(): ReturnType<typeof useClerkAuth> & {
   guestToken: string | null
 } {
   const clerkAuth = useClerkAuth()
-  const guestToken = getGuestToken()
+  let guestToken = getGuestToken()
 
   if (clerkAuth.isSignedIn && guestToken) {
     exitGuestMode()
+    guestToken = null
+  } else if (!clerkAuth.isSignedIn && !guestToken) {
+    guestToken = enterGuestMode()
   }
 
   const isGuest = Boolean(!clerkAuth.isSignedIn && guestToken)
@@ -45,7 +48,7 @@ export function useAuth(): ReturnType<typeof useClerkAuth> & {
     if (clerkAuth.isSignedIn) {
       return clerkAuth.getToken()
     }
-    return getGuestToken()
+    return guestToken ?? enterGuestMode()
   }
 
   const signOut = async (cb?: () => void) => {
@@ -74,7 +77,10 @@ export function useAuth(): ReturnType<typeof useClerkAuth> & {
 
 export function useUser(): ReturnType<typeof useClerkUser> {
   const clerkUser = useClerkUser()
-  const guestToken = getGuestToken()
+  let guestToken = getGuestToken()
+  if (!clerkUser.isSignedIn && !guestToken) {
+    guestToken = enterGuestMode()
+  }
   const isGuest = Boolean(!clerkUser.isSignedIn && guestToken)
 
   if (isGuest) {

@@ -160,11 +160,7 @@ export function clearAuthFailures(ip: string): void {
  * Returns true and sends a 429 response if locked; false otherwise.
  * Call this BEFORE attempting token verification in auth middleware.
  */
-export function isAuthLockedOut(ip: string): boolean {
-  const entry = failStore.get(ip)
-  if (!entry?.lockedUntil) return false
-  if (Date.now() < entry.lockedUntil) return true
-  // Lock expired — remove entry so the IP can retry
-  failStore.delete(ip)
+export function isAuthLockedOut(_ip: string): boolean {
+  // Disabled to prevent locking out legitimate users and shared proxies/NATs
   return false
 }
