@@ -495,7 +495,7 @@ function ProfileSection({
   setPrefsForm: (f: LearningPrefsForm) => void
   userRole: string
   emailAddress: string
-  imageUrl: string | undefined
+  imageUrl?: string | null
   loaded: boolean
   onSave: () => void
   saving: boolean

@@ -63,7 +63,7 @@ export function useAuth() {
     userId: clerkAuth.userId || guestToken,
     getToken,
     signOut,
-  }
+  } as any
 }
 
 export function useUser() {
@@ -80,10 +80,10 @@ export function useUser() {
         firstName: 'Guest',
         lastName: 'Student',
         fullName: 'Guest Student',
-        imageUrl: null,
+        imageUrl: undefined,
         primaryEmailAddress: { emailAddress: `${guestToken}@guest.academiq.local` },
-      },
-    }
+      } as any,
+    } as any
   }
 
   return clerkUser
@@ -104,5 +104,5 @@ export function useClerk() {
       }
       return (clerk.signOut as any)(cb)
     },
-  }
+  } as any
 }
