@@ -302,6 +302,22 @@ export function makeApi(token: string) {
       get: (id: string) =>
         apiFetch<{ syllabus: Syllabus; topics: SyllabusTopic[] }>(`/syllabus/${id}`, token),
 
+      create: (body: {
+        title: string
+        subjectId?: string | null
+        topics?: Array<{
+          unit?: string | null
+          topic: string
+          subtopic?: string | null
+          orderIndex?: number
+        }>
+      }) =>
+        apiFetch<{ syllabus: Syllabus; topics: SyllabusTopic[] }>('/syllabus/create', token, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }),
+
       upload: (file: File, title: string, subjectId?: string) => {
         const form = new FormData()
         form.append('title', title)

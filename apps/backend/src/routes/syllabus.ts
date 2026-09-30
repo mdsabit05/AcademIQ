@@ -41,6 +41,81 @@ const syllabus = new Hono<SyllabusEnv>()
 
 const MAX_SYLLABUS_BYTES = 20 * 1024 * 1024 // 20 MB
 
+syllabus.post('/create', async (c) => {
+  const dbUserId = c.get('dbUserId')
+  const body = await c.req.json<{
+    title: string
+    subjectId?: string | null
+    topics?: Array<{
+      unit?: string | null
+      topic: string
+      subtopic?: string | null
+      orderIndex?: number
+    }>
+  }>().catch(() => null)
+
+  if (!body) return c.json({ error: 'Invalid JSON body' }, 400)
+
+  const title = (body.title || '').trim()
+  if (!title) return c.json({ error: 'Title is required' }, 400)
+
+  const subjectId = body.subjectId ? body.subjectId.trim() : null
+  const topics = Array.isArray(body.topics) ? body.topics : []
+
+  const [newSyllabus] = await sql<
+    Array<{
+      id: string
+      owner_id: string
+      subject_id: string | null
+      title: string
+      status: string
+      created_at: string
+    }>
+  >`
+    INSERT INTO syllabi (owner_id, subject_id, title, status)
+    VALUES (${dbUserId}, ${subjectId}, ${title}, 'ready')
+    RETURNING id, owner_id, subject_id, title, status, created_at
+  `
+
+  const insertedTopics: Array<{
+    id: string
+    syllabus_id: string
+    unit: string | null
+    topic: string
+    subtopic: string | null
+    order_index: number
+    completed: boolean
+  }> = []
+
+  let order = 0
+  for (const t of topics) {
+    const topicName = (t.topic || '').trim()
+    if (!topicName) continue
+    const unit = t.unit ? t.unit.trim() : null
+    const subtopic = t.subtopic ? t.subtopic.trim() : null
+    const orderIndex = typeof t.orderIndex === 'number' ? t.orderIndex : order++
+
+    const [row] = await sql<
+      Array<{
+        id: string
+        syllabus_id: string
+        unit: string | null
+        topic: string
+        subtopic: string | null
+        order_index: number
+        completed: boolean
+      }>
+    >`
+      INSERT INTO syllabus_topics (syllabus_id, unit, topic, subtopic, order_index, completed)
+      VALUES (${newSyllabus.id}, ${unit}, ${topicName}, ${subtopic}, ${orderIndex}, false)
+      RETURNING id, syllabus_id, unit, topic, subtopic, order_index, completed
+    `
+    insertedTopics.push(row)
+  }
+
+  return c.json({ syllabus: newSyllabus, topics: insertedTopics }, 201)
+})
+
 syllabus.post('/', async (c) => {
   const dbUserId = c.get('dbUserId')
   const rawReq = c.env.incoming
