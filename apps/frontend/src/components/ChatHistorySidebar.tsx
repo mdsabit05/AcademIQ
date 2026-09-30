@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Trash2, MoreHorizontal, MessageSquare, Star } from 'lucide-react'
+import { Plus, Trash2, MoreHorizontal, MessageSquare, Star, Pencil, Check, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { ChatSession } from 'shared'
 
@@ -60,6 +60,7 @@ function SessionRow({
   starred,
   onSelect,
   onDelete,
+  onRename,
   onStar,
   onPrefetch,
 }: {
@@ -68,12 +69,19 @@ function SessionRow({
   starred: boolean
   onSelect: () => void
   onDelete: () => void
+  onRename?: (newTitle: string) => void
   onStar: () => void
   onPrefetch?: () => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
   const menuRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const title     = session.title ?? session.topic ?? 'Untitled chat'
+  const bookTitle = (session.book_titles ?? [])[0] ?? null
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -86,8 +94,34 @@ function SessionRow({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const title     = session.title ?? session.topic ?? 'Untitled chat'
-  const bookTitle = (session.book_titles ?? [])[0] ?? null
+  useEffect(() => {
+    if (isEditing) {
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    }
+  }, [isEditing])
+
+  const handleStartEdit = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    setEditTitle(title)
+    setIsEditing(true)
+    setMenuOpen(false)
+  }
+
+  const handleSave = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    const trimmed = editTitle.trim()
+    if (trimmed && trimmed !== title && onRename) {
+      onRename(trimmed)
+    }
+    setIsEditing(false)
+  }
+
+  const handleCancel = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    setEditTitle(title)
+    setIsEditing(false)
+  }
 
   return (
     <div
@@ -97,7 +131,7 @@ function SessionRow({
           ? 'bg-primary/10 border border-primary/30'
           : 'hover:bg-white/5 border border-transparent',
       )}
-      onClick={onSelect}
+      onClick={isEditing ? undefined : onSelect}
       onMouseEnter={onPrefetch}
     >
       {/* Active left accent */}
@@ -105,82 +139,132 @@ function SessionRow({
         <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full bg-primary" />
       )}
 
-      <div className="flex items-start justify-between gap-1 min-w-0">
-        <div className="min-w-0 flex-1 flex items-start gap-1.5">
-          {starred && (
-            <Star size={10} className="text-yellow-400 shrink-0 mt-0.5 fill-yellow-400" />
-          )}
-          <div className="min-w-0 flex-1">
-            <p className={clsx(
-              'text-[12px] font-medium leading-snug truncate',
-              isActive ? 'text-primary' : 'text-white',
-            )}>
-              {title}
-            </p>
-            {bookTitle && (
-              <p className="mt-0.5 text-[10px] text-muted truncate flex items-center gap-1">
-                <MessageSquare size={9} className="shrink-0" />
-                {bookTitle}
+      {isEditing ? (
+        <div className="flex items-center gap-1.5 w-full py-0.5" onClick={(e) => e.stopPropagation()}>
+          <input
+            ref={inputRef}
+            type="text"
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSave()
+              else if (e.key === 'Escape') handleCancel()
+            }}
+            className="flex-1 min-w-0 bg-surface border border-primary/60 rounded px-2 py-0.5 text-xs text-white placeholder:text-muted/50 focus:outline-none focus:ring-1 focus:ring-primary"
+            placeholder="Tab name..."
+          />
+          <button
+            type="button"
+            onClick={handleSave}
+            title="Save"
+            className="p-1 rounded text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors shrink-0"
+          >
+            <Check size={13} />
+          </button>
+          <button
+            type="button"
+            onClick={handleCancel}
+            title="Cancel"
+            className="p-1 rounded text-muted hover:text-white hover:bg-white/10 transition-colors shrink-0"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-start justify-between gap-1 min-w-0">
+          <div className="min-w-0 flex-1 flex items-start gap-1.5">
+            {starred && (
+              <Star size={10} className="text-yellow-400 shrink-0 mt-0.5 fill-yellow-400" />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className={clsx(
+                'text-[12px] font-medium leading-snug truncate',
+                isActive ? 'text-primary' : 'text-white',
+              )}>
+                {title}
               </p>
+              {bookTitle && (
+                <p className="mt-0.5 text-[10px] text-muted truncate flex items-center gap-1">
+                  <MessageSquare size={9} className="shrink-0" />
+                  {bookTitle}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Menu & Edit — visible on hover */}
+          <div
+            ref={menuRef}
+            className="shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {onRename && (
+              <button
+                onClick={handleStartEdit}
+                title="Edit name"
+                className="rounded p-0.5 text-muted hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <Pencil size={11} />
+              </button>
+            )}
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              className="rounded p-0.5 text-muted hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <MoreHorizontal size={13} />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-1 top-7 z-50 w-36 rounded-lg border border-border bg-surface shadow-xl py-1 overflow-hidden">
+                {confirmDelete ? (
+                  <div className="px-3 py-2">
+                    <p className="text-[11px] text-muted mb-2">Delete this chat?</p>
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => { setMenuOpen(false); setConfirmDelete(false); onDelete() }}
+                        className="flex-1 rounded bg-red-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-red-700 transition-colors"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(false)}
+                        className="flex-1 rounded border border-border px-2 py-1 text-[11px] text-muted hover:text-white transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {onRename && (
+                      <button
+                        onClick={handleStartEdit}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted hover:text-white hover:bg-white/5 transition-colors"
+                      >
+                        <Pencil size={12} /> Rename
+                      </button>
+                    )}
+                    <button
+                      onClick={() => { onStar(); setMenuOpen(false) }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted hover:text-white hover:bg-white/5 transition-colors"
+                    >
+                      <Star size={12} className={starred ? 'fill-yellow-400 text-yellow-400' : ''} />
+                      {starred ? 'Unpin' : 'Pin to top'}
+                    </button>
+                    <div className="h-px bg-border/50 mx-2 my-0.5" />
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-950/30 transition-colors"
+                    >
+                      <Trash2 size={12} /> Delete
+                    </button>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>
-
-        {/* Menu — visible on hover */}
-        <div
-          ref={menuRef}
-          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => setMenuOpen((o) => !o)}
-            className="rounded p-0.5 text-muted hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <MoreHorizontal size={13} />
-          </button>
-
-          {menuOpen && (
-            <div className="absolute right-1 top-7 z-50 w-36 rounded-lg border border-border bg-surface shadow-xl py-1 overflow-hidden">
-              {confirmDelete ? (
-                <div className="px-3 py-2">
-                  <p className="text-[11px] text-muted mb-2">Delete this chat?</p>
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => { setMenuOpen(false); setConfirmDelete(false); onDelete() }}
-                      className="flex-1 rounded bg-red-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-red-700 transition-colors"
-                    >
-                      Delete
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete(false)}
-                      className="flex-1 rounded border border-border px-2 py-1 text-[11px] text-muted hover:text-white transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <button
-                    onClick={() => { onStar(); setMenuOpen(false) }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted hover:text-white hover:bg-white/5 transition-colors"
-                  >
-                    <Star size={12} className={starred ? 'fill-yellow-400 text-yellow-400' : ''} />
-                    {starred ? 'Unpin' : 'Pin to top'}
-                  </button>
-                  <div className="h-px bg-border/50 mx-2 my-0.5" />
-                  <button
-                    onClick={() => setConfirmDelete(true)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-950/30 transition-colors"
-                  >
-                    <Trash2 size={12} /> Delete
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   )
 }
@@ -193,6 +277,7 @@ interface Props {
   onNewChat: () => void
   onSelectSession: (session: ChatSession) => void
   onDeleteSession: (id: string) => void
+  onRenameSession?: (id: string, newTitle: string) => void | Promise<void>
   onPrefetch?: (session: ChatSession) => void
 }
 
@@ -202,6 +287,7 @@ export default function ChatHistorySidebar({
   onNewChat,
   onSelectSession,
   onDeleteSession,
+  onRenameSession,
   onPrefetch,
 }: Props) {
   const [starred, setStarred] = useState<Set<string>>(loadStarred)
@@ -260,6 +346,7 @@ export default function ChatHistorySidebar({
                       starred={true}
                       onSelect={() => onSelectSession(s)}
                       onDelete={() => onDeleteSession(s.id)}
+                      onRename={onRenameSession ? (newTitle) => onRenameSession(s.id, newTitle) : undefined}
                       onStar={() => toggleStar(s.id)}
                       onPrefetch={onPrefetch ? () => onPrefetch(s) : undefined}
                     />
@@ -283,6 +370,7 @@ export default function ChatHistorySidebar({
                       starred={false}
                       onSelect={() => onSelectSession(s)}
                       onDelete={() => onDeleteSession(s.id)}
+                      onRename={onRenameSession ? (newTitle) => onRenameSession(s.id, newTitle) : undefined}
                       onStar={() => toggleStar(s.id)}
                       onPrefetch={onPrefetch ? () => onPrefetch(s) : undefined}
                     />
@@ -292,7 +380,6 @@ export default function ChatHistorySidebar({
             ))}
           </>
         )}
-
       </div>
     </div>
   )

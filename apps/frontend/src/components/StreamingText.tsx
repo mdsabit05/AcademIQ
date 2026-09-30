@@ -40,7 +40,7 @@ export default memo(function StreamingText({ text, streaming, className }: Strea
   }, [html])
 
   return (
-    <div className={clsx('ai-md text-sm leading-relaxed', className)}>
+    <div className={clsx('ai-md text-[15px] sm:text-base leading-relaxed', className)}>
       <div ref={containerRef} dangerouslySetInnerHTML={{ __html: html }} />
       {streaming && !text && (
         <span className="inline-flex items-center gap-1 py-1">

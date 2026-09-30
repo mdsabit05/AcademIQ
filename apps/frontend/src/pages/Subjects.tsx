@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '../lib/auth.ts'
 import { Plus, Trash2, BookOpen } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
 import type { Subject } from 'shared'

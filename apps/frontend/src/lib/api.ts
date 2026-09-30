@@ -130,6 +130,12 @@ export function makeApi(token: string) {
       get: (id: string) =>
         apiFetch<{ session: ChatSession; messages: ChatMessage[] }>(`/sessions/${id}`, token),
 
+      update: (id: string, body: { title: string }) =>
+        apiFetch<{ session: ChatSession }>(`/sessions/${id}`, token, {
+          method: 'PATCH',
+          body: JSON.stringify(body),
+        }),
+
       delete: (id: string) =>
         apiFetch<{ success: boolean }>(`/sessions/${id}`, token, { method: 'DELETE' }),
     },

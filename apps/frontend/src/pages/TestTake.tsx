@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '../lib/auth.ts'
 import { AlertTriangle, Clock } from 'lucide-react'
 import { makeApi } from '../lib/api.ts'
 import type { Test, TestQuestion } from 'shared'

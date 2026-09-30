@@ -23,7 +23,7 @@ import Logo from '../Logo.tsx'
 import { useCurrentUser } from '../../lib/useCurrentUser.ts'
 import { isAdmin } from '../../lib/rbac.ts'
 import { useMode } from '../../lib/modeContext.tsx'
-import { useClerk, useUser } from '@clerk/clerk-react'
+import { useClerk, useUser, useAuth } from '../../lib/auth.ts'
 
 interface NavItem {
   to: string
@@ -84,6 +84,7 @@ export default function Sidebar() {
   const { user } = useCurrentUser()
   const { user: clerkUser } = useUser()
   const { signOut } = useClerk()
+  const { isGuest } = useAuth()
   const navigate = useNavigate()
   const { mode, setMode } = useMode()
   const role = user?.role
@@ -195,7 +196,7 @@ export default function Sidebar() {
           )}
         >
           <LogOut size={16} className="shrink-0" />
-          {!collapsed && <span>Sign Out</span>}
+          {!collapsed && <span>{isGuest ? 'Exit Guest' : 'Sign Out'}</span>}
         </button>
 
         {/* User info */}

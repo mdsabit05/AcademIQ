@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '../lib/auth.ts'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../lib/theme.tsx'
 import {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '../lib/auth.ts'
 import {
   Users, BookOpen, FileText, Zap, Clock,
   Search, Filter, ChevronDown,

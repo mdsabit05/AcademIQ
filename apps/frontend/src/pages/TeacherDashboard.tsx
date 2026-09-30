@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '../lib/auth.ts'
 import teacherBgUrl from '../assets/teacherbg.png'
 import teacherBgLightUrl from '../assets/teacherbgLight.png'
 import { useTheme } from '../lib/theme.tsx'

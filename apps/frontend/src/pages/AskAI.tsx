@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '../lib/auth.ts'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Send, Search, Plus, FileText, ChevronDown, ChevronRight,
@@ -144,7 +144,6 @@ export default function AskAI() {
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [streamBuffer, setStreamBuffer] = useState('')
-  const [webSearch, setWebSearch] = useState(false)
   const [deepReason, setDeepReason] = useState(false)
   const [historyVisible, setHistoryVisible] = useState(() => window.innerWidth >= 768)
   const [sessions, setSessions] = useState<ChatSession[]>([])
@@ -467,7 +466,7 @@ export default function AskAI() {
       const res = await fetch(`${apiBase}/chat/${sid}/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ content, webSearch, deepReason }),
+        body: JSON.stringify({ content, webSearch: false, deepReason }),
       })
       if (!res.body) throw new Error('No response body')
       const reader = res.body.getReader(); const decoder = new TextDecoder()
@@ -491,7 +490,7 @@ export default function AskAI() {
       setStreaming(false)
       refreshHistory()
     }
-  }, [input, streaming, selectedBookIds, ensureSession, getToken, refreshHistory, webSearch, deepReason, setNavCollapsed])
+  }, [input, streaming, selectedBookIds, ensureSession, getToken, refreshHistory, deepReason, setNavCollapsed])
 
   async function deleteSession(id: string) {
     const token = await getToken()
@@ -501,6 +500,17 @@ export default function AskAI() {
     setSessions((prev) => prev.filter((s) => s.id !== id))
   }
 
+  async function renameSession(id: string, newTitle: string) {
+    const token = await getToken()
+    if (!token) return
+    try {
+      await makeApi(token).sessions.update(id, { title: newTitle })
+      setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, title: newTitle } : s)))
+    } catch (err) {
+      console.error('Failed to rename session:', err)
+    }
+  }
+
   const sidebar = (
     <ChatHistorySidebar
       sessions={sessions}
@@ -508,6 +518,7 @@ export default function AskAI() {
       onNewChat={startNewChat}
       onSelectSession={loadSession}
       onDeleteSession={deleteSession}
+      onRenameSession={renameSession}
       onPrefetch={handlePrefetch}
     />
   )
@@ -615,8 +626,8 @@ export default function AskAI() {
                       </div>
                     )}
                     <div className={clsx(
-                      'max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
-                      msg.role === 'user' ? 'font-medium' : 'border border-border bg-surface text-white'
+                      'max-w-[85%] rounded-2xl px-4 py-3 leading-relaxed',
+                      msg.role === 'user' ? 'text-sm font-medium' : 'border border-border bg-surface text-white text-[15px] sm:text-base leading-relaxed'
                     )} style={msg.role === 'user' ? { background: '#22D3EE', color: '#0a0f1a' } : {}}>
                       {msg.role === 'assistant' ? <StreamingText text={msg.content} /> : msg.content}
                     </div>
@@ -648,7 +659,7 @@ export default function AskAI() {
                     style={{ background: 'rgba(34,211,238,0.15)', border: '1px solid rgba(34,211,238,0.3)' }}>
                     <Sparkles size={13} style={{ color: '#22D3EE' }} />
                   </div>
-                  <div className="max-w-[80%] rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-white leading-relaxed">
+                  <div className="max-w-[85%] rounded-2xl border border-border bg-surface px-4 py-3 text-[15px] sm:text-base text-white leading-relaxed">
                     <StreamingText text={streamBuffer} />
                   </div>
                 </div>
@@ -690,7 +701,6 @@ export default function AskAI() {
               </div>
               <div className="flex items-center justify-between mt-1.5 px-1">
                 <div className="flex items-center gap-4">
-                  <Toggle label="Web Search" value={webSearch} onChange={setWebSearch} />
                   <Toggle label="Deep Reasoning" value={deepReason} onChange={setDeepReason} icon={<Sparkles size={10} className="text-muted" />} />
                 </div>
                 <span className="text-[11px] text-muted/50">
@@ -1216,7 +1226,6 @@ export default function AskAI() {
             </div>
             <div className="flex items-center justify-between mt-1.5 px-1">
               <div className="flex items-center gap-4">
-                <Toggle label="Web Search" value={webSearch} onChange={setWebSearch} />
                 <Toggle label="Deep Reasoning" value={deepReason} onChange={setDeepReason} icon={<Sparkles size={10} className="text-muted" />} />
               </div>
               <div className="flex items-center gap-3 text-[11px] text-muted">

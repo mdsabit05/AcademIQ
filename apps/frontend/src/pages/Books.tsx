@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import mybookImg from '../assets/mybook.png'
 import mybookLightImg from '../assets/mybookLight.png'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '../lib/auth.ts'
 import {
   Upload,
   Trash2,

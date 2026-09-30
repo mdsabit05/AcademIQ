@@ -32,7 +32,6 @@ export async function rerank(
   topK = DEFAULT_TOP_K,
 ): Promise<RetrievedChunk[]> {
   if (candidates.length === 0) return []
-  if (candidates.length <= topK) return candidates
 
   const snippets = candidates.map((c, i) =>
     `[${i}] (${c.bookTitle}${c.pageNumber ? `, p.${c.pageNumber}` : ''})\n${c.content.slice(0, 400)}`,
@@ -58,8 +57,9 @@ Include every passage index. Do not add explanations outside the JSON.`
     )
   } catch (err) {
     console.warn('[reranker] LLM reranking failed, falling back to vector scores:', err)
-    // Fallback: return top-K by original vector score
+    // Fallback: return top-K by original vector score if similarity is reasonable
     return [...candidates]
+      .filter((c) => c.score >= 0.55)
       .sort((a, b) => b.score - a.score)
       .slice(0, topK)
   }
@@ -67,9 +67,12 @@ Include every passage index. Do not add explanations outside the JSON.`
   // Map scores back to candidates and sort descending
   const scoreMap = new Map(scores.map((s) => [s.index, s.score]))
 
-  return [...candidates]
+  const scoredCandidates = candidates
     .map((chunk, i) => ({ chunk, rerankScore: scoreMap.get(i) ?? 0 }))
     .sort((a, b) => b.rerankScore - a.rerankScore)
-    .slice(0, topK)
-    .map(({ chunk }) => chunk)
+
+  // Filter out passages with negligible or zero relevance (score < 2 out of 10)
+  const relevant = scoredCandidates.filter((item) => item.rerankScore >= 2)
+
+  return relevant.slice(0, topK).map(({ chunk }) => chunk)
 }

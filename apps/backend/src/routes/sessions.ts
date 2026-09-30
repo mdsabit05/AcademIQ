@@ -121,6 +121,24 @@ sessions.get('/:id', requireOwnership('chat_sessions', 'id'), async (c) => {
   return c.json({ session, messages })
 })
 
+// ── Update session (rename title) ───────────────────────────────────────────
+
+sessions.patch('/:id', requireOwnership('chat_sessions', 'id'), async (c) => {
+  const id = c.req.param('id')
+  const body = await c.req.json<{ title?: string }>()
+  const title = body.title ? limitStr(body.title.trim(), 100) : null
+  if (!title) return c.json({ error: 'Title is required' }, 400)
+
+  const [session] = await sql`
+    UPDATE chat_sessions
+    SET title = ${title}, updated_at = now()
+    WHERE id = ${id}
+    RETURNING id, mode, topic, title, created_at, updated_at
+  `
+  if (!session) return c.json({ error: 'Not Found' }, 404)
+  return c.json({ session })
+})
+
 // ── Delete session ──────────────────────────────────────────────────────────
 
 sessions.delete('/:id', requireOwnership('chat_sessions', 'id'), async (c) => {

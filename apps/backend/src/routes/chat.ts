@@ -83,6 +83,10 @@ chat.post(
     .reverse()
     .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
 
+  const isDocMode = session.mode === 'learn' || session.mode === 'ask' || bookIds.length > 0
+  // Never perform outside web search in document-grounded AI Tutor mode
+  const effectiveWebSearch = isDocMode ? false : webSearch
+
   // ── RAG pipeline ──────────────────────────────────────────────────────────
   const candidates = bookIds.length > 0
     ? await retrieve(userContent, bookIds, 20)
@@ -90,6 +94,30 @@ chat.post(
   const reranked = candidates.length > 0
     ? await rerank(userContent, candidates, 5)
     : []
+
+  // If in document mode and no relevant material was found in the selected document(s)
+  // for a new question (no conversation history), immediately return the clear refusal.
+  if (isDocMode && bookIds.length > 0 && reranked.length === 0 && conversationHistory.length === 0) {
+    const notFoundMsg = "I am sorry, but this information is not present in your selected document(s). Please ask a question related to your uploaded study material."
+    await sql`
+      INSERT INTO chat_messages (session_id, role, content, metadata)
+      VALUES (${sessionId}, 'user', ${userContent}, '{}')
+    `
+    if (!userContent.startsWith('[CONTEXT')) {
+      const autoTitle = userContent.slice(0, 55).replace(/\s+/g, ' ').trim()
+      await sql`UPDATE chat_sessions SET title = ${autoTitle} WHERE id = ${sessionId} AND title IS NULL`
+    }
+    await sql`
+      INSERT INTO chat_messages (session_id, role, content, metadata)
+      VALUES (${sessionId}, 'assistant', ${notFoundMsg}, ${JSON.stringify({ citations: [] })}::jsonb)
+    `
+    await sql`UPDATE chat_sessions SET updated_at = now() WHERE id = ${sessionId}`
+
+    return streamSSE(c, async (sseStream) => {
+      await sseStream.writeSSE({ data: JSON.stringify(notFoundMsg) })
+      await sseStream.writeSSE({ data: '[DONE]', event: 'done' })
+    })
+  }
 
   // ── MAG memory ────────────────────────────────────────────────────────────
   const memory = await readMemory(dbUserId, session.topic ?? undefined, 8)
@@ -127,9 +155,9 @@ chat.post(
   }
 
   // ── Stream AI response ────────────────────────────────────────────────────
-  // webSearch uses Perplexity's online model (built-in real-time web search via OpenRouter)
-  // deepReason + webSearch: use web search model (it's already strong enough)
-  const model = webSearch ? MODELS.webSearch : deepReason ? MODELS.strong : MODELS.default
+  // webSearch uses Perplexity's online model (only allowed in general mode, never in document tutor mode)
+  // deepReason + webSearch: use web search model
+  const model = effectiveWebSearch ? MODELS.webSearch : deepReason ? MODELS.strong : MODELS.default
   const rawStream = await aiStream(messages, model)
 
   let fullResponse = ''

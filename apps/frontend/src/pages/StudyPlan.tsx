@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '../lib/auth.ts'
 import {
   Plus, X, Trash2, Calendar, Target, CheckCircle2,
   Loader2,

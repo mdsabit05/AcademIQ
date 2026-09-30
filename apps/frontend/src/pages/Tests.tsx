@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '../lib/auth.ts'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus, FileText, Trophy, Clock, BarChart2, BookOpen,

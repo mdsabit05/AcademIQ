@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '../lib/auth.ts'
 import {
   ArrowLeft,
   CheckCircle,
@@ -265,20 +265,20 @@ export default function TestResults() {
           </svg>
           <span className="text-3xl font-black text-white">{pct}%</span>
         </div>
-        <p className="text-base text-muted">{score?.score} / {score?.totalMarks} marks</p>
-        <p className={`mt-1.5 text-sm font-semibold ${label.color}`}>{label.text}</p>
+        <p className="text-lg text-muted">{score?.score} / {score?.totalMarks} marks</p>
+        <p className={`mt-1.5 text-base font-semibold ${label.color}`}>{label.text}</p>
         <div className="mt-4 flex items-center justify-center gap-8 border-t border-border pt-4">
           <div className="text-center">
-            <p className="text-xl font-bold text-emerald-400">{answers.filter(a => a.is_correct).length}</p>
-            <p className="text-xs text-muted mt-0.5">Correct</p>
+            <p className="text-2xl font-bold text-emerald-400">{answers.filter(a => a.is_correct).length}</p>
+            <p className="text-sm text-muted mt-0.5">Correct</p>
           </div>
           <div className="text-center">
-            <p className="text-xl font-bold text-red-400">{wrongQs.length}</p>
-            <p className="text-xs text-muted mt-0.5">Wrong</p>
+            <p className="text-2xl font-bold text-red-400">{wrongQs.length}</p>
+            <p className="text-sm text-muted mt-0.5">Wrong</p>
           </div>
           <div className="text-center">
-            <p className="text-xl font-bold text-white">{answers.length}</p>
-            <p className="text-xs text-muted mt-0.5">Total</p>
+            <p className="text-2xl font-bold text-white">{answers.length}</p>
+            <p className="text-sm text-muted mt-0.5">Total</p>
           </div>
         </div>
       </div>
@@ -293,7 +293,7 @@ export default function TestResults() {
 
       {/* Question review */}
       <div>
-        <h2 className="mb-3 font-semibold text-white">Question Review</h2>
+        <h2 className="mb-3 text-lg font-semibold text-white">Question Review</h2>
         <div className="space-y-3">
           {answers.map((a, i) => (
             <div
@@ -306,17 +306,17 @@ export default function TestResults() {
             >
               <div className="mb-2 flex items-start gap-2.5">
                 {a.is_correct
-                  ? <CheckCircle size={15} className="mt-0.5 shrink-0 text-emerald-400" />
-                  : <XCircle    size={15} className="mt-0.5 shrink-0 text-red-400" />}
+                  ? <CheckCircle size={17} className="mt-0.5 shrink-0 text-emerald-400" />
+                  : <XCircle    size={17} className="mt-0.5 shrink-0 text-red-400" />}
                 <div className="flex-1 min-w-0">
-                  <p className="mb-1 text-[11px] text-muted">Q{i + 1} · {a.marks_awarded}/{a.marks} marks</p>
-                  <p className="text-sm font-medium text-white">{a.question}</p>
+                  <p className="mb-1 text-xs font-medium text-muted">Q{i + 1} · {a.marks_awarded}/{a.marks} marks</p>
+                  <p className="text-[15px] sm:text-base font-medium text-white leading-snug">{a.question}</p>
                 </div>
               </div>
-              <div className="ml-6 space-y-1 text-xs">
+              <div className="ml-6 space-y-1.5 text-sm sm:text-[15px]">
                 <div className="flex gap-2">
                   <span className="shrink-0 text-muted">Your answer:</span>
-                  <span className={a.is_correct ? 'text-primary' : 'text-red-500'}>{a.answer || '—'}</span>
+                  <span className={a.is_correct ? 'text-primary font-medium' : 'text-red-400 font-medium'}>{a.answer || '—'}</span>
                 </div>
                 {!a.is_correct && (
                   <div className="flex gap-2">
@@ -332,9 +332,9 @@ export default function TestResults() {
                     setMobileTab('chat')
                   }}
                   disabled={!chatReady || sending}
-                  className="ml-6 mt-2 flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary hover:bg-primary/20 transition-colors disabled:opacity-40"
+                  className="ml-6 mt-2.5 flex items-center gap-1.5 rounded-full bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors disabled:opacity-40"
                 >
-                  <Sparkles size={10} /> Explain this
+                  <Sparkles size={11} /> Explain this
                 </button>
               )}
             </div>
@@ -350,25 +350,25 @@ export default function TestResults() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center px-4">
-            <MessageSquare size={28} className="text-muted/30" />
-            <p className="text-sm font-medium text-white">Ask the AI anything about your test</p>
-            <p className="text-xs text-muted">I know all your questions, answers, and where you went wrong.</p>
+            <MessageSquare size={32} className="text-muted/30" />
+            <p className="text-base font-semibold text-white">Ask the AI anything about your test</p>
+            <p className="text-sm text-muted">I know all your questions, answers, and where you went wrong.</p>
           </div>
         ) : (
           messages.map((msg, i) => (
             <div key={i} className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
               {msg.role === 'assistant' && (
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 mt-0.5">
-                  <Sparkles size={11} className="text-primary" />
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 mt-0.5">
+                  <Sparkles size={13} className="text-primary" />
                 </div>
               )}
-              <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+              <div className={`max-w-[85%] rounded-2xl px-4 py-3 leading-relaxed ${
                 msg.role === 'user'
-                  ? 'bg-primary text-bg font-medium'
-                  : 'bg-surface border border-border text-white'
+                  ? 'bg-primary text-bg font-medium text-sm sm:text-[15px]'
+                  : 'bg-surface border border-border text-white text-[15px] sm:text-base leading-relaxed'
               }`}>
                 {msg.role === 'assistant' ? (
-                  <div className="ai-md" dangerouslySetInnerHTML={{
+                  <div className="ai-md text-[15px] sm:text-base leading-relaxed" dangerouslySetInnerHTML={{
                     __html: marked.parse(msg.content || (msg.streaming ? '…' : ''), { gfm: true }) as string,
                   }} />
                 ) : msg.content}
@@ -382,11 +382,11 @@ export default function TestResults() {
       {/* Quick chips */}
       {messages.length === 0 && chatReady && (
         <div className="border-t border-border px-4 py-3 shrink-0">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted">Quick questions</p>
-          <div className="flex flex-wrap gap-1.5">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Quick questions</p>
+          <div className="flex flex-wrap gap-2">
             {quickChips.map((chip) => (
               <button key={chip} onClick={() => send(chip)} disabled={sending}
-                className="rounded-full border border-border/60 bg-surface px-2.5 py-1 text-[11px] text-muted hover:border-primary/40 hover:text-primary transition-colors disabled:opacity-40">
+                className="rounded-full border border-border/60 bg-surface px-3 py-1.5 text-xs text-muted hover:border-primary/40 hover:text-primary transition-colors disabled:opacity-40">
                 {chip}
               </button>
             ))}

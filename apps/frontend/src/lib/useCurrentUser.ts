@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from './auth.ts'
 import { makeApi } from './api.ts'
 import type { User } from 'shared'
 

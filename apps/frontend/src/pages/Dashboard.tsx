@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import heroBgUrl from '../assets/hero-bg.png'
 import lightLandingUrl from '../assets/lightLanding.png'
 import { useNavigate } from 'react-router-dom'
-import { useAuth, useUser } from '@clerk/clerk-react'
+import { useAuth, useUser } from '../lib/auth.ts'
 import { useTheme } from '../lib/theme.tsx'
 import {
   FileText,

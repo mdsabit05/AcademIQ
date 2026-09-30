@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useAuth, useClerk } from '@clerk/clerk-react'
+import { useAuth, useClerk, enterGuestMode } from '../lib/auth.ts'
 import heroBgUrl from '../assets/hero-bg.png'
 import lightLandingUrl from '../assets/lightLanding.png'
 import academiqLogoUrl from '../assets/academiq-logo-transparent.svg'
@@ -383,6 +383,11 @@ export default function Landing() {
     else openSignUp()
   }
 
+  function startGuest() {
+    enterGuestMode()
+    navigate('/dashboard')
+  }
+
   const CYAN = '#22D3EE'
   const BLUE = '#2563EB'
   const ACCENT = isLight ? BLUE : CYAN
@@ -587,7 +592,25 @@ export default function Landing() {
                   Dashboard
                 </button>
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button
+                    className="lp-login-btn"
+                    onClick={startGuest}
+                    style={{
+                      background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
+                      border: `1.5px solid ${T.loginBorder}`,
+                      borderRadius: 8,
+                      color: T.loginColor,
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                      padding: '9px 18px',
+                      cursor: 'pointer',
+                      transition: 'all 0.25s',
+                      letterSpacing: '0.01em',
+                    }}
+                  >
+                    Try as Guest
+                  </button>
                   <button
                     className="lp-login-btn"
                     onClick={() => isSignedIn ? navigate('/dashboard') : openSignIn()}
@@ -598,7 +621,7 @@ export default function Landing() {
                       color: T.loginColor,
                       fontSize: 14,
                       fontWeight: 600,
-                      padding: '9px 26px',
+                      padding: '9px 20px',
                       cursor: 'pointer',
                       transition: 'all 0.25s',
                       letterSpacing: '0.01em',
@@ -606,7 +629,7 @@ export default function Landing() {
                   >
                     Log In
                   </button>
-                  <button onClick={go} className="lp-btn-primary" style={{ padding: '9px 26px', fontSize: 14 }}>
+                  <button onClick={go} className="lp-btn-primary" style={{ padding: '9px 24px', fontSize: 14 }}>
                     Get Started
                   </button>
                 </div>
@@ -704,6 +727,26 @@ export default function Landing() {
               <div className="lp-hero-btns" style={{ display: 'flex', gap: 12, marginBottom: 32, flexWrap: 'wrap' }}>
                 <button onClick={go} className="lp-btn-primary" style={{ padding: '12px 22px', fontSize: 14 }}>
                   Get Started Free <ArrowRight size={15} />
+                </button>
+                <button
+                  onClick={startGuest}
+                  className="lp-login-btn"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '12px 22px',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    borderRadius: 8,
+                    border: `1.5px solid ${T.borderMid}`,
+                    color: T.text,
+                    background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
+                    cursor: 'pointer',
+                    transition: 'all 0.25s',
+                  }}
+                >
+                  <Sparkles size={15} style={{ color: '#22D3EE' }} /> Try as Guest
                 </button>
               </div>
 
@@ -1013,9 +1056,27 @@ export default function Landing() {
                   <p className="lp-cta-sub-nowrap" style={{ fontSize: 13, color: isLight ? 'rgba(15,23,42,0.7)' : 'rgba(255,255,255,0.75)', marginBottom: 22, lineHeight: 1.65, whiteSpace: 'nowrap', transition: 'color 0.35s' }}>
                     Join thousands of learners and make your studies smarter, simpler, and more effective.
                   </p>
-                  <button onClick={go} className="lp-btn-primary" style={{ fontSize: 14, padding: '12px 26px' }}>
-                    Get Started Free <ArrowRight size={15} />
-                  </button>
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <button onClick={go} className="lp-btn-primary" style={{ fontSize: 14, padding: '12px 26px' }}>
+                      Get Started Free <ArrowRight size={15} />
+                    </button>
+                    <button
+                      onClick={startGuest}
+                      style={{
+                        fontSize: 14,
+                        padding: '12px 22px',
+                        borderRadius: 8,
+                        border: `1.5px solid ${isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.2)'}`,
+                        background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.08)',
+                        color: isLight ? '#0f172a' : '#fff',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        transition: 'all 0.25s',
+                      }}
+                    >
+                      Explore as Guest
+                    </button>
+                  </div>
                   <p style={{ fontSize: 11, color: isLight ? 'rgba(15,23,42,0.45)' : 'rgba(255,255,255,0.4)', marginTop: 12, transition: 'color 0.35s' }}>No credit card required</p>
                 </div>
               </div>

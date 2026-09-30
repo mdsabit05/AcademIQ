@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { Sun, Moon, LogOut, Settings } from 'lucide-react'
-import { useUser, useClerk } from '@clerk/clerk-react'
+import { useUser, useClerk } from '../../lib/auth.ts'
 import Sidebar from './Sidebar.tsx'
 import MobileBottomNav from './MobileBottomNav.tsx'
 import { SidebarProvider } from '../../lib/sidebarContext.tsx'

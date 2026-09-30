@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { SignIn, SignUp, useAuth } from '@clerk/clerk-react'
+import { SignIn, SignUp } from '@clerk/clerk-react'
+import { useAuth } from './lib/auth.ts'
 import AppLayout from './components/layout/AppLayout.tsx'
 import Landing from './pages/Landing.tsx'
 import Dashboard from './pages/Dashboard.tsx'

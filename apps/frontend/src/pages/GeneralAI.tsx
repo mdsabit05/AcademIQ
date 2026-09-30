@@ -5,7 +5,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '../lib/auth.ts'
 import { useNavigate } from 'react-router-dom'
 import {
   Send, Sparkles, PanelLeftOpen, PanelLeftClose, Plus, Trash2, Mic, BookOpen,
@@ -104,6 +104,17 @@ export default function GeneralAI() {
     setSessions((prev) => prev.filter((s) => s.id !== id))
   }, [getToken, sessionId, startNewChat])
 
+  const renameSession = useCallback(async (id: string, newTitle: string) => {
+    const token = await getToken()
+    if (!token) return
+    try {
+      await makeApi(token).sessions.update(id, { title: newTitle })
+      setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, title: newTitle } : s)))
+    } catch (err) {
+      console.error('Failed to rename session:', err)
+    }
+  }, [getToken])
+
   const handleSend = useCallback(async () => {
     const content = input.trim()
     if (!content || streaming) return
@@ -166,6 +177,7 @@ export default function GeneralAI() {
       onNewChat={startNewChat}
       onSelectSession={loadSession}
       onDeleteSession={deleteSession}
+      onRenameSession={renameSession}
       onPrefetch={handlePrefetch}
     />
   )
@@ -290,8 +302,8 @@ export default function GeneralAI() {
                     </div>
                   )}
                   <div className={clsx(
-                    'max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
-                    msg.role === 'user' ? 'font-medium' : 'border border-border bg-surface text-white',
+                    'max-w-[85%] rounded-2xl px-4 py-3 leading-relaxed',
+                    msg.role === 'user' ? 'text-sm font-medium' : 'border border-border bg-surface text-white text-[15px] sm:text-base leading-relaxed',
                   )} style={msg.role === 'user' ? { background: '#22D3EE', color: '#0a0f1a' } : {}}>
                     {msg.role === 'assistant' ? <StreamingText text={msg.content} /> : msg.content}
                   </div>
@@ -335,7 +347,7 @@ export default function GeneralAI() {
                   style={{ background: 'rgba(34,211,238,0.15)', border: '1px solid rgba(34,211,238,0.3)' }}>
                   <Sparkles size={13} style={{ color: '#22D3EE' }} />
                 </div>
-                <div className="max-w-[80%] rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-white leading-relaxed">
+                <div className="max-w-[85%] rounded-2xl border border-border bg-surface px-4 py-3 text-[15px] sm:text-base text-white leading-relaxed">
                   <StreamingText text={streamBuffer} />
                 </div>
               </div>

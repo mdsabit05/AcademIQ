@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import { useAuth, useClerk, useUser } from '@clerk/clerk-react'
+import { useAuth, useClerk, useUser } from '../lib/auth.ts'
 import {
   Bell,
   Check,
