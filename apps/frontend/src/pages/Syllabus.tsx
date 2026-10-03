@@ -247,13 +247,24 @@ interface CreateSyllabusModalProps {
   theme: string
 }
 
+interface TopicEntry {
+  id: string
+  unit: string
+  topic: string
+  subtopics: Array<{ id: string; value: string }>
+}
+
+function uid() {
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+}
+
 function CreateSyllabusModal({ onClose, onCreated, getToken, theme }: CreateSyllabusModalProps) {
   const [title, setTitle] = useState('')
   const [activeTab, setActiveTab] = useState<'builder' | 'paste'>('builder')
-  const [topics, setTopics] = useState<Array<{ id: string; unit: string; topic: string; subtopic: string }>>([
-    { id: '1', unit: 'Unit 1', topic: '', subtopic: '' },
-    { id: '2', unit: 'Unit 1', topic: '', subtopic: '' },
-    { id: '3', unit: 'Unit 2', topic: '', subtopic: '' },
+  const [topics, setTopics] = useState<TopicEntry[]>([
+    { id: '1', unit: 'Unit 1', topic: '', subtopics: [] },
+    { id: '2', unit: 'Unit 1', topic: '', subtopics: [] },
+    { id: '3', unit: 'Unit 2', topic: '', subtopics: [] },
   ])
   const [pasteText, setPasteText] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -266,36 +277,63 @@ function CreateSyllabusModal({ onClose, onCreated, getToken, theme }: CreateSyll
   const inputBg = isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)'
   const borderCol = isLight ? '#e2e8f0' : 'rgb(var(--color-border))'
 
+  // ── Topic-level helpers ──────────────────────────────────────────────────────
+
   function addTopicRow(unitName?: string) {
     const lastUnit = unitName ?? (topics.length > 0 ? topics[topics.length - 1].unit : 'Unit 1')
-    setTopics((prev) => [
-      ...prev,
-      {
-        id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        unit: lastUnit,
-        topic: '',
-        subtopic: '',
-      },
-    ])
+    setTopics((prev) => [...prev, { id: uid(), unit: lastUnit, topic: '', subtopics: [] }])
   }
 
   function addUnit() {
     const unitCount = new Set(topics.map((t) => t.unit).filter(Boolean)).size
-    const nextUnit = `Unit ${unitCount + 1}`
-    addTopicRow(nextUnit)
+    addTopicRow(`Unit ${unitCount + 1}`)
   }
 
-  function removeTopicRow(id: string) {
+  function removeTopic(id: string) {
     if (topics.length <= 1) {
-      setTopics([{ id: '1', unit: 'Unit 1', topic: '', subtopic: '' }])
+      setTopics([{ id: '1', unit: 'Unit 1', topic: '', subtopics: [] }])
       return
     }
     setTopics((prev) => prev.filter((t) => t.id !== id))
   }
 
-  function updateTopicRow(id: string, field: 'unit' | 'topic' | 'subtopic', val: string) {
+  function updateTopic(id: string, field: 'unit' | 'topic', val: string) {
     setTopics((prev) => prev.map((t) => (t.id === id ? { ...t, [field]: val } : t)))
   }
+
+  // ── Subtopic-level helpers ───────────────────────────────────────────────────
+
+  function addSubtopic(topicId: string) {
+    setTopics((prev) =>
+      prev.map((t) =>
+        t.id === topicId
+          ? { ...t, subtopics: [...t.subtopics, { id: uid(), value: '' }] }
+          : t
+      )
+    )
+  }
+
+  function removeSubtopic(topicId: string, subId: string) {
+    setTopics((prev) =>
+      prev.map((t) =>
+        t.id === topicId
+          ? { ...t, subtopics: t.subtopics.filter((s) => s.id !== subId) }
+          : t
+      )
+    )
+  }
+
+  function updateSubtopic(topicId: string, subId: string, val: string) {
+    setTopics((prev) =>
+      prev.map((t) =>
+        t.id === topicId
+          ? { ...t, subtopics: t.subtopics.map((s) => (s.id === subId ? { ...s, value: val } : s)) }
+          : t
+      )
+    )
+  }
+
+  // ── Paste parser ─────────────────────────────────────────────────────────────
 
   function parsePasteText(text: string) {
     const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
@@ -307,31 +345,22 @@ function CreateSyllabusModal({ onClose, onCreated, getToken, theme }: CreateSyll
       const unitMatch = line.match(/^(unit|module|chapter|part)\s*(\d+|[ivxlcdm]+)[:\s-]*(.*)/i)
       if (unitMatch) {
         currentUnit = `${unitMatch[1]} ${unitMatch[2]}`.trim()
-        if (unitMatch[3] && unitMatch[3].trim()) {
-          parsed.push({
-            id: `${Date.now()}_${i}`,
-            unit: currentUnit,
-            topic: unitMatch[3].trim(),
-            subtopic: '',
-          })
+        if (unitMatch[3]?.trim()) {
+          parsed.push({ id: `${Date.now()}_${i}`, unit: currentUnit, topic: unitMatch[3].trim(), subtopic: '' })
         }
         continue
       }
-
       const cleanTopic = line.replace(/^(\d+[\.\)]|\*|-|•)\s*/, '').trim()
       if (cleanTopic) {
-        parsed.push({
-          id: `${Date.now()}_${i}`,
-          unit: currentUnit,
-          topic: cleanTopic,
-          subtopic: '',
-        })
+        parsed.push({ id: `${Date.now()}_${i}`, unit: currentUnit, topic: cleanTopic, subtopic: '' })
       }
     }
     return parsed
   }
 
   const detectedPasteCount = activeTab === 'paste' ? parsePasteText(pasteText).length : 0
+
+  // ── Submit ───────────────────────────────────────────────────────────────────
 
   async function submit() {
     if (!title.trim()) {
@@ -359,12 +388,20 @@ function CreateSyllabusModal({ onClose, onCreated, getToken, theme }: CreateSyll
         setError('Please enter at least one topic title')
         return
       }
-      topicsToSubmit = valid.map((t, idx) => ({
-        unit: t.unit.trim() || undefined,
-        topic: t.topic.trim(),
-        subtopic: t.subtopic.trim() || undefined,
-        orderIndex: idx,
-      }))
+      // Expand each topic + its subtopics into flat rows
+      let order = 0
+      for (const t of valid) {
+        const unit = t.unit.trim() || undefined
+        const topic = t.topic.trim()
+        const filledSubs = t.subtopics.map((s) => s.value.trim()).filter(Boolean)
+        if (filledSubs.length === 0) {
+          topicsToSubmit.push({ unit, topic, orderIndex: order++ })
+        } else {
+          for (const sub of filledSubs) {
+            topicsToSubmit.push({ unit, topic, subtopic: sub, orderIndex: order++ })
+          }
+        }
+      }
     }
 
     setSubmitting(true)
@@ -478,41 +515,35 @@ function CreateSyllabusModal({ onClose, onCreated, getToken, theme }: CreateSyll
 
         {/* Tab contents */}
         {activeTab === 'builder' ? (
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[200px] max-h-[340px]">
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[200px] max-h-[360px]">
             {topics.map((t, idx) => (
               <div
                 key={t.id}
-                className="p-2 rounded-xl transition-all"
-                style={{
-                  background: isLight ? '#f8fafc' : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${borderCol}`,
-                }}
+                className="rounded-xl transition-all"
+                style={{ border: `1px solid ${borderCol}`, background: isLight ? '#f8fafc' : 'rgba(255,255,255,0.03)' }}
               >
-                {/* Row 1: index + unit + topic + delete */}
-                <div className="flex items-center gap-2">
+                {/* Topic header row */}
+                <div className="flex items-center gap-2 p-2">
                   <span className="text-[11px] font-mono w-5 text-center shrink-0" style={{ color: mutedColor }}>
                     {idx + 1}
                   </span>
-
                   <input
                     value={t.unit}
-                    onChange={(e) => updateTopicRow(t.id, 'unit', e.target.value)}
+                    onChange={(e) => updateTopic(t.id, 'unit', e.target.value)}
                     placeholder="Unit 1"
                     className="w-20 shrink-0 px-2 py-1.5 rounded-lg text-xs outline-none"
                     style={{ background: inputBg, border: `1px solid ${borderCol}`, color: textColor }}
                   />
-
                   <input
                     value={t.topic}
-                    onChange={(e) => updateTopicRow(t.id, 'topic', e.target.value)}
+                    onChange={(e) => updateTopic(t.id, 'topic', e.target.value)}
                     placeholder="Topic title (required)"
                     className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg text-xs outline-none"
                     style={{ background: inputBg, border: `1px solid ${borderCol}`, color: textColor }}
                   />
-
                   <button
                     type="button"
-                    onClick={() => removeTopicRow(t.id)}
+                    onClick={() => removeTopic(t.id)}
                     className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors shrink-0"
                     title="Remove topic"
                   >
@@ -520,15 +551,44 @@ function CreateSyllabusModal({ onClose, onCreated, getToken, theme }: CreateSyll
                   </button>
                 </div>
 
-                {/* Row 2: subtopic — always visible */}
-                <div className="mt-1.5 ml-7">
-                  <input
-                    value={t.subtopic}
-                    onChange={(e) => updateTopicRow(t.id, 'subtopic', e.target.value)}
-                    placeholder="Subtopic (optional)"
-                    className="w-full px-2.5 py-1.5 rounded-lg text-xs outline-none"
-                    style={{ background: inputBg, border: `1px solid ${borderCol}`, color: textColor }}
-                  />
+                {/* Subtopics */}
+                {t.subtopics.length > 0 && (
+                  <div
+                    className="mx-2 mb-1 space-y-1 pt-1 pb-1"
+                    style={{ borderTop: `1px solid ${borderCol}` }}
+                  >
+                    {t.subtopics.map((sub) => (
+                      <div key={sub.id} className="flex items-center gap-1.5 pl-6">
+                        <span className="text-[10px]" style={{ color: mutedColor }}>↳</span>
+                        <input
+                          value={sub.value}
+                          onChange={(e) => updateSubtopic(t.id, sub.id, e.target.value)}
+                          placeholder="Subtopic name"
+                          className="flex-1 min-w-0 px-2 py-1 rounded-lg text-xs outline-none"
+                          style={{ background: inputBg, border: `1px solid ${borderCol}`, color: textColor }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeSubtopic(t.id, sub.id)}
+                          className="p-1 rounded text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                        >
+                          <X size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add subtopic button */}
+                <div className="px-2 pb-2 pl-8">
+                  <button
+                    type="button"
+                    onClick={() => addSubtopic(t.id)}
+                    className="text-[11px] font-medium px-2 py-0.5 rounded transition-colors"
+                    style={{ color: primaryColor }}
+                  >
+                    + Add subtopic
+                  </button>
                 </div>
               </div>
             ))}
