@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import {
   useAuth as useClerkAuth,
   useUser as useClerkUser,
@@ -44,21 +45,23 @@ export function useAuth(): ReturnType<typeof useClerkAuth> & {
 
   const isGuest = Boolean(!clerkAuth.isSignedIn && guestToken)
 
-  const getToken = async () => {
+  const getToken = useCallback(async () => {
     if (clerkAuth.isSignedIn) {
       return clerkAuth.getToken()
     }
     return guestToken ?? enterGuestMode()
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clerkAuth.isSignedIn, clerkAuth.getToken, guestToken])
 
-  const signOut = async (cb?: () => void) => {
+  const signOut = useCallback(async (cb?: () => void) => {
     if (isGuest) {
       exitGuestMode()
       if (cb) cb()
       return
     }
     return (clerkAuth.signOut as any)(cb)
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGuest, clerkAuth.signOut])
 
   return {
     ...clerkAuth,
