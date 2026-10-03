@@ -116,11 +116,11 @@ function ConfirmDeleteModal({ onConfirm, onCancel, theme }: {
 interface UploadModalProps {
   onClose: () => void
   onUploaded: (s: Syllabus) => void
-  token: string
+  getToken: () => Promise<string | null>
   theme: string
 }
 
-function UploadModal({ onClose, onUploaded, token, theme }: UploadModalProps) {
+function UploadModal({ onClose, onUploaded, getToken, theme }: UploadModalProps) {
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -133,6 +133,8 @@ function UploadModal({ onClose, onUploaded, token, theme }: UploadModalProps) {
     setUploading(true)
     setError('')
     try {
+      const token = await getToken()
+      if (!token) throw new Error('Not authenticated')
       const { syllabus } = await makeApi(token).syllabus.upload(file, title.trim())
       onUploaded(syllabus)
     } catch (e: unknown) {
@@ -241,11 +243,11 @@ function UploadModal({ onClose, onUploaded, token, theme }: UploadModalProps) {
 interface CreateSyllabusModalProps {
   onClose: () => void
   onCreated: (s: Syllabus, topics: SyllabusTopic[]) => void
-  token: string
+  getToken: () => Promise<string | null>
   theme: string
 }
 
-function CreateSyllabusModal({ onClose, onCreated, token, theme }: CreateSyllabusModalProps) {
+function CreateSyllabusModal({ onClose, onCreated, getToken, theme }: CreateSyllabusModalProps) {
   const [title, setTitle] = useState('')
   const [activeTab, setActiveTab] = useState<'builder' | 'paste'>('builder')
   const [topics, setTopics] = useState<Array<{ id: string; unit: string; topic: string; subtopic: string }>>([
@@ -368,6 +370,8 @@ function CreateSyllabusModal({ onClose, onCreated, token, theme }: CreateSyllabu
     setSubmitting(true)
     setError('')
     try {
+      const token = await getToken()
+      if (!token) throw new Error('Not authenticated')
       const res = await makeApi(token).syllabus.create({
         title: title.trim(),
         topics: topicsToSubmit,
@@ -474,68 +478,58 @@ function CreateSyllabusModal({ onClose, onCreated, token, theme }: CreateSyllabu
 
         {/* Tab contents */}
         {activeTab === 'builder' ? (
-          <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 min-h-[200px] max-h-[340px]">
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[200px] max-h-[340px]">
             {topics.map((t, idx) => (
               <div
                 key={t.id}
-                className="flex items-center gap-2 p-2 rounded-xl transition-all"
+                className="p-2 rounded-xl transition-all"
                 style={{
                   background: isLight ? '#f8fafc' : 'rgba(255,255,255,0.03)',
                   border: `1px solid ${borderCol}`,
                 }}
               >
-                <span className="text-[11px] font-mono w-5 text-center shrink-0" style={{ color: mutedColor }}>
-                  {idx + 1}
-                </span>
+                {/* Row 1: index + unit + topic + delete */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono w-5 text-center shrink-0" style={{ color: mutedColor }}>
+                    {idx + 1}
+                  </span>
 
-                {/* Unit */}
-                <input
-                  value={t.unit}
-                  onChange={(e) => updateTopicRow(t.id, 'unit', e.target.value)}
-                  placeholder="Unit (e.g. Unit 1)"
-                  className="w-24 sm:w-28 px-2.5 py-1.5 rounded-lg text-xs outline-none"
-                  style={{
-                    background: inputBg,
-                    border: `1px solid ${borderCol}`,
-                    color: textColor,
-                  }}
-                />
+                  <input
+                    value={t.unit}
+                    onChange={(e) => updateTopicRow(t.id, 'unit', e.target.value)}
+                    placeholder="Unit 1"
+                    className="w-20 shrink-0 px-2 py-1.5 rounded-lg text-xs outline-none"
+                    style={{ background: inputBg, border: `1px solid ${borderCol}`, color: textColor }}
+                  />
 
-                {/* Topic Title */}
-                <input
-                  value={t.topic}
-                  onChange={(e) => updateTopicRow(t.id, 'topic', e.target.value)}
-                  placeholder="Topic title (required)"
-                  className="flex-1 px-3 py-1.5 rounded-lg text-xs outline-none"
-                  style={{
-                    background: inputBg,
-                    border: `1px solid ${borderCol}`,
-                    color: textColor,
-                  }}
-                />
+                  <input
+                    value={t.topic}
+                    onChange={(e) => updateTopicRow(t.id, 'topic', e.target.value)}
+                    placeholder="Topic title (required)"
+                    className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg text-xs outline-none"
+                    style={{ background: inputBg, border: `1px solid ${borderCol}`, color: textColor }}
+                  />
 
-                {/* Subtopic */}
-                <input
-                  value={t.subtopic}
-                  onChange={(e) => updateTopicRow(t.id, 'subtopic', e.target.value)}
-                  placeholder="Subtopics (optional)"
-                  className="hidden sm:block w-32 px-2.5 py-1.5 rounded-lg text-xs outline-none"
-                  style={{
-                    background: inputBg,
-                    border: `1px solid ${borderCol}`,
-                    color: textColor,
-                  }}
-                />
+                  <button
+                    type="button"
+                    onClick={() => removeTopicRow(t.id)}
+                    className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors shrink-0"
+                    title="Remove topic"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
 
-                {/* Delete button */}
-                <button
-                  type="button"
-                  onClick={() => removeTopicRow(t.id)}
-                  className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors shrink-0"
-                  title="Remove topic"
-                >
-                  <Trash2 size={13} />
-                </button>
+                {/* Row 2: subtopic — always visible */}
+                <div className="mt-1.5 ml-7">
+                  <input
+                    value={t.subtopic}
+                    onChange={(e) => updateTopicRow(t.id, 'subtopic', e.target.value)}
+                    placeholder="Subtopic (optional)"
+                    className="w-full px-2.5 py-1.5 rounded-lg text-xs outline-none"
+                    style={{ background: inputBg, border: `1px solid ${borderCol}`, color: textColor }}
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -596,26 +590,6 @@ function CreateSyllabusModal({ onClose, onCreated, token, theme }: CreateSyllabu
   )
 }
 
-function CreateModalWrapper({
-  onClose,
-  onCreated,
-  getToken,
-  theme,
-}: {
-  onClose: () => void
-  onCreated: (s: Syllabus, topics: SyllabusTopic[]) => void
-  getToken: () => Promise<string | null>
-  theme: string
-}) {
-  const [token, setToken] = useState<string | null>(null)
-
-  useEffect(() => {
-    getToken().then(setToken)
-  }, [getToken])
-
-  if (!token) return null
-  return <CreateSyllabusModal onClose={onClose} onCreated={onCreated} token={token} theme={theme} />
-}
 
 // ── Topic checkbox row ─────────────────────────────────────────────────────────
 
@@ -1226,7 +1200,7 @@ export default function SyllabusPage() {
 
       {/* Create modal */}
       {showCreateModal && (
-        <CreateModalWrapper
+        <CreateSyllabusModal
           onClose={() => setShowCreateModal(false)}
           onCreated={handleCreated}
           getToken={getToken}
@@ -1236,7 +1210,7 @@ export default function SyllabusPage() {
 
       {/* Upload modal */}
       {showUpload && (
-        <UploadModalWrapper
+        <UploadModal
           onClose={() => setShowUpload(false)}
           onUploaded={handleUploaded}
           getToken={getToken}
@@ -1256,21 +1230,3 @@ export default function SyllabusPage() {
   )
 }
 
-// Wrapper to get token once for upload modal
-function UploadModalWrapper({
-  onClose, onUploaded, getToken, theme,
-}: {
-  onClose: () => void
-  onUploaded: (s: Syllabus) => void
-  getToken: () => Promise<string | null>
-  theme: string
-}) {
-  const [token, setToken] = useState<string | null>(null)
-
-  useEffect(() => {
-    getToken().then(setToken)
-  }, [getToken])
-
-  if (!token) return null
-  return <UploadModal onClose={onClose} onUploaded={onUploaded} token={token} theme={theme} />
-}
