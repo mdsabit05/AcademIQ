@@ -104,8 +104,8 @@ DO $$ BEGIN
       AND attname = 'embedding'
       AND atttypmod <> 2052
   ) THEN
-    ALTER TABLE chunks ALTER COLUMN embedding TYPE vector(2048) USING NULL;
     DROP INDEX IF EXISTS chunks_embedding_idx;
+    ALTER TABLE chunks ALTER COLUMN embedding TYPE vector(2048) USING NULL;
   END IF;
 END $$;
 
