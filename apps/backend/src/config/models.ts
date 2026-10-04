@@ -16,16 +16,22 @@ export const MODELS = {
 
   // ── NVIDIA free chat models (active) ───────────────────────────────────────
   /** Default generation — learn, ask, general chat */
-  default: process.env.MODEL_DEFAULT ?? 'nvidia/nemotron-3-super-120b-a12b',
+  default: process.env.MODEL_DEFAULT ?? 'deepseek-ai/deepseek-v4.1-flash',
 
   /** Strong reasoning — test generation, paper generation, reranking */
-  strong: process.env.MODEL_STRONG ?? 'nvidia/nemotron-3-super-120b-a12b',
+  strong: process.env.MODEL_STRONG ?? 'deepseek-ai/deepseek-v4.1-flash',
 
   /** Lightweight — memory extraction, syllabus parsing, summarization */
-  light: process.env.MODEL_LIGHT ?? 'meta/llama-3.1-8b-instruct',
+  light: process.env.MODEL_LIGHT ?? 'deepseek-ai/deepseek-v4.1-flash',
 
   /** Reranker */
-  reranker: process.env.MODEL_RERANKER ?? 'nvidia/nemotron-3-super-120b-a12b',
+  reranker: process.env.MODEL_RERANKER ?? 'deepseek-ai/deepseek-v4.1-flash',
+
+  // ── Nemotron models (commented out) ────────────────────────────────────────
+  // default:   process.env.MODEL_DEFAULT   ?? 'nvidia/nemotron-3-super-120b-a12b',
+  // strong:    process.env.MODEL_STRONG    ?? 'nvidia/nemotron-3-super-120b-a12b',
+  // light:     process.env.MODEL_LIGHT     ?? 'meta/llama-3.1-8b-instruct',
+  // reranker:  process.env.MODEL_RERANKER  ?? 'nvidia/nemotron-3-super-120b-a12b',
 
   // ── OpenRouter chat models (commented out — uncomment to revert) ────────────
   // default:   process.env.MODEL_DEFAULT   ?? 'openai/gpt-5.6-terra',
