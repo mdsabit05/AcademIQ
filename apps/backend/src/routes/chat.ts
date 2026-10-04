@@ -71,6 +71,7 @@ chat.post(
     SELECT book_id FROM chat_session_books WHERE session_id = ${sessionId}
   `
   const bookIds = bookRows.map((r) => r.book_id)
+  console.log(`[chat] sessionId=${sessionId} bookIds=${JSON.stringify(bookIds)}`)
 
   // Load recent conversation history (last 10 messages)
   const history = await sql<Array<{ role: string; content: string }>>`

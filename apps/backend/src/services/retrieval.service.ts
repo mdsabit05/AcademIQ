@@ -37,6 +37,13 @@ export async function retrieve(
 ): Promise<RetrievedChunk[]> {
   if (bookIds.length === 0) return []
 
+  // Debug: check how many chunks with embeddings exist for these books
+  const dbgRows = await sql<{ cnt: string }[]>`
+    SELECT COUNT(*) AS cnt FROM chunks
+    WHERE book_id = ANY(${bookIds}::uuid[]) AND embedding IS NOT NULL
+  `
+  console.log(`[retrieve] bookIds=${JSON.stringify(bookIds)} chunks_with_embeddings=${dbgRows[0]?.cnt}`)
+
   const queryVector = await embed(query)
   const vectorLiteral = `[${queryVector.join(',')}]`
 

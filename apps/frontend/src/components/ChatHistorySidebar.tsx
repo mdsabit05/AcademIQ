@@ -236,14 +236,6 @@ function SessionRow({
                   </div>
                 ) : (
                   <>
-                    {onRename && (
-                      <button
-                        onClick={handleStartEdit}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted hover:text-white hover:bg-white/5 transition-colors"
-                      >
-                        <Pencil size={12} /> Rename
-                      </button>
-                    )}
                     <button
                       onClick={() => { onStar(); setMenuOpen(false) }}
                       className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted hover:text-white hover:bg-white/5 transition-colors"
