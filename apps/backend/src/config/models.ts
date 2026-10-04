@@ -19,16 +19,16 @@ export const MODELS = {
 
   // ── Groq free chat models (active) ─────────────────────────────────────────
   /** Default generation — learn, ask, general chat */
-  default: process.env.MODEL_DEFAULT ?? 'llama-3.3-70b-versatile',
+  default: process.env.MODEL_DEFAULT ?? 'openai/gpt-oss-120b',
 
   /** Strong reasoning — test generation, paper generation, reranking */
-  strong: process.env.MODEL_STRONG ?? 'llama-3.3-70b-versatile',
+  strong: process.env.MODEL_STRONG ?? 'openai/gpt-oss-120b',
 
   /** Lightweight — memory extraction, syllabus parsing, summarization */
-  light: process.env.MODEL_LIGHT ?? 'llama-3.1-8b-instant',
+  light: process.env.MODEL_LIGHT ?? 'openai/gpt-oss-20b',
 
-  /** Reranker */
-  reranker: process.env.MODEL_RERANKER ?? 'llama-3.1-8b-instant',
+  /** Reranker — separate model to avoid hitting same quota as chat */
+  reranker: process.env.MODEL_RERANKER ?? 'qwen/qwen3.8-27b',
 
   // ── DeepSeek R1 distill (commented out — blank response on streaming) ────────
   // default:  process.env.MODEL_DEFAULT  ?? 'deepseek-r1-distill-llama-70b',

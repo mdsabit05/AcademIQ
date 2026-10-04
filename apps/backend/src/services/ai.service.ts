@@ -62,6 +62,18 @@ export interface Message {
   content: string
 }
 
+/** Retry a fetch call on 429 with exponential backoff (max 3 attempts) */
+async function withRetry(fn: () => Promise<Response>): Promise<Response> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fn()
+    if (res.status !== 429) return res
+    const wait = (attempt + 1) * 2000 // 2s, 4s
+    console.warn(`[ai] 429 rate limit, retrying in ${wait}ms (attempt ${attempt + 1})`)
+    await new Promise((r) => setTimeout(r, wait))
+  }
+  return fn()
+}
+
 /**
  * Stream a chat completion.
  * Returns the raw ReadableStream from OpenRouter for SSE passthrough.
@@ -70,11 +82,11 @@ export async function stream(
   messages: Message[],
   model: string = MODELS.default,
 ): Promise<ReadableStream<Uint8Array>> {
-  const res = await fetch(`${CHAT_BASE}/chat/completions`, {
+  const res = await withRetry(() => fetch(`${CHAT_BASE}/chat/completions`, {
     method: 'POST',
     headers: chatHeaders(),
     body: JSON.stringify({ model, messages, stream: true, max_tokens: 4096 }),
-  })
+  }))
 
   if (!res.ok || !res.body) {
     const err = await res.text().catch(() => res.statusText)
@@ -93,11 +105,11 @@ export async function complete(
   messages: Message[],
   model: string = MODELS.default,
 ): Promise<string> {
-  const res = await fetch(`${CHAT_BASE}/chat/completions`, {
+  const res = await withRetry(() => fetch(`${CHAT_BASE}/chat/completions`, {
     method: 'POST',
     headers: chatHeaders(),
     body: JSON.stringify({ model, messages, stream: false, max_tokens: 4096 }),
-  })
+  }))
 
   if (!res.ok) {
     const err = await res.text().catch(() => res.statusText)
