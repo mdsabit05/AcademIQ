@@ -83,6 +83,7 @@ export async function stream(
 /**
  * Non-streaming chat completion.
  * Returns the full assistant message content as a string.
+ * Strips <think>...</think> reasoning blocks produced by DeepSeek R1 models.
  */
 export async function complete(
   messages: Message[],
@@ -103,7 +104,9 @@ export async function complete(
     choices: Array<{ message: { content: string } }>
   }
 
-  return data.choices[0]?.message?.content ?? ''
+  const raw = data.choices[0]?.message?.content ?? ''
+  // Strip <think>...</think> reasoning blocks (DeepSeek R1 models)
+  return raw.replace(/<think>[\s\S]*?<\/think>\s*/g, '').trim()
 }
 
 /**
@@ -282,14 +285,19 @@ export async function completeWithTools(
 }
 
 /**
- * Parse a raw SSE stream from OpenRouter into text tokens.
+ * Parse a raw SSE stream into text tokens.
  * Used by route handlers to forward to the client via Hono streamSSE.
+ *
+ * Handles DeepSeek R1 models:
+ * - Skips `reasoning_content` tokens (thinking phase) — never shown to users
+ * - Strips any `<think>...</think>` blocks that appear inline in `content`
  */
 export async function* parseSSEStream(
   rawStream: ReadableStream<Uint8Array>,
 ): AsyncGenerator<string> {
   const reader = rawStream.getReader()
   const decoder = new TextDecoder()
+  let inThink = false
 
   try {
     while (true) {
@@ -306,10 +314,34 @@ export async function* parseSSEStream(
 
         try {
           const parsed = JSON.parse(data) as {
-            choices?: Array<{ delta?: { content?: string } }>
+            choices?: Array<{ delta?: { content?: string; reasoning_content?: string } }>
           }
+          // reasoning_content = DeepSeek R1 thinking phase — skip entirely
           const token = parsed.choices?.[0]?.delta?.content
-          if (token) yield token
+          if (!token) continue
+
+          // Fast path: no think tags in this token
+          if (!inThink && !token.includes('<think>') && !token.includes('</think>')) {
+            yield token
+            continue
+          }
+
+          // Filter <think>...</think> blocks that appear inline in content
+          let remaining = token
+          while (remaining.length > 0) {
+            if (inThink) {
+              const end = remaining.indexOf('</think>')
+              if (end === -1) { remaining = ''; break }
+              remaining = remaining.slice(end + 8).trimStart()
+              inThink = false
+            } else {
+              const start = remaining.indexOf('<think>')
+              if (start === -1) { yield remaining; remaining = ''; break }
+              if (start > 0) yield remaining.slice(0, start)
+              remaining = remaining.slice(start + 7)
+              inThink = true
+            }
+          }
         } catch {
           // skip malformed lines
         }

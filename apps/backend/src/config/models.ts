@@ -16,16 +16,22 @@ export const MODELS = {
 
   // ── Groq free chat models (active) ─────────────────────────────────────────
   /** Default generation — learn, ask, general chat */
-  default: process.env.MODEL_DEFAULT ?? 'deepseek-r1-distill-llama-70b',
+  default: process.env.MODEL_DEFAULT ?? 'openai/gpt-oss-120b',
 
   /** Strong reasoning — test generation, paper generation, reranking */
-  strong: process.env.MODEL_STRONG ?? 'deepseek-r1-distill-llama-70b',
+  strong: process.env.MODEL_STRONG ?? 'openai/gpt-oss-120b',
 
   /** Lightweight — memory extraction, syllabus parsing, summarization */
-  light: process.env.MODEL_LIGHT ?? 'llama-3.1-8b-instant',
+  light: process.env.MODEL_LIGHT ?? 'openai/gpt-oss-20b',
 
   /** Reranker */
-  reranker: process.env.MODEL_RERANKER ?? 'deepseek-r1-distill-llama-70b',
+  reranker: process.env.MODEL_RERANKER ?? 'openai/gpt-oss-120b',
+
+  // ── DeepSeek R1 distill (commented out — reasoning model, blank response issue) ─
+  // default:  process.env.MODEL_DEFAULT  ?? 'deepseek-r1-distill-llama-70b',
+  // strong:   process.env.MODEL_STRONG   ?? 'deepseek-r1-distill-llama-70b',
+  // light:    process.env.MODEL_LIGHT    ?? 'llama-3.1-8b-instant',
+  // reranker: process.env.MODEL_RERANKER ?? 'deepseek-r1-distill-llama-70b',
 
   // ── NVIDIA free chat models (commented out — uncomment to revert) ───────────
   // default:  process.env.MODEL_DEFAULT  ?? 'meta/llama-3.3-70b-instruct',
