@@ -1,7 +1,12 @@
 /**
  * AI Service — Hybrid mode:
- *   Chat completions → NVIDIA free API  (NVIDIA_API_KEY)
+ *   Chat completions → Groq free API    (GROQ_API_KEY)
  *   Embeddings       → OpenRouter       (OPENROUTER_API_KEY)
+ *
+ * ── To revert to NVIDIA ───────────────────────────────────────────────────────
+ *   1. Change CHAT_BASE  → NVIDIA_BASE
+ *   2. Change chatHeaders → nvidiaHeaders
+ *   (Also revert config/models.ts model names)
  *
  * ── To revert to full OpenRouter ─────────────────────────────────────────────
  *   1. Change CHAT_BASE  → OPENROUTER_BASE
@@ -15,6 +20,7 @@ import { MODELS } from '../config/models.js'
 
 const OPENROUTER_BASE = 'https://openrouter.ai/api/v1'
 const NVIDIA_BASE     = 'https://integrate.api.nvidia.com/v1'
+const GROQ_BASE       = 'https://api.groq.com/openai/v1'
 
 // ── Auth header factories ─────────────────────────────────────────────────────
 
@@ -35,11 +41,17 @@ function nvidiaHeaders(): Record<string, string> {
   return { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
 }
 
-// ── Active routing ────────────────────────────────────────────────────────────
-// Chat → NVIDIA  |  to revert: swap both lines to OPENROUTER_BASE / openrouterHeaders
+function groqHeaders(): Record<string, string> {
+  const key = process.env.GROQ_API_KEY
+  if (!key) throw new Error('GROQ_API_KEY is not set')
+  return { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
+}
 
-const CHAT_BASE   = NVIDIA_BASE       // ← swap to OPENROUTER_BASE to revert
-const chatHeaders = nvidiaHeaders     // ← swap to openrouterHeaders to revert
+// ── Active routing ────────────────────────────────────────────────────────────
+// Chat → Groq  |  to revert to NVIDIA: swap both lines to NVIDIA_BASE / nvidiaHeaders
+
+const CHAT_BASE   = GROQ_BASE       // ← swap to NVIDIA_BASE to revert
+const chatHeaders = groqHeaders     // ← swap to nvidiaHeaders to revert
 
 export interface Message {
   role: 'system' | 'user' | 'assistant'

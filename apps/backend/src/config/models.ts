@@ -4,7 +4,7 @@
  * Override any model via environment variable without code changes.
  *
  * ── HYBRID MODE (current) ────────────────────────────────────────────────────
- *   Chat  → NVIDIA free API  (env: NVIDIA_API_KEY)
+ *   Chat  → Groq free API    (env: GROQ_API_KEY)
  *   Embed → OpenRouter       (env: OPENROUTER_API_KEY)  ← unchanged
  *
  * ── To revert to full OpenRouter ─────────────────────────────────────────────
@@ -14,30 +14,30 @@ export const MODELS = {
   /** Embeddings — OpenRouter /api/v1/embeddings — 1536 dimensions (unchanged) */
   embed: process.env.MODEL_EMBED ?? 'openai/text-embedding-3-small',
 
-  // ── NVIDIA free chat models (active) ───────────────────────────────────────
+  // ── Groq free chat models (active) ─────────────────────────────────────────
   /** Default generation — learn, ask, general chat */
-  default: process.env.MODEL_DEFAULT ?? 'meta/llama-3.3-70b-instruct',
+  default: process.env.MODEL_DEFAULT ?? 'deepseek-r1-distill-llama-70b',
 
   /** Strong reasoning — test generation, paper generation, reranking */
-  strong: process.env.MODEL_STRONG ?? 'meta/llama-3.3-70b-instruct',
+  strong: process.env.MODEL_STRONG ?? 'deepseek-r1-distill-llama-70b',
 
   /** Lightweight — memory extraction, syllabus parsing, summarization */
-  light: process.env.MODEL_LIGHT ?? 'meta/llama-3.1-8b-instruct',
+  light: process.env.MODEL_LIGHT ?? 'llama-3.1-8b-instant',
 
   /** Reranker */
-  reranker: process.env.MODEL_RERANKER ?? 'meta/llama-3.3-70b-instruct',
+  reranker: process.env.MODEL_RERANKER ?? 'deepseek-r1-distill-llama-70b',
+
+  // ── NVIDIA free chat models (commented out — uncomment to revert) ───────────
+  // default:  process.env.MODEL_DEFAULT  ?? 'meta/llama-3.3-70b-instruct',
+  // strong:   process.env.MODEL_STRONG   ?? 'meta/llama-3.3-70b-instruct',
+  // light:    process.env.MODEL_LIGHT    ?? 'meta/llama-3.1-8b-instruct',
+  // reranker: process.env.MODEL_RERANKER ?? 'meta/llama-3.3-70b-instruct',
 
   // ── DeepSeek v4.1 Flash (unstable on NVIDIA free tier — try later) ──────────
   // default:  process.env.MODEL_DEFAULT  ?? 'deepseek-ai/deepseek-v4.1-flash',
   // strong:   process.env.MODEL_STRONG   ?? 'deepseek-ai/deepseek-v4.1-flash',
   // light:    process.env.MODEL_LIGHT    ?? 'deepseek-ai/deepseek-v4.1-flash',
   // reranker: process.env.MODEL_RERANKER ?? 'deepseek-ai/deepseek-v4.1-flash',
-
-  // ── Nemotron (commented out) ────────────────────────────────────────────────
-  // default:   process.env.MODEL_DEFAULT   ?? 'nvidia/nemotron-3-super-120b-a12b',
-  // strong:    process.env.MODEL_STRONG    ?? 'nvidia/nemotron-3-super-120b-a12b',
-  // light:     process.env.MODEL_LIGHT     ?? 'meta/llama-3.1-8b-instruct',
-  // reranker:  process.env.MODEL_RERANKER  ?? 'nvidia/nemotron-3-super-120b-a12b',
 
   // ── OpenRouter chat models (commented out — uncomment to revert) ────────────
   // default:   process.env.MODEL_DEFAULT   ?? 'openai/gpt-5.6-terra',
