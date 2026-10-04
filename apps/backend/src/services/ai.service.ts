@@ -1,14 +1,18 @@
 /**
  * AI Service — Hybrid mode:
- *   Chat completions → Groq free API    (GROQ_API_KEY)
- *   Embeddings       → OpenRouter       (OPENROUTER_API_KEY)
+ *   Chat completions → Groq free API          (GROQ_API_KEY)
+ *   Embeddings       → NVIDIA paid API         (NVIDIA_API_KEY)
  *
- * ── To revert to NVIDIA ───────────────────────────────────────────────────────
+ * ── To revert embeddings to OpenRouter ───────────────────────────────────────
+ *   In embedBatch(): swap NVIDIA_BASE → OPENROUTER_BASE, nvidiaHeaders → openrouterHeaders
+ *   Also revert config/models.ts embed model + schema.sql vector(4096) → vector(1536)
+ *
+ * ── To revert chat to NVIDIA ─────────────────────────────────────────────────
  *   1. Change CHAT_BASE  → NVIDIA_BASE
  *   2. Change chatHeaders → nvidiaHeaders
  *   (Also revert config/models.ts model names)
  *
- * ── To revert to full OpenRouter ─────────────────────────────────────────────
+ * ── To revert chat to full OpenRouter ────────────────────────────────────────
  *   1. Change CHAT_BASE  → OPENROUTER_BASE
  *   2. Change chatHeaders → openrouterHeaders
  *   (Also revert config/models.ts model names)
@@ -131,7 +135,7 @@ export async function completeJson<T>(
 
 /**
  * Embed a single text string.
- * Returns a 1536-dimensional vector via OpenRouter /api/v1/embeddings.
+ * Returns a 4096-dimensional vector via NVIDIA paid API.
  */
 export async function embed(text: string): Promise<number[]> {
   const results = await embedBatch([text])
@@ -141,6 +145,9 @@ export async function embed(text: string): Promise<number[]> {
 /**
  * Batch embed multiple texts.
  * Send in batches of up to 100 to stay within rate limits.
+ *
+ * ── Active: NVIDIA paid API (NVIDIA_API_KEY) — nemotron-3-embed-1b — 4096 dims ──
+ * ── To revert to OpenRouter: swap the two commented lines below ──────────────────
  */
 export async function embedBatch(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return []
@@ -151,9 +158,9 @@ export async function embedBatch(texts: string[]): Promise<number[][]> {
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
     const batch = texts.slice(i, i + BATCH_SIZE)
 
-    const res = await fetch(`${OPENROUTER_BASE}/embeddings`, {
+    const res = await fetch(`${NVIDIA_BASE}/embeddings`, {        // ← swap to OPENROUTER_BASE to revert
       method: 'POST',
-      headers: openrouterHeaders(),  // embeddings stay on OpenRouter
+      headers: nvidiaHeaders(),                                    // ← swap to openrouterHeaders() to revert
       body: JSON.stringify({
         model: MODELS.embed,
         input: batch,
@@ -166,10 +173,12 @@ export async function embedBatch(texts: string[]): Promise<number[][]> {
     }
 
     const data = (await res.json()) as {
-      data: Array<{ embedding: number[] }>
+      data: Array<{ embedding: number[]; index: number }>
     }
 
-    results.push(...data.data.map((d) => d.embedding))
+    // NVIDIA returns embeddings sorted by index — sort to guarantee order
+    const sorted = [...data.data].sort((a, b) => a.index - b.index)
+    results.push(...sorted.map((d) => d.embedding))
   }
 
   return results

@@ -11,8 +11,11 @@
  *   Swap the commented / uncommented lines below, then update ai.service.ts.
  */
 export const MODELS = {
-  /** Embeddings — OpenRouter /api/v1/embeddings — 1536 dimensions (unchanged) */
-  embed: process.env.MODEL_EMBED ?? 'openai/text-embedding-3-small',
+  /** Embeddings — NVIDIA paid API — nemotron-3-embed-1b — 4096 dimensions */
+  embed: process.env.MODEL_EMBED ?? 'nvidia/nemotron-3-embed-1b',
+
+  // ── OpenRouter embeddings (commented out — uncomment to revert, also update ai.service.ts + schema.sql) ──
+  // embed: process.env.MODEL_EMBED ?? 'openai/text-embedding-3-small',  // 1536 dims
 
   // ── Groq free chat models (active) ─────────────────────────────────────────
   /** Default generation — learn, ask, general chat */
