@@ -16,18 +16,24 @@ export const MODELS = {
 
   // ── NVIDIA free chat models (active) ───────────────────────────────────────
   /** Default generation — learn, ask, general chat */
-  default: process.env.MODEL_DEFAULT ?? 'deepseek-ai/deepseek-v4.1-flash',
+  default: process.env.MODEL_DEFAULT ?? 'meta/llama-3.3-70b-instruct',
 
   /** Strong reasoning — test generation, paper generation, reranking */
-  strong: process.env.MODEL_STRONG ?? 'deepseek-ai/deepseek-v4.1-flash',
+  strong: process.env.MODEL_STRONG ?? 'meta/llama-3.3-70b-instruct',
 
   /** Lightweight — memory extraction, syllabus parsing, summarization */
-  light: process.env.MODEL_LIGHT ?? 'deepseek-ai/deepseek-v4.1-flash',
+  light: process.env.MODEL_LIGHT ?? 'meta/llama-3.1-8b-instruct',
 
   /** Reranker */
-  reranker: process.env.MODEL_RERANKER ?? 'deepseek-ai/deepseek-v4.1-flash',
+  reranker: process.env.MODEL_RERANKER ?? 'meta/llama-3.3-70b-instruct',
 
-  // ── Nemotron models (commented out) ────────────────────────────────────────
+  // ── DeepSeek v4.1 Flash (unstable on NVIDIA free tier — try later) ──────────
+  // default:  process.env.MODEL_DEFAULT  ?? 'deepseek-ai/deepseek-v4.1-flash',
+  // strong:   process.env.MODEL_STRONG   ?? 'deepseek-ai/deepseek-v4.1-flash',
+  // light:    process.env.MODEL_LIGHT    ?? 'deepseek-ai/deepseek-v4.1-flash',
+  // reranker: process.env.MODEL_RERANKER ?? 'deepseek-ai/deepseek-v4.1-flash',
+
+  // ── Nemotron (commented out) ────────────────────────────────────────────────
   // default:   process.env.MODEL_DEFAULT   ?? 'nvidia/nemotron-3-super-120b-a12b',
   // strong:    process.env.MODEL_STRONG    ?? 'nvidia/nemotron-3-super-120b-a12b',
   // light:     process.env.MODEL_LIGHT     ?? 'meta/llama-3.1-8b-instruct',
