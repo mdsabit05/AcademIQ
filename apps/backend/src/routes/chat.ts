@@ -95,9 +95,9 @@ chat.post(
     ? await rerank(userContent, candidates, 5)
     : []
 
-  // If in document mode and no relevant material was found in the selected document(s)
-  // for a new question (no conversation history), immediately return the clear refusal.
-  if (isDocMode && bookIds.length > 0 && reranked.length === 0 && conversationHistory.length === 0) {
+  // If in document mode and vector search found nothing at all (not even loosely similar),
+  // return a refusal. If candidates exist but reranker filtered them, still let the model try.
+  if (isDocMode && bookIds.length > 0 && candidates.length === 0 && conversationHistory.length === 0) {
     const notFoundMsg = "I am sorry, but this information is not present in your selected document(s). Please ask a question related to your uploaded study material."
     await sql`
       INSERT INTO chat_messages (session_id, role, content, metadata)

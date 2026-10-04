@@ -59,7 +59,7 @@ Include every passage index. Do not add explanations outside the JSON.`
     console.warn('[reranker] LLM reranking failed, falling back to vector scores:', err)
     // Fallback: return top-K by original vector score if similarity is reasonable
     return [...candidates]
-      .filter((c) => c.score >= 0.55)
+      .filter((c) => c.score >= 0.3)
       .sort((a, b) => b.score - a.score)
       .slice(0, topK)
   }
@@ -71,8 +71,8 @@ Include every passage index. Do not add explanations outside the JSON.`
     .map((chunk, i) => ({ chunk, rerankScore: scoreMap.get(i) ?? 0 }))
     .sort((a, b) => b.rerankScore - a.rerankScore)
 
-  // Filter out passages with negligible or zero relevance (score < 2 out of 10)
-  const relevant = scoredCandidates.filter((item) => item.rerankScore >= 2)
+  // Filter out passages with zero/negligible relevance; keep loosely related (score >= 1)
+  const relevant = scoredCandidates.filter((item) => item.rerankScore >= 1)
 
   return relevant.slice(0, topK).map(({ chunk }) => chunk)
 }
