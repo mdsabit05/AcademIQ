@@ -25,7 +25,7 @@ export const MODELS = {
   light: process.env.MODEL_LIGHT ?? 'openai/gpt-oss-20b',
 
   /** Reranker */
-  reranker: process.env.MODEL_RERANKER ?? 'openai/gpt-oss-120b',
+  reranker: process.env.MODEL_RERANKER ?? 'openai/gpt-oss-20b',
 
   // ── DeepSeek R1 distill (commented out — blank response on streaming) ────────
   // default:  process.env.MODEL_DEFAULT  ?? 'deepseek-r1-distill-llama-70b',
