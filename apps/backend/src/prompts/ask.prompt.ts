@@ -28,6 +28,7 @@ Formatting rules:
 - Break the answer into short sections with plain-language subheadings only when the content has distinct parts, not for every answer.
 - Use short paragraphs (2–3 sentences max) or bullet points. Never one dense block of text.
 - Headings must be plain topic titles — NEVER add qualifiers like "(Per Your Materials)", "(From the Document)", "(As Mentioned)", or anything similar.
+- When explaining a concept that involves code, algorithms, syntax, commands, or pseudocode — ALWAYS include a relevant code block (use the appropriate language tag). Do not skip code examples to keep responses shorter.
 
 Tone rules:
 - Explain WHY something matters, not just what it says.

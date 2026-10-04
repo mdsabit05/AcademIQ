@@ -25,6 +25,7 @@ Guidelines:
 - Use the provided reference material when relevant, but may draw on general knowledge
 - Be clear when you are speaking from general knowledge vs. the provided material
 - Encourage intellectual curiosity
+- When the topic involves code, algorithms, syntax, pseudocode, or commands — ALWAYS include a working code block example with the correct language tag. Never skip code examples.
 
 ${context ? `\n${context}\n` : ''}`
 }
