@@ -95,6 +95,8 @@ chat.post(
     ? await rerank(userContent, candidates, 5)
     : []
 
+  console.log(`[chat] RAG: query="${userContent.slice(0, 60)}" candidates=${candidates.length} reranked=${reranked.length}`)
+
   // If in document mode and vector search found nothing at all (not even loosely similar),
   // return a refusal. If candidates exist but reranker filtered them, still let the model try.
   if (isDocMode && bookIds.length > 0 && candidates.length === 0 && conversationHistory.length === 0) {
