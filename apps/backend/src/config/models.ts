@@ -2,24 +2,38 @@
  * Centralized model configuration.
  * All model IDs are defined here. No model strings appear elsewhere in the codebase.
  * Override any model via environment variable without code changes.
+ *
+ * ── HYBRID MODE (current) ────────────────────────────────────────────────────
+ *   Chat  → NVIDIA free API  (env: NVIDIA_API_KEY)
+ *   Embed → OpenRouter       (env: OPENROUTER_API_KEY)  ← unchanged
+ *
+ * ── To revert to full OpenRouter ─────────────────────────────────────────────
+ *   Swap the commented / uncommented lines below, then update ai.service.ts.
  */
 export const MODELS = {
-  /** Embeddings — OpenRouter /api/v1/embeddings — 1536 dimensions */
+  /** Embeddings — OpenRouter /api/v1/embeddings — 1536 dimensions (unchanged) */
   embed: process.env.MODEL_EMBED ?? 'openai/text-embedding-3-small',
 
-  /** Default generation — learn, ask, general chat, discussion */
-  default: process.env.MODEL_DEFAULT ?? 'openai/gpt-5.6-terra',
+  // ── NVIDIA free chat models (active) ───────────────────────────────────────
+  /** Default generation — learn, ask, general chat */
+  default: process.env.MODEL_DEFAULT ?? 'meta/llama-3.3-70b-instruct',
 
   /** Strong reasoning — test generation, paper generation, reranking */
-  strong: process.env.MODEL_STRONG ?? 'openai/gpt-5.6-sol',
+  strong: process.env.MODEL_STRONG ?? 'nvidia/llama-3.1-nemotron-70b-instruct',
 
-  /** Lightweight — memory extraction, lightweight summarization */
-  light: process.env.MODEL_LIGHT ?? 'openai/gpt-5.6-luna',
+  /** Lightweight — memory extraction, syllabus parsing, summarization */
+  light: process.env.MODEL_LIGHT ?? 'meta/llama-3.1-8b-instruct',
 
-  /** Reranker — configurable independently; defaults to strong model */
-  reranker: process.env.MODEL_RERANKER ?? 'openai/gpt-5.6-sol',
+  /** Reranker */
+  reranker: process.env.MODEL_RERANKER ?? 'nvidia/llama-3.1-nemotron-70b-instruct',
 
-  /** Web search — Perplexity online model with built-in real-time search */
+  // ── OpenRouter chat models (commented out — uncomment to revert) ────────────
+  // default:   process.env.MODEL_DEFAULT   ?? 'openai/gpt-5.6-terra',
+  // strong:    process.env.MODEL_STRONG    ?? 'openai/gpt-5.6-sol',
+  // light:     process.env.MODEL_LIGHT     ?? 'openai/gpt-5.6-luna',
+  // reranker:  process.env.MODEL_RERANKER  ?? 'openai/gpt-5.6-sol',
+
+  /** Web search — Perplexity online model via OpenRouter (unchanged) */
   webSearch: process.env.MODEL_WEB_SEARCH ?? 'perplexity/sonar',
 } as const
 

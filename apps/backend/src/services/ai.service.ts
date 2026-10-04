@@ -1,19 +1,24 @@
 /**
- * AI Service — OpenRouter gateway for both chat completions and embeddings.
- * Single OPENROUTER_API_KEY covers all operations.
- * No model IDs are hardcoded here — callers pass from config/models.ts.
+ * AI Service — Hybrid mode:
+ *   Chat completions → NVIDIA free API  (NVIDIA_API_KEY)
+ *   Embeddings       → OpenRouter       (OPENROUTER_API_KEY)
+ *
+ * ── To revert to full OpenRouter ─────────────────────────────────────────────
+ *   1. Change CHAT_BASE  → OPENROUTER_BASE
+ *   2. Change chatHeaders → openrouterHeaders
+ *   (Also revert config/models.ts model names)
  */
 
 import { MODELS } from '../config/models.js'
 
-const BASE_URL = 'https://openrouter.ai/api/v1'
+// ── Base URLs ─────────────────────────────────────────────────────────────────
 
-export interface Message {
-  role: 'system' | 'user' | 'assistant'
-  content: string
-}
+const OPENROUTER_BASE = 'https://openrouter.ai/api/v1'
+const NVIDIA_BASE     = 'https://integrate.api.nvidia.com/v1'
 
-function authHeaders(): Record<string, string> {
+// ── Auth header factories ─────────────────────────────────────────────────────
+
+function openrouterHeaders(): Record<string, string> {
   const key = process.env.OPENROUTER_API_KEY
   if (!key) throw new Error('OPENROUTER_API_KEY is not set')
   return {
@@ -24,6 +29,23 @@ function authHeaders(): Record<string, string> {
   }
 }
 
+function nvidiaHeaders(): Record<string, string> {
+  const key = process.env.NVIDIA_API_KEY
+  if (!key) throw new Error('NVIDIA_API_KEY is not set')
+  return { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
+}
+
+// ── Active routing ────────────────────────────────────────────────────────────
+// Chat → NVIDIA  |  to revert: swap both lines to OPENROUTER_BASE / openrouterHeaders
+
+const CHAT_BASE   = NVIDIA_BASE       // ← swap to OPENROUTER_BASE to revert
+const chatHeaders = nvidiaHeaders     // ← swap to openrouterHeaders to revert
+
+export interface Message {
+  role: 'system' | 'user' | 'assistant'
+  content: string
+}
+
 /**
  * Stream a chat completion.
  * Returns the raw ReadableStream from OpenRouter for SSE passthrough.
@@ -32,15 +54,15 @@ export async function stream(
   messages: Message[],
   model: string = MODELS.default,
 ): Promise<ReadableStream<Uint8Array>> {
-  const res = await fetch(`${BASE_URL}/chat/completions`, {
+  const res = await fetch(`${CHAT_BASE}/chat/completions`, {
     method: 'POST',
-    headers: authHeaders(),
+    headers: chatHeaders(),
     body: JSON.stringify({ model, messages, stream: true, max_tokens: 4096 }),
   })
 
   if (!res.ok || !res.body) {
     const err = await res.text().catch(() => res.statusText)
-    throw new Error(`OpenRouter stream error ${res.status}: ${err}`)
+    throw new Error(`Chat stream error ${res.status}: ${err}`)
   }
 
   return res.body
@@ -54,15 +76,15 @@ export async function complete(
   messages: Message[],
   model: string = MODELS.default,
 ): Promise<string> {
-  const res = await fetch(`${BASE_URL}/chat/completions`, {
+  const res = await fetch(`${CHAT_BASE}/chat/completions`, {
     method: 'POST',
-    headers: authHeaders(),
+    headers: chatHeaders(),
     body: JSON.stringify({ model, messages, stream: false, max_tokens: 4096 }),
   })
 
   if (!res.ok) {
     const err = await res.text().catch(() => res.statusText)
-    throw new Error(`OpenRouter complete error ${res.status}: ${err}`)
+    throw new Error(`Chat complete error ${res.status}: ${err}`)
   }
 
   const data = (await res.json()) as {
@@ -114,9 +136,9 @@ export async function embedBatch(texts: string[]): Promise<number[][]> {
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
     const batch = texts.slice(i, i + BATCH_SIZE)
 
-    const res = await fetch(`${BASE_URL}/embeddings`, {
+    const res = await fetch(`${OPENROUTER_BASE}/embeddings`, {
       method: 'POST',
-      headers: authHeaders(),
+      headers: openrouterHeaders(),  // embeddings stay on OpenRouter
       body: JSON.stringify({
         model: MODELS.embed,
         input: batch,
@@ -125,7 +147,7 @@ export async function embedBatch(texts: string[]): Promise<number[][]> {
 
     if (!res.ok) {
       const err = await res.text().catch(() => res.statusText)
-      throw new Error(`OpenRouter embeddings error ${res.status}: ${err}`)
+      throw new Error(`Embeddings error ${res.status}: ${err}`)
     }
 
     const data = (await res.json()) as {
@@ -189,15 +211,15 @@ export async function completeWithTools(
     body.tool_choice = 'auto'
   }
 
-  const res = await fetch(`${BASE_URL}/chat/completions`, {
+  const res = await fetch(`${CHAT_BASE}/chat/completions`, {
     method: 'POST',
-    headers: authHeaders(),
+    headers: chatHeaders(),
     body: JSON.stringify(body),
   })
 
   if (!res.ok) {
     const err = await res.text().catch(() => res.statusText)
-    throw new Error(`OpenRouter tool completion error ${res.status}: ${err}`)
+    throw new Error(`Chat tool completion error ${res.status}: ${err}`)
   }
 
   const data = (await res.json()) as {
@@ -216,7 +238,7 @@ export async function completeWithTools(
   }
 
   const choice = data.choices[0]
-  if (!choice) throw new Error('No completion choice returned from OpenRouter')
+  if (!choice) throw new Error('No completion choice returned')
 
   const { message, finish_reason } = choice
 
