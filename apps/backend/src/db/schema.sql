@@ -102,7 +102,7 @@ DO $$ BEGIN
     SELECT 1 FROM pg_attribute
     WHERE attrelid = 'chunks'::regclass
       AND attname = 'embedding'
-      AND atttypmod <> 2052
+      AND atttypmod <> 2048
   ) THEN
     DROP INDEX IF EXISTS chunks_embedding_idx;
     ALTER TABLE chunks ALTER COLUMN embedding TYPE vector(2048) USING NULL;
