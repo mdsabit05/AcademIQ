@@ -16,7 +16,7 @@ import sql from '../db/client.js'
 import { requireOwnership } from '../middleware/rbac.js'
 import { rateLimit, userKey } from '../middleware/rate-limit.js'
 import { botGuard } from '../middleware/abuse-protection.js'
-import { retrieve } from '../services/retrieval.service.js'
+import { retrieve, retrieveBroad } from '../services/retrieval.service.js'
 import { rerank } from '../services/reranker.service.js'
 import { buildContext } from '../services/context-builder.service.js'
 import { readMemory, extractAndSave } from '../services/memory.service.js'
@@ -89,14 +89,25 @@ chat.post(
   const effectiveWebSearch = isDocMode ? false : webSearch
 
   // ── RAG pipeline ──────────────────────────────────────────────────────────
-  const candidates = bookIds.length > 0
+  // Detect meta-commands that don't match document chunks via similarity
+  const META_COMMANDS = /\b(summar\w+|overview|compare|contrast|outline|what (is|are|does) this (document|book|material|pdf)|explain this document|list (the )?(main |key )?(topics?|concepts?|points?))\b/i
+  const isMetaCommand = bookIds.length > 0 && META_COMMANDS.test(userContent)
+
+  let candidates = bookIds.length > 0
     ? await retrieve(userContent, bookIds, 20)
     : []
+
+  // If meta-command or vector search found nothing, use broad chunk retrieval
+  if (bookIds.length > 0 && (isMetaCommand || candidates.length === 0)) {
+    const broad = await retrieveBroad(bookIds, 20)
+    if (broad.length > 0) candidates = broad
+  }
+
   const reranked = candidates.length > 0
     ? await rerank(userContent, candidates, 5)
     : []
 
-  console.log(`[chat] RAG: query="${userContent.slice(0, 60)}" candidates=${candidates.length} reranked=${reranked.length}`)
+  console.log(`[chat] RAG: query="${userContent.slice(0, 60)}" candidates=${candidates.length} reranked=${reranked.length} meta=${isMetaCommand}`)
 
   // If in document mode and vector search found nothing at all (not even loosely similar),
   // return a refusal. If candidates exist but reranker filtered them, still let the model try.

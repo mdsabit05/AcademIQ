@@ -23,6 +23,59 @@ export interface RetrievedChunk {
 const DEFAULT_TOP_K = 20
 
 /**
+ * Broad retrieval — fetches chunks evenly spread across the book(s) without
+ * embedding similarity. Used for meta-commands like "summarise" or "compare"
+ * where the query doesn't semantically match any specific chunk.
+ */
+export async function retrieveBroad(
+  bookIds: string[],
+  topK = 20,
+): Promise<RetrievedChunk[]> {
+  if (bookIds.length === 0) return []
+
+  const rows = await sql<
+    Array<{
+      id: string
+      book_id: string
+      book_title: string
+      content: string
+      page_number: number | null
+      chapter: string | null
+      topic_hint: string | null
+      has_ocr: boolean
+    }>
+  >`
+    SELECT
+      c.id,
+      c.book_id,
+      b.title AS book_title,
+      c.content,
+      c.page_number,
+      c.chapter,
+      c.topic_hint,
+      c.has_ocr
+    FROM chunks c
+    JOIN books b ON b.id = c.book_id
+    WHERE c.book_id = ANY(${bookIds}::uuid[])
+      AND c.embedding IS NOT NULL
+    ORDER BY c.chunk_index ASC
+    LIMIT ${topK}
+  `
+
+  return rows.map((r) => ({
+    id: r.id,
+    bookId: r.book_id,
+    bookTitle: r.book_title,
+    content: r.content,
+    pageNumber: r.page_number,
+    chapter: r.chapter,
+    topicHint: r.topic_hint,
+    hasOcr: r.has_ocr,
+    score: 1,
+  }))
+}
+
+/**
  * Retrieve the top-K semantically similar chunks for a query.
  * Scoped to the provided book IDs (ownership already verified by the caller).
  *
