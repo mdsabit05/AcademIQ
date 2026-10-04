@@ -110,8 +110,8 @@ DO $$ BEGIN
 END $$;
 
 CREATE INDEX IF NOT EXISTS chunks_embedding_idx
-  ON chunks USING ivfflat (embedding vector_cosine_ops)
-  WITH (lists = 100);
+  ON chunks USING hnsw (embedding vector_cosine_ops)
+  WITH (m = 16, ef_construction = 64);
 
 CREATE INDEX IF NOT EXISTS chunks_book_id_idx ON chunks(book_id);
 
