@@ -16,16 +16,16 @@ export const MODELS = {
 
   // ── NVIDIA free chat models (active) ───────────────────────────────────────
   /** Default generation — learn, ask, general chat */
-  default: process.env.MODEL_DEFAULT ?? 'meta/llama-3.3-70b-instruct',
+  default: process.env.MODEL_DEFAULT ?? 'nvidia/nemotron-3-super-120b-a12b',
 
   /** Strong reasoning — test generation, paper generation, reranking */
-  strong: process.env.MODEL_STRONG ?? 'nvidia/llama-3.1-nemotron-70b-instruct',
+  strong: process.env.MODEL_STRONG ?? 'nvidia/nemotron-3-super-120b-a12b',
 
   /** Lightweight — memory extraction, syllabus parsing, summarization */
   light: process.env.MODEL_LIGHT ?? 'meta/llama-3.1-8b-instruct',
 
   /** Reranker */
-  reranker: process.env.MODEL_RERANKER ?? 'nvidia/llama-3.1-nemotron-70b-instruct',
+  reranker: process.env.MODEL_RERANKER ?? 'nvidia/nemotron-3-super-120b-a12b',
 
   // ── OpenRouter chat models (commented out — uncomment to revert) ────────────
   // default:   process.env.MODEL_DEFAULT   ?? 'openai/gpt-5.6-terra',
