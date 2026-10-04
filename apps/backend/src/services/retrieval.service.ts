@@ -23,9 +23,10 @@ export interface RetrievedChunk {
 const DEFAULT_TOP_K = 20
 
 /**
- * Broad retrieval — fetches chunks evenly spread across the book(s) without
- * embedding similarity. Used for meta-commands like "summarise" or "compare"
- * where the query doesn't semantically match any specific chunk.
+ * Broad retrieval — fetches chunks evenly from each book without embedding
+ * similarity. Used for meta-commands like "summarise" or "compare" where
+ * the query doesn't semantically match any specific chunk.
+ * Fetches perBookLimit chunks per book so all selected books are represented.
  */
 export async function retrieveBroad(
   bookIds: string[],
@@ -33,46 +34,53 @@ export async function retrieveBroad(
 ): Promise<RetrievedChunk[]> {
   if (bookIds.length === 0) return []
 
-  const rows = await sql<
-    Array<{
-      id: string
-      book_id: string
-      book_title: string
-      content: string
-      page_number: number | null
-      chapter: string | null
-      topic_hint: string | null
-      has_ocr: boolean
-    }>
-  >`
-    SELECT
-      c.id,
-      c.book_id,
-      b.title AS book_title,
-      c.content,
-      c.page_number,
-      c.chapter,
-      c.topic_hint,
-      c.has_ocr
-    FROM chunks c
-    JOIN books b ON b.id = c.book_id
-    WHERE c.book_id = ANY(${bookIds}::uuid[])
-      AND c.embedding IS NOT NULL
-    ORDER BY c.chunk_index ASC
-    LIMIT ${topK}
-  `
+  const perBook = Math.max(5, Math.ceil(topK / bookIds.length))
+  const all: RetrievedChunk[] = []
 
-  return rows.map((r) => ({
-    id: r.id,
-    bookId: r.book_id,
-    bookTitle: r.book_title,
-    content: r.content,
-    pageNumber: r.page_number,
-    chapter: r.chapter,
-    topicHint: r.topic_hint,
-    hasOcr: r.has_ocr,
-    score: 1,
-  }))
+  for (const bookId of bookIds) {
+    const rows = await sql<
+      Array<{
+        id: string
+        book_id: string
+        book_title: string
+        content: string
+        page_number: number | null
+        chapter: string | null
+        topic_hint: string | null
+        has_ocr: boolean
+      }>
+    >`
+      SELECT
+        c.id,
+        c.book_id,
+        b.title AS book_title,
+        c.content,
+        c.page_number,
+        c.chapter,
+        c.topic_hint,
+        c.has_ocr
+      FROM chunks c
+      JOIN books b ON b.id = c.book_id
+      WHERE c.book_id = ${bookId}
+        AND c.embedding IS NOT NULL
+      ORDER BY c.chunk_index ASC
+      LIMIT ${perBook}
+    `
+
+    all.push(...rows.map((r) => ({
+      id: r.id,
+      bookId: r.book_id,
+      bookTitle: r.book_title,
+      content: r.content,
+      pageNumber: r.page_number,
+      chapter: r.chapter,
+      topicHint: r.topic_hint,
+      hasOcr: r.has_ocr,
+      score: 1,
+    })))
+  }
+
+  return all
 }
 
 /**

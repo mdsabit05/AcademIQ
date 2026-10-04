@@ -90,22 +90,22 @@ chat.post(
 
   // ── RAG pipeline ──────────────────────────────────────────────────────────
   // Detect meta-commands that don't match document chunks via similarity
-  const META_COMMANDS = /\b(summar\w+|overview|compare|contrast|outline|what (is|are|does) this (document|book|material|pdf)|explain this document|list (the )?(main |key )?(topics?|concepts?|points?))\b/i
-  const isMetaCommand = bookIds.length > 0 && META_COMMANDS.test(userContent)
+  const META_COMMANDS = /\b(summar\w+|overview|compare|contrast|diff\w*|outline|what (is|are|does) this (document|book|material|pdf)|explain this document|list (the )?(main |key )?(topics?|concepts?|points?|ideas?)|introduction|conclusion)\b/i
+  const isMetaCommand = bookIds.length > 0 && (META_COMMANDS.test(userContent) || bookIds.length > 1)
 
-  let candidates = bookIds.length > 0
-    ? await retrieve(userContent, bookIds, 20)
-    : []
+  let candidates = isMetaCommand
+    ? await retrieveBroad(bookIds, 20)
+    : (bookIds.length > 0 ? await retrieve(userContent, bookIds, 20) : [])
 
-  // If meta-command or vector search found nothing, use broad chunk retrieval
-  if (bookIds.length > 0 && (isMetaCommand || candidates.length === 0)) {
-    const broad = await retrieveBroad(bookIds, 20)
-    if (broad.length > 0) candidates = broad
+  // Fallback: if vector search found nothing, try broad retrieval
+  if (!isMetaCommand && bookIds.length > 0 && candidates.length === 0) {
+    candidates = await retrieveBroad(bookIds, 20)
   }
 
-  const reranked = candidates.length > 0
-    ? await rerank(userContent, candidates, 5)
-    : []
+  // Skip reranker for meta-commands — it scores broad chunks low and filters them out
+  const reranked = isMetaCommand
+    ? candidates
+    : (candidates.length > 0 ? await rerank(userContent, candidates, 5) : [])
 
   console.log(`[chat] RAG: query="${userContent.slice(0, 60)}" candidates=${candidates.length} reranked=${reranked.length} meta=${isMetaCommand}`)
 
