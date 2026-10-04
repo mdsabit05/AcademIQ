@@ -11,7 +11,7 @@
  *   Swap the commented / uncommented lines below, then update ai.service.ts.
  */
 export const MODELS = {
-  /** Embeddings — NVIDIA paid API — nemotron-3-embed-1b — 4096 dimensions */
+  /** Embeddings — NVIDIA paid API — nemotron-3-embed-1b — 2048 dimensions */
   embed: process.env.MODEL_EMBED ?? 'nvidia/nemotron-3-embed-1b',
 
   // ── OpenRouter embeddings (commented out — uncomment to revert, also update ai.service.ts + schema.sql) ──

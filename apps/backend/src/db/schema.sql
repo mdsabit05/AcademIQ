@@ -77,15 +77,15 @@ DO $$ BEGIN
 END $$;
 
 -- ─────────────────────────────────────────────────────────
--- CHUNKS  (RAG vectors — 4096 dimensions, nvidia/nemotron-3-embed-1b)
--- To revert to OpenRouter (1536 dims): change vector(4096) → vector(1536)
---   and run: ALTER TABLE chunks ALTER COLUMN embedding TYPE vector(1536)
+-- CHUNKS  (RAG vectors — 2048 dimensions, nvidia/nemotron-3-embed-1b)
+-- To revert to OpenRouter (1536 dims): change vector(2048) → vector(1536)
+--   and run reembed.ts after switching model back
 -- ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS chunks (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   book_id     UUID NOT NULL REFERENCES books(id) ON DELETE CASCADE,
   content     TEXT NOT NULL,
-  embedding   vector(4096),
+  embedding   vector(2048),
   chunk_index INT NOT NULL,
   page_number INT,
   chapter     TEXT,
@@ -95,6 +95,19 @@ CREATE TABLE IF NOT EXISTS chunks (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Idempotent migration: resize embedding column to 2048 (nemotron-3-embed-1b)
+-- Clears stale embeddings — re-upload documents or run reembed.ts after deploy.
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_attribute
+    WHERE attrelid = 'chunks'::regclass
+      AND attname = 'embedding'
+      AND atttypmod <> 2052
+  ) THEN
+    ALTER TABLE chunks ALTER COLUMN embedding TYPE vector(2048) USING NULL;
+    DROP INDEX IF EXISTS chunks_embedding_idx;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS chunks_embedding_idx
   ON chunks USING ivfflat (embedding vector_cosine_ops)

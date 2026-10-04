@@ -135,7 +135,7 @@ export async function completeJson<T>(
 
 /**
  * Embed a single text string.
- * Returns a 4096-dimensional vector via NVIDIA paid API.
+ * Returns a 2048-dimensional vector via NVIDIA paid API.
  */
 export async function embed(text: string): Promise<number[]> {
   const results = await embedBatch([text])
