@@ -16,27 +16,21 @@ export const MODELS = {
 
   // ── Groq free chat models (active) ─────────────────────────────────────────
   /** Default generation — learn, ask, general chat */
-  default: process.env.MODEL_DEFAULT ?? 'llama3-70b-8192',
+  default: process.env.MODEL_DEFAULT ?? 'openai/gpt-oss-120b',
 
   /** Strong reasoning — test generation, paper generation, reranking */
-  strong: process.env.MODEL_STRONG ?? 'llama3-70b-8192',
+  strong: process.env.MODEL_STRONG ?? 'openai/gpt-oss-120b',
 
   /** Lightweight — memory extraction, syllabus parsing, summarization */
-  light: process.env.MODEL_LIGHT ?? 'llama-3.1-8b-instant',
+  light: process.env.MODEL_LIGHT ?? 'openai/gpt-oss-20b',
 
   /** Reranker */
-  reranker: process.env.MODEL_RERANKER ?? 'llama3-70b-8192',
-
-  // ── openai/gpt-oss-120b (commented out — unverified Groq API model ID) ───────
-  // default:  process.env.MODEL_DEFAULT  ?? 'openai/gpt-oss-120b',
-  // strong:   process.env.MODEL_STRONG   ?? 'openai/gpt-oss-120b',
-  // light:    process.env.MODEL_LIGHT    ?? 'openai/gpt-oss-20b',
-  // reranker: process.env.MODEL_RERANKER ?? 'openai/gpt-oss-120b',
+  reranker: process.env.MODEL_RERANKER ?? 'openai/gpt-oss-120b',
 
   // ── DeepSeek R1 distill (commented out — blank response on streaming) ────────
   // default:  process.env.MODEL_DEFAULT  ?? 'deepseek-r1-distill-llama-70b',
   // strong:   process.env.MODEL_STRONG   ?? 'deepseek-r1-distill-llama-70b',
-  // light:    process.env.MODEL_LIGHT    ?? 'llama-3.1-8b-instant',
+  // light:    process.env.MODEL_LIGHT    ?? 'openai/gpt-oss-20b',
   // reranker: process.env.MODEL_RERANKER ?? 'deepseek-r1-distill-llama-70b',
 
   // ── NVIDIA free chat models (commented out — uncomment to revert) ───────────
