@@ -95,18 +95,6 @@ CREATE TABLE IF NOT EXISTS chunks (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Migration: resize embedding column from 1536 → 4096 (nemotron-3-embed-1b)
--- Drops all existing embeddings — re-upload documents after deploying.
--- To revert: ALTER TABLE chunks ALTER COLUMN embedding TYPE vector(1536)
-DO $$ BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'chunks' AND column_name = 'embedding'
-  ) THEN
-    ALTER TABLE chunks ALTER COLUMN embedding TYPE vector(4096)
-      USING NULL;
-  END IF;
-END $$;
 
 CREATE INDEX IF NOT EXISTS chunks_embedding_idx
   ON chunks USING ivfflat (embedding vector_cosine_ops)
