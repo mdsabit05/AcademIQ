@@ -1,13 +1,12 @@
 /**
  * AI Service
  *   Chat completions → OpenRouter   (OPENROUTER_API_KEY)
- *   Embeddings       → NVIDIA       (NVIDIA_API_KEY) — nemotron-3-embed-1b, 2048 dims
+ *   Embeddings       → OpenRouter   (OPENROUTER_API_KEY) — text-embedding-3-small, 1536 dims
  */
 
 import { MODELS } from '../config/models.js'
 
 const OPENROUTER_BASE = 'https://openrouter.ai/api/v1'
-const NVIDIA_BASE     = 'https://integrate.api.nvidia.com/v1'
 
 function openrouterHeaders(): Record<string, string> {
   const key = process.env.OPENROUTER_API_KEY
@@ -18,12 +17,6 @@ function openrouterHeaders(): Record<string, string> {
     'HTTP-Referer': 'https://academiq.app',
     'X-Title': 'AcademIQ',
   }
-}
-
-function nvidiaHeaders(): Record<string, string> {
-  const key = process.env.NVIDIA_API_KEY
-  if (!key) throw new Error('NVIDIA_API_KEY is not set')
-  return { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
 }
 
 export interface Message {
@@ -101,7 +94,7 @@ export async function completeJson<T>(
 
 /**
  * Embed a single text string.
- * Returns a 2048-dimensional vector via NVIDIA paid API.
+ * Returns a 1536-dimensional vector via OpenRouter (text-embedding-3-small).
  */
 export async function embed(text: string): Promise<number[]> {
   const results = await embedBatch([text])
@@ -109,7 +102,7 @@ export async function embed(text: string): Promise<number[]> {
 }
 
 /**
- * Batch embed multiple texts via NVIDIA paid API (nemotron-3-embed-1b, 2048 dims).
+ * Batch embed multiple texts via OpenRouter (text-embedding-3-small, 1536 dims).
  */
 export async function embedBatch(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return []
@@ -120,9 +113,9 @@ export async function embedBatch(texts: string[]): Promise<number[][]> {
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
     const batch = texts.slice(i, i + BATCH_SIZE)
 
-    const res = await fetch(`${NVIDIA_BASE}/embeddings`, {
+    const res = await fetch(`${OPENROUTER_BASE}/embeddings`, {
       method: 'POST',
-      headers: nvidiaHeaders(),
+      headers: openrouterHeaders(),
       body: JSON.stringify({ model: MODELS.embed, input: batch }),
     })
 

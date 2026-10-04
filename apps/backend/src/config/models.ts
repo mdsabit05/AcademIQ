@@ -4,11 +4,11 @@
  * Override any model via environment variable without code changes.
  *
  *   Chat  → OpenRouter  (OPENROUTER_API_KEY)
- *   Embed → NVIDIA      (NVIDIA_API_KEY) — nemotron-3-embed-1b, 2048 dims
+ *   Embed → OpenRouter  (OPENROUTER_API_KEY) — text-embedding-3-small, 1536 dims
  */
 export const MODELS = {
-  /** Embeddings — NVIDIA paid API — nemotron-3-embed-1b — 2048 dimensions */
-  embed: process.env.MODEL_EMBED ?? 'nvidia/nemotron-3-embed-1b',
+  /** Embeddings — OpenRouter — text-embedding-3-small — 1536 dimensions */
+  embed: process.env.MODEL_EMBED ?? 'openai/text-embedding-3-small',
 
   /** Default generation — learn, ask, general chat */
   default: process.env.MODEL_DEFAULT ?? 'openai/gpt-4o-mini',

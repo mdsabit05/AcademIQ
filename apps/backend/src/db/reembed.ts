@@ -39,8 +39,8 @@ async function resizeColumn(dim: number) {
     WHERE attrelid = 'chunks'::regclass AND attname = 'embedding'
   `
   const current = rows[0]?.atttypmod ?? -1
-  // pg stores vector(N) as N+4 in atttypmod
-  const currentDim = current > 0 ? current - 4 : null
+  // pgvector stores vector(N) as atttypmod = N
+  const currentDim = current > 0 ? current : null
 
   if (currentDim === dim) {
     console.log(`[reembed] Column already vector(${dim}) — no resize needed.`)
@@ -51,13 +51,9 @@ async function resizeColumn(dim: number) {
   await sql.unsafe(
     `ALTER TABLE chunks ALTER COLUMN embedding TYPE vector(${dim}) USING NULL`,
   )
-  // Drop and recreate index for new dimension
+  // Drop stale index (HNSW max 2000 dims, ivfflat requires rows — skip recreating)
   await sql.unsafe(`DROP INDEX IF EXISTS chunks_embedding_idx`)
-  await sql.unsafe(
-    `CREATE INDEX chunks_embedding_idx ON chunks
-       USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)`,
-  )
-  console.log(`[reembed] Column resized and index recreated.`)
+  console.log(`[reembed] Column resized. No vector index created (exact KNN used).`)
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
