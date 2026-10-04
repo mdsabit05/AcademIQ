@@ -109,9 +109,8 @@ chat.post(
 
   console.log(`[chat] RAG: query="${userContent.slice(0, 60)}" candidates=${candidates.length} reranked=${reranked.length} meta=${isMetaCommand}`)
 
-  // If in document mode and vector search found nothing at all (not even loosely similar),
-  // return a refusal. If candidates exist but reranker filtered them, still let the model try.
-  if (isDocMode && bookIds.length > 0 && candidates.length === 0 && conversationHistory.length === 0) {
+  // Only refuse if no books are selected AND no conversation history exists
+  if (isDocMode && bookIds.length === 0 && candidates.length === 0 && conversationHistory.length === 0) {
     const notFoundMsg = "I am sorry, but this information is not present in your selected document(s). Please ask a question related to your uploaded study material."
     await sql`
       INSERT INTO chat_messages (session_id, role, content, metadata)

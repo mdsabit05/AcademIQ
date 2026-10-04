@@ -62,7 +62,6 @@ export async function retrieveBroad(
       FROM chunks c
       JOIN books b ON b.id = c.book_id
       WHERE c.book_id = ${bookId}
-        AND c.embedding IS NOT NULL
       ORDER BY c.chunk_index ASC
       LIMIT ${perBook}
     `
