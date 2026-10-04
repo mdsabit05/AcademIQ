@@ -123,7 +123,10 @@ chat.post(
   const memory = await readMemory(dbUserId, session.topic ?? undefined, 8)
 
   // ── Build context ─────────────────────────────────────────────────────────
-  const { contextText, citations } = buildContext(reranked, memory)
+  // If reranker filtered everything out but vector search found candidates,
+  // fall back to top-5 candidates so the model still has something to work with.
+  const contextChunks = reranked.length > 0 ? reranked : candidates.slice(0, 5)
+  const { contextText, citations } = buildContext(contextChunks, memory)
 
   // ── Build system prompt (with user language + style prefs) ───────────────
   let systemContent: string
