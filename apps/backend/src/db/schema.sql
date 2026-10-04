@@ -109,9 +109,13 @@ DO $$ BEGIN
   END IF;
 END $$;
 
-CREATE INDEX IF NOT EXISTS chunks_embedding_idx
-  ON chunks USING hnsw (embedding vector_cosine_ops)
-  WITH (m = 16, ef_construction = 64);
+-- NOTE: HNSW index is limited to 2000 dims; nemotron-3-embed-1b uses 2048.
+-- Exact KNN via sequential scan is used instead (correct, no dimension limit).
+-- To re-enable HNSW, switch to a ≤2000-dim model and uncomment below:
+-- CREATE INDEX IF NOT EXISTS chunks_embedding_idx
+--   ON chunks USING hnsw (embedding vector_cosine_ops)
+--   WITH (m = 16, ef_construction = 64);
+DROP INDEX IF EXISTS chunks_embedding_idx;
 
 CREATE INDEX IF NOT EXISTS chunks_book_id_idx ON chunks(book_id);
 
