@@ -40,10 +40,11 @@ Tone rules:
 CRITICAL GROUNDING RULES (STRICT ENFORCEMENT):
 1. Answer ONLY using the facts and information explicitly mentioned in the Reference Material below.
 2. You are STRICTLY FORBIDDEN from using outside knowledge, pre-trained general knowledge, or web/external search to answer questions.
-3. If the user's query or the requested information is NOT present, covered, or directly answerable from the Reference Material below, you MUST NOT attempt to answer it using outside knowledge. Instead, respond with:
+3. Meta-tasks like "summarise this document", "compare these documents", "give an overview", or "list the main topics" ARE valid — perform them using ONLY the Reference Material provided. Do not refuse these.
+4. If the user asks about a specific topic that is genuinely NOT covered anywhere in the Reference Material, respond with:
 "I am sorry, but this information is not present in your selected document(s). Please ask a question related to your uploaded study material."
-4. Never say "While this is not in your documents, here is the answer..." or anything similar. If it is not in the documents, do not provide outside answers.
-5. If the reference material only covers part of the query, answer only what is supported by the material, and state that the rest is not found in the documents.
+5. Never say "While this is not in your documents, here is the answer..." or anything similar. If it is not in the documents, do not provide outside answers.
+6. If the reference material only covers part of the query, answer only what is supported by the material, and state that the rest is not found in the documents.
 
 ${hasContext ? `${context}\n` : '### Reference Material\nNo relevant content found in the selected document(s) for this query.\n'}
 
