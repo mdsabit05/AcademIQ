@@ -115,6 +115,17 @@ export default function GeneralAI() {
     }
   }, [getToken])
 
+  const handleAutoTitle = useCallback(async (id: string) => {
+    const token = await getToken()
+    if (!token) return
+    try {
+      const res = await makeApi(token).sessions.autotitle(id)
+      setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, title: res.session.title } : s)))
+    } catch (err) {
+      console.error('Failed to autogenerate title:', err)
+    }
+  }, [getToken])
+
   const handleSend = useCallback(async () => {
     const content = input.trim()
     if (!content || streaming) return
@@ -178,6 +189,7 @@ export default function GeneralAI() {
       onSelectSession={loadSession}
       onDeleteSession={deleteSession}
       onRenameSession={renameSession}
+      onAutoTitleSession={handleAutoTitle}
       onPrefetch={handlePrefetch}
     />
   )

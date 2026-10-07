@@ -130,9 +130,10 @@ export default function Dashboard() {
   const todoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    let cancelled = false
     async function load() {
       const token = await getToken()
-      if (!token) return
+      if (!token || cancelled) return
       const api = makeApi(token)
       try {
         const [booksRes, syllabiRes, progressRes, historyRes, tasksRes] = await Promise.all([
@@ -142,18 +143,24 @@ export default function Dashboard() {
           api.progress.history(6, 0),
           api.studyplan.listTasks(),
         ])
+        if (cancelled) return
         setBooks(booksRes.books.filter((b) => b.status === 'READY'))
         setSyllabi(syllabiRes.syllabi.filter((s) => s.status === 'ready'))
         setTopicMastery(progressRes.topicMastery)
         setAttempts(historyRes.attempts as HistoryAttempt[])
         setTasks(tasksRes.tasks)
       } catch (err) {
-        console.error('[dashboard] load error:', err)
+        if (!cancelled) console.error('[dashboard] load error:', err)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
-    load().catch(console.error)
+    load().catch((err) => {
+      if (!cancelled) console.error(err)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [getToken])
 
   async function handleAddTodo() {

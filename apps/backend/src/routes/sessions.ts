@@ -12,6 +12,7 @@ import sql from '../db/client.js'
 import { requireOwnership } from '../middleware/rbac.js'
 import { verifyBookAccess } from '../middleware/rbac.js'
 import { limitStr, isEnum } from '../lib/validate.js'
+import { generateSessionTitle } from '../services/ai.service.js'
 import type { AuthEnv } from '../middleware/auth.js'
 
 const VALID_MODES = ['learn', 'ask', 'general'] as const
@@ -26,6 +27,7 @@ sessions.post('/', async (c) => {
     mode: 'learn' | 'ask' | 'general'
     bookIds: string[]
     topic?: string
+    title?: string
   }>()
 
   if (!isEnum(body.mode, VALID_MODES)) {
@@ -43,10 +45,11 @@ sessions.post('/', async (c) => {
   }
 
   const topic = body.topic ? limitStr(body.topic, 500) : null
+  const title = body.title ? limitStr(body.title.trim(), 100) : null
 
   const [session] = await sql<[{ id: string }]>`
-    INSERT INTO chat_sessions (owner_id, mode, topic)
-    VALUES (${dbUserId}, ${body.mode}, ${topic})
+    INSERT INTO chat_sessions (owner_id, mode, topic, title)
+    VALUES (${dbUserId}, ${body.mode}, ${topic}, ${title})
     RETURNING id
   `
 
@@ -136,6 +139,32 @@ sessions.patch('/:id', requireOwnership('chat_sessions', 'id'), async (c) => {
     RETURNING id, mode, topic, title, created_at, updated_at
   `
   if (!session) return c.json({ error: 'Not Found' }, 404)
+  return c.json({ session })
+})
+
+// ── Auto-generate session title from messages ──────────────────────────────
+
+sessions.post('/:id/autotitle', requireOwnership('chat_sessions', 'id'), async (c) => {
+  const id = c.req.param('id')
+
+  const messages = await sql<Array<{ content: string }>>`
+    SELECT content FROM chat_messages
+    WHERE session_id = ${id} AND role = 'user' AND NOT content LIKE '[CONTEXT%'
+    ORDER BY created_at ASC
+    LIMIT 1
+  `
+  const firstUserMsg = messages[0]?.content
+  if (!firstUserMsg) {
+    return c.json({ error: 'No user messages to generate title from' }, 400)
+  }
+
+  const generatedTitle = await generateSessionTitle(firstUserMsg)
+  const [session] = await sql`
+    UPDATE chat_sessions
+    SET title = ${generatedTitle}, updated_at = now()
+    WHERE id = ${id}
+    RETURNING id, mode, topic, title, created_at, updated_at
+  `
   return c.json({ session })
 })
 

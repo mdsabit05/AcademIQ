@@ -9,6 +9,7 @@ import { useMode } from './lib/modeContext.tsx'
 
 // ── Lazy-loaded pages (code-split per route) ─────────────────────────────────
 const Landing         = lazy(() => import('./pages/Landing.tsx'))
+const AuthPage        = lazy(() => import('./pages/AuthPage.tsx'))
 const Dashboard       = lazy(() => import('./pages/Dashboard.tsx'))
 const TeacherDashboard = lazy(() => import('./pages/TeacherDashboard.tsx'))
 const TeacherMaterials = lazy(() => import('./pages/TeacherMaterials.tsx'))
@@ -94,22 +95,10 @@ export default function App() {
       <Routes>
         {/* Public */}
         <Route path="/" element={<LandingOrDashboard />} />
-        <Route
-          path="/sign-in/*"
-          element={
-            <div className="flex min-h-screen items-center justify-center bg-bg">
-              <SignIn />
-            </div>
-          }
-        />
-        <Route
-          path="/sign-up/*"
-          element={
-            <div className="flex min-h-screen items-center justify-center bg-bg">
-              <SignUp />
-            </div>
-          }
-        />
+        <Route path="/sign-in/*" element={<AuthPage initialMode="sign-in" />} />
+        <Route path="/login/*" element={<AuthPage initialMode="sign-in" />} />
+        <Route path="/sign-up/*" element={<AuthPage initialMode="sign-up" />} />
+        <Route path="/register/*" element={<AuthPage initialMode="sign-up" />} />
 
         {/* Protected — wrapped in AppLayout (sidebar + main) */}
         <Route

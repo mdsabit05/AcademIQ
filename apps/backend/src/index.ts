@@ -70,17 +70,17 @@ app.route('/api/webhooks', webhooksRoute)
 // ── Authenticated routes ──────────────────────────────────────────────────────
 const api = new Hono()
 
-// Layer 1 — IP-based limit (pre-auth): 200 req / min.
+// Layer 1 — IP-based limit (pre-auth): 600 req / min.
 // Stops scanners and floods before any crypto work is done.
-api.use('*', rateLimit({ windowMs: 60_000, max: 200, label: 'api-ip' }))
+api.use('*', rateLimit({ windowMs: 60_000, max: 600, label: 'api-ip' }))
 
 // Layer 2 — Authentication.
 api.use('*', authMiddleware)
 
-// Layer 3 — Per-user limit (post-auth): 120 req / min.
+// Layer 3 — Per-user limit (post-auth): 500 req / min.
 // Prevents a single compromised account from abusing the platform
 // even if they rotate IPs to get past layer 1.
-api.use('*', rateLimit({ windowMs: 60_000, max: 120, keyFn: userKey, label: 'api-user' }))
+api.use('*', rateLimit({ windowMs: 60_000, max: 500, keyFn: userKey, label: 'api-user' }))
 
 api.route('/books',     booksRoute)
 api.route('/sessions',  sessionsRoute)

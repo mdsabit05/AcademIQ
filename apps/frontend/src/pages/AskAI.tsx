@@ -511,6 +511,17 @@ export default function AskAI() {
     }
   }
 
+  async function handleAutoTitle(id: string) {
+    const token = await getToken()
+    if (!token) return
+    try {
+      const res = await makeApi(token).sessions.autotitle(id)
+      setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, title: res.session.title } : s)))
+    } catch (err) {
+      console.error('Failed to autogenerate title:', err)
+    }
+  }
+
   const sidebar = (
     <ChatHistorySidebar
       sessions={sessions}
@@ -519,6 +530,7 @@ export default function AskAI() {
       onSelectSession={loadSession}
       onDeleteSession={deleteSession}
       onRenameSession={renameSession}
+      onAutoTitleSession={handleAutoTitle}
       onPrefetch={handlePrefetch}
     />
   )

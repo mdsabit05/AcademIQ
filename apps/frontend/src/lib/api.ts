@@ -116,7 +116,7 @@ export function makeApi(token: string) {
 
     // ── Sessions ───────────────────────────────────────────────────────────
     sessions: {
-      create: (body: { mode: 'learn' | 'ask' | 'general'; bookIds: string[]; topic?: string }) =>
+      create: (body: { mode: 'learn' | 'ask' | 'general'; bookIds: string[]; topic?: string; title?: string }) =>
         apiFetch<{ session: ChatSession }>('/sessions', token, {
           method: 'POST',
           body: JSON.stringify(body),
@@ -135,6 +135,11 @@ export function makeApi(token: string) {
         apiFetch<{ session: ChatSession }>(`/sessions/${id}`, token, {
           method: 'PATCH',
           body: JSON.stringify(body),
+        }),
+
+      autotitle: (id: string) =>
+        apiFetch<{ session: ChatSession }>(`/sessions/${id}/autotitle`, token, {
+          method: 'POST',
         }),
 
       delete: (id: string) =>

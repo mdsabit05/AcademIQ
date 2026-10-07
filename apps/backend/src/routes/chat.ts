@@ -21,7 +21,7 @@ import { rerank } from '../services/reranker.service.js'
 import { buildContext } from '../services/context-builder.service.js'
 import { readMemory, extractAndSave } from '../services/memory.service.js'
 import { checkResponse } from '../services/guardrails.service.js'
-import { stream as aiStream, parseSSEStream } from '../services/ai.service.js'
+import { stream as aiStream, parseSSEStream, generateSessionTitle } from '../services/ai.service.js'
 import { MODELS } from '../config/models.js'
 import { learnSystemPrompt } from '../prompts/learn.prompt.js'
 import { askSystemPrompt } from '../prompts/ask.prompt.js'
@@ -117,8 +117,19 @@ chat.post(
       VALUES (${sessionId}, 'user', ${userContent}, '{}')
     `
     if (!userContent.startsWith('[CONTEXT')) {
-      const autoTitle = userContent.slice(0, 55).replace(/\s+/g, ' ').trim()
-      await sql`UPDATE chat_sessions SET title = ${autoTitle} WHERE id = ${sessionId} AND title IS NULL`
+      const fallbackTitle = userContent.slice(0, 45).replace(/\s+/g, ' ').trim()
+      await sql`UPDATE chat_sessions SET title = ${fallbackTitle} WHERE id = ${sessionId} AND title IS NULL`
+      generateSessionTitle(userContent)
+        .then(async (aiTitle) => {
+          if (aiTitle) {
+            await sql`
+              UPDATE chat_sessions
+              SET title = ${aiTitle}
+              WHERE id = ${sessionId} AND (title = ${fallbackTitle} OR title IS NULL)
+            `
+          }
+        })
+        .catch(() => {})
     }
     await sql`
       INSERT INTO chat_messages (session_id, role, content, metadata)
@@ -163,11 +174,23 @@ chat.post(
     VALUES (${sessionId}, 'user', ${userContent}, '{}')
   `
 
-  // ── Auto-title: set from first user message if not already titled ─────────
+  // ── Auto-title: set clean initial title + generate smart AI title in background ──
   // Skip context-priming messages (test review sessions)
   if (conversationHistory.length === 0 && !userContent.startsWith('[CONTEXT')) {
-    const autoTitle = userContent.slice(0, 55).replace(/\s+/g, ' ').trim()
-    await sql`UPDATE chat_sessions SET title = ${autoTitle} WHERE id = ${sessionId} AND title IS NULL`
+    const fallbackTitle = userContent.slice(0, 45).replace(/\s+/g, ' ').trim()
+    await sql`UPDATE chat_sessions SET title = ${fallbackTitle} WHERE id = ${sessionId} AND title IS NULL`
+
+    generateSessionTitle(userContent)
+      .then(async (aiTitle) => {
+        if (aiTitle) {
+          await sql`
+            UPDATE chat_sessions
+            SET title = ${aiTitle}
+            WHERE id = ${sessionId} AND (title = ${fallbackTitle} OR title IS NULL)
+          `
+        }
+      })
+      .catch((err) => console.warn('[chat] auto-title error:', err))
   }
 
   // ── Stream AI response ────────────────────────────────────────────────────

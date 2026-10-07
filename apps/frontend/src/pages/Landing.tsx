@@ -380,7 +380,7 @@ export default function Landing() {
 
   function go() {
     if (isSignedIn) navigate('/dashboard')
-    else openSignUp()
+    else navigate('/sign-up')
   }
 
   function startGuest() {
@@ -613,7 +613,7 @@ export default function Landing() {
                   </button>
                   <button
                     className="lp-login-btn"
-                    onClick={() => isSignedIn ? navigate('/dashboard') : openSignIn()}
+                    onClick={() => isSignedIn ? navigate('/dashboard') : navigate('/sign-in')}
                     style={{
                       background: 'transparent',
                       border: `1.5px solid ${T.loginBorder}`,

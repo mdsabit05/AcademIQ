@@ -244,22 +244,29 @@ export async function completeWithTools(
 /**
  * Parse a raw SSE stream into text tokens.
  * Used by route handlers to forward to the client via Hono streamSSE.
+ * Buffers chunks across read calls to prevent dropped tokens on packet boundaries.
  */
 export async function* parseSSEStream(
   rawStream: ReadableStream<Uint8Array>,
 ): AsyncGenerator<string> {
   const reader = rawStream.getReader()
   const decoder = new TextDecoder()
+  let buffer = ''
 
   try {
     while (true) {
       const { done, value } = await reader.read()
-      if (done) break
+      if (done) {
+        buffer += decoder.decode()
+        break
+      }
 
-      const text = decoder.decode(value, { stream: true })
-      const lines = text.split('\n')
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
 
-      for (const line of lines) {
+      for (const rawLine of lines) {
+        const line = rawLine.replace(/\r$/, '').trim()
         if (!line.startsWith('data: ')) continue
         const data = line.slice(6).trim()
         if (data === '[DONE]') return
@@ -275,7 +282,59 @@ export async function* parseSSEStream(
         }
       }
     }
+
+    if (buffer.trim()) {
+      const line = buffer.replace(/\r$/, '').trim()
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6).trim()
+        if (data !== '[DONE]') {
+          try {
+            const parsed = JSON.parse(data) as {
+              choices?: Array<{ delta?: { content?: string } }>
+            }
+            const token = parsed.choices?.[0]?.delta?.content
+            if (token) yield token
+          } catch {
+            // skip malformed lines
+          }
+        }
+      }
+    }
   } finally {
     reader.releaseLock()
   }
+}
+
+/**
+ * Generate a concise 3-5 word conversation title from the user's initial message.
+ * Uses lightweight model. Strips quotes, prefixes, and markdown.
+ */
+export async function generateSessionTitle(userMessage: string): Promise<string> {
+  const cleanMsg = userMessage.replace(/\s+/g, ' ').trim()
+  if (!cleanMsg) return 'New Conversation'
+
+  try {
+    const raw = await complete([
+      {
+        role: 'system',
+        content:
+          'You generate concise, descriptive titles for chat sessions. Return ONLY a 3-5 word title summarizing the user message. Do NOT include quotes, prefixes like "Title:", markdown, or punctuation.',
+      },
+      {
+        role: 'user',
+        content: cleanMsg.slice(0, 500),
+      },
+    ], MODELS.light)
+
+    const cleaned = raw.replace(/["'*_#`]/g, '').trim()
+    if (cleaned && cleaned.length >= 2 && cleaned.length <= 60) {
+      return cleaned
+    }
+  } catch (err) {
+    console.warn('[title] failed to generate title:', err)
+  }
+
+  // Graceful fallback: first 4-5 words or slice
+  const words = cleanMsg.split(' ').slice(0, 5).join(' ')
+  return words.length > 40 ? words.slice(0, 40) + '…' : words
 }

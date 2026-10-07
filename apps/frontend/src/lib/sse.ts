@@ -37,18 +37,25 @@ export function useSSE(options: UseSSEOptions = {}) {
 
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
+        let buf = ''
 
         while (true) {
           const { done, value } = await reader.read()
-          if (done) break
+          if (done) {
+            buf += decoder.decode()
+            break
+          }
 
-          const chunk = decoder.decode(value, { stream: true })
-          const lines = chunk.split('\n').filter((l) => l.startsWith('data: '))
+          buf += decoder.decode(value, { stream: true })
+          const lines = buf.split('\n')
+          buf = lines.pop() ?? ''
 
-          for (const line of lines) {
+          for (const rawLine of lines) {
+            const line = rawLine.replace(/\r$/, '').trim()
+            if (!line.startsWith('data: ')) continue
             try {
               const parsed = JSON.parse(line.slice(6))
-              const t: string = parsed.token ?? ''
+              const t: string = parsed.token ?? (typeof parsed === 'string' ? parsed : '')
               if (t) {
                 accumulated += t
                 setText((prev) => prev + t)

@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   useAuth as useClerkAuth,
   useUser as useClerkUser,
@@ -21,12 +21,14 @@ export function enterGuestMode(): string {
     token = 'guest_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36)
     localStorage.setItem(GUEST_TOKEN_KEY, token)
   }
+  window.dispatchEvent(new Event('aq_auth_change'))
   return token
 }
 
 export function exitGuestMode(): void {
   localStorage.removeItem(GUEST_TOKEN_KEY)
   sessionStorage.removeItem('aq_current_user')
+  window.dispatchEvent(new Event('aq_auth_change'))
 }
 
 export function useAuth(): ReturnType<typeof useClerkAuth> & {
@@ -34,24 +36,36 @@ export function useAuth(): ReturnType<typeof useClerkAuth> & {
   guestToken: string | null
 } {
   const clerkAuth = useClerkAuth()
-  let guestToken = getGuestToken()
+  const [guestToken, setGuestToken] = useState<string | null>(() => getGuestToken())
 
-  if (clerkAuth.isSignedIn && guestToken) {
-    exitGuestMode()
-    guestToken = null
-  } else if (!clerkAuth.isSignedIn && !guestToken) {
-    guestToken = enterGuestMode()
-  }
+  useEffect(() => {
+    const handleAuthChange = () => setGuestToken(getGuestToken())
+    window.addEventListener('aq_auth_change', handleAuthChange)
+    window.addEventListener('storage', handleAuthChange)
+    return () => {
+      window.removeEventListener('aq_auth_change', handleAuthChange)
+      window.removeEventListener('storage', handleAuthChange)
+    }
+  }, [])
+
+  // If user signed in with real Clerk account, clear guest session
+  useEffect(() => {
+    if (clerkAuth.isSignedIn && guestToken) {
+      exitGuestMode()
+    }
+  }, [clerkAuth.isSignedIn, guestToken])
 
   const isGuest = Boolean(!clerkAuth.isSignedIn && guestToken)
+  const clerkGetToken = clerkAuth.getToken
+  const clerkSignOut = clerkAuth.signOut
+  const isSignedIn = Boolean(clerkAuth.isSignedIn || isGuest)
 
   const getToken = useCallback(async () => {
     if (clerkAuth.isSignedIn) {
-      return clerkAuth.getToken()
+      return clerkGetToken()
     }
-    return guestToken ?? enterGuestMode()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clerkAuth.isSignedIn, clerkAuth.getToken, guestToken])
+    return getGuestToken()
+  }, [clerkAuth.isSignedIn, clerkGetToken])
 
   const signOut = useCallback(async (cb?: () => void) => {
     if (isGuest) {
@@ -59,14 +73,13 @@ export function useAuth(): ReturnType<typeof useClerkAuth> & {
       if (cb) cb()
       return
     }
-    return (clerkAuth.signOut as any)(cb)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isGuest, clerkAuth.signOut])
+    return (clerkSignOut as any)(cb)
+  }, [isGuest, clerkSignOut])
 
   return {
     ...clerkAuth,
     isLoaded: clerkAuth.isLoaded,
-    isSignedIn: clerkAuth.isSignedIn || isGuest,
+    isSignedIn,
     isGuest,
     guestToken,
     userId: clerkAuth.userId || guestToken,
@@ -80,13 +93,21 @@ export function useAuth(): ReturnType<typeof useClerkAuth> & {
 
 export function useUser(): ReturnType<typeof useClerkUser> {
   const clerkUser = useClerkUser()
-  let guestToken = getGuestToken()
-  if (!clerkUser.isSignedIn && !guestToken) {
-    guestToken = enterGuestMode()
-  }
+  const [guestToken, setGuestToken] = useState<string | null>(() => getGuestToken())
+
+  useEffect(() => {
+    const handleAuthChange = () => setGuestToken(getGuestToken())
+    window.addEventListener('aq_auth_change', handleAuthChange)
+    window.addEventListener('storage', handleAuthChange)
+    return () => {
+      window.removeEventListener('aq_auth_change', handleAuthChange)
+      window.removeEventListener('storage', handleAuthChange)
+    }
+  }, [])
+
   const isGuest = Boolean(!clerkUser.isSignedIn && guestToken)
 
-  if (isGuest) {
+  if (isGuest && guestToken) {
     return {
       isLoaded: true,
       isSignedIn: true,
@@ -106,7 +127,18 @@ export function useUser(): ReturnType<typeof useClerkUser> {
 
 export function useClerk(): ReturnType<typeof useClerkOrig> {
   const clerk = useClerkOrig()
-  const guestToken = getGuestToken()
+  const [guestToken, setGuestToken] = useState<string | null>(() => getGuestToken())
+
+  useEffect(() => {
+    const handleAuthChange = () => setGuestToken(getGuestToken())
+    window.addEventListener('aq_auth_change', handleAuthChange)
+    window.addEventListener('storage', handleAuthChange)
+    return () => {
+      window.removeEventListener('aq_auth_change', handleAuthChange)
+      window.removeEventListener('storage', handleAuthChange)
+    }
+  }, [])
+
   const isGuest = Boolean(!clerk.user && guestToken)
 
   return {
