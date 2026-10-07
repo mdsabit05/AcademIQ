@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { Sun, Moon, LogOut, Settings } from 'lucide-react'
-import { useUser, useClerk, useAuth } from '../../lib/auth.ts'
+import { useUser, useClerk } from '../../lib/auth.ts'
 import Sidebar from './Sidebar.tsx'
 import MobileBottomNav from './MobileBottomNav.tsx'
 import { SidebarProvider } from '../../lib/sidebarContext.tsx'
@@ -14,7 +14,6 @@ import Logo from '../Logo.tsx'
 function MobileTopBar() {
   const { user } = useUser()
   const { signOut } = useClerk()
-  const { isGuest } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const { mode, setMode } = useMode()
   const { theme, toggle } = useTheme()
@@ -95,7 +94,7 @@ function MobileTopBar() {
                 onClick={() => { setMenuOpen(false); signOut(() => navigate('/')) }}
                 className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/5 transition-colors"
               >
-                <LogOut size={14} /> {isGuest ? 'Exit Guest' : 'Sign Out'}
+                <LogOut size={14} /> Sign Out
               </button>
             </div>
           )}

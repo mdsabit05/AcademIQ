@@ -47,45 +47,6 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
     return c.json({ error: 'Unauthorized' }, 401)
   }
 
-  if (token.startsWith('guest_')) {
-    if (!/^guest_[a-zA-Z0-9_-]{8,64}$/.test(token)) {
-      trackAuthFailure(ip)
-      return c.json({ error: 'Unauthorized: Invalid guest token format' }, 401)
-    }
-
-    try {
-      const email = `${token}@guest.academiq.local`
-      const name = 'Guest User'
-
-      const [guestUser] = await sql<
-        Array<{ id: string; role: Role; learning_prefs: Record<string, unknown> }>
-      >`
-        INSERT INTO users (clerk_id, email, name, role)
-        VALUES (
-          ${token},
-          ${email},
-          ${name},
-          'student'
-        )
-        ON CONFLICT (clerk_id) DO UPDATE
-          SET email = EXCLUDED.email
-        RETURNING id, role, learning_prefs
-      `
-
-      c.set('clerkUserId', token)
-      c.set('dbUserId', guestUser.id)
-      c.set('userRole', 'student')
-      c.set('userPrefs', guestUser.learning_prefs ?? {})
-
-      clearAuthFailures(ip)
-      return await next()
-    } catch (err) {
-      logger.error('Failed to upsert guest user', {
-        error: err instanceof Error ? err.message : String(err),
-      })
-      return c.json({ error: 'Failed to authenticate guest' }, 500)
-    }
-  }
 
   try {
     const payload = await verifyToken(token, {

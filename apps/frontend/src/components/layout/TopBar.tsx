@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { Sun, Moon, ChevronDown, LogOut, Settings } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useClerk, useUser, useAuth } from '../../lib/auth.ts'
+import { useClerk, useUser } from '../../lib/auth.ts'
 import { useTheme } from '../../lib/theme.tsx'
 import { useCurrentUser } from '../../lib/useCurrentUser.ts'
 import { useMode } from '../../lib/modeContext.tsx'
@@ -11,8 +11,7 @@ export default function TopBar() {
   const { theme, toggle } = useTheme()
   const { user } = useCurrentUser()
   const { user: clerkUser } = useUser()
-  const { signOut, openSignIn } = useClerk()
-  const { isGuest } = useAuth()
+  const { signOut } = useClerk()
   const navigate = useNavigate()
   const { mode, setMode } = useMode()
   const [open, setOpen] = useState(false)
@@ -40,20 +39,6 @@ export default function TopBar() {
 
       {/* Right: controls */}
       <div className="ml-auto flex items-center gap-2">
-        {/* Guest Mode badge */}
-        {isGuest && (
-          <button
-            onClick={() => {
-              if (openSignIn) openSignIn()
-              else navigate('/sign-in')
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-all cursor-pointer"
-            title="You are browsing as a guest. Click to sign in and save your history permanently."
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-            <span className="hidden sm:inline">Guest Mode •</span> <span className="underline font-semibold">Sign In</span>
-          </button>
-        )}
 
         {/* Student / Teacher toggle */}
         <div className="flex items-center rounded-lg border border-border bg-bg p-0.5 gap-0.5">
@@ -123,7 +108,7 @@ export default function TopBar() {
                 onClick={() => signOut(() => navigate('/'))}
                 className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/5 transition-colors"
               >
-                <LogOut size={14} /> {isGuest ? 'Exit Guest' : 'Sign Out'}
+                <LogOut size={14} /> Sign Out
               </button>
             </div>
           )}
