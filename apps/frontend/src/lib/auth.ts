@@ -70,7 +70,9 @@ export function useAuth(): ReturnType<typeof useClerkAuth> & {
   const signOut = useCallback(async (cb?: () => void) => {
     if (isGuest) {
       exitGuestMode()
-      if (cb) cb()
+      // Full page reload so all React state reinitialises from scratch —
+      // avoids stale isSignedIn state causing a redirect loop back to /dashboard
+      window.location.replace('/')
       return
     }
     return (clerkSignOut as any)(cb)
@@ -143,13 +145,13 @@ export function useClerk(): ReturnType<typeof useClerkOrig> {
 
   return {
     ...clerk,
-    signOut: async (cb?: () => void) => {
+    signOut: async (_cb?: () => void) => {
       if (isGuest) {
         exitGuestMode()
-        if (cb) cb()
+        window.location.replace('/')
         return
       }
-      return (clerk.signOut as any)(cb)
+      return (clerk.signOut as any)(_cb)
     },
   } as unknown as ReturnType<typeof useClerkOrig>
 }
