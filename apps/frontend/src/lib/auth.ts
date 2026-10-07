@@ -72,7 +72,7 @@ export function useAuth(): ReturnType<typeof useClerkAuth> & {
       exitGuestMode()
       // Full page reload so all React state reinitialises from scratch —
       // avoids stale isSignedIn state causing a redirect loop back to /dashboard
-      window.location.replace('/')
+      window.location.replace(window.location.pathname + '#/')
       return
     }
     return (clerkSignOut as any)(cb)
@@ -148,7 +148,7 @@ export function useClerk(): ReturnType<typeof useClerkOrig> {
     signOut: async (_cb?: () => void) => {
       if (isGuest) {
         exitGuestMode()
-        window.location.replace('/')
+        window.location.replace(window.location.pathname + '#/')
         return
       }
       return (clerk.signOut as any)(_cb)
