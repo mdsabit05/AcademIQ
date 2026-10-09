@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Trash2, MoreHorizontal, MessageSquare, Star, Pencil, Check, X, Sparkles } from 'lucide-react'
+import { Plus, Trash2, MoreHorizontal, MessageSquare, Star, Pencil, Check, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { ChatSession } from 'shared'
 
@@ -71,7 +71,6 @@ function SessionRow({
   onSelect,
   onDelete,
   onRename,
-  onAutoTitle,
   onStar,
   onPrefetch,
 }: {
@@ -81,7 +80,6 @@ function SessionRow({
   onSelect: () => void
   onDelete: () => void
   onRename?: (newTitle: string) => void
-  onAutoTitle?: () => void | Promise<void>
   onStar: () => void
   onPrefetch?: () => void
 }) {
@@ -248,18 +246,6 @@ function SessionRow({
                   </div>
                 ) : (
                   <>
-                    {onAutoTitle && (
-                      <button
-                        onClick={async () => {
-                          setMenuOpen(false)
-                          await onAutoTitle()
-                        }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted hover:text-white hover:bg-white/5 transition-colors"
-                      >
-                        <Sparkles size={12} className="text-primary shrink-0" />
-                        Auto-title
-                      </button>
-                    )}
                     <button
                       onClick={() => { onStar(); setMenuOpen(false) }}
                       className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted hover:text-white hover:bg-white/5 transition-colors"
@@ -294,7 +280,6 @@ interface Props {
   onSelectSession: (session: ChatSession) => void
   onDeleteSession: (id: string) => void
   onRenameSession?: (id: string, newTitle: string) => void | Promise<void>
-  onAutoTitleSession?: (id: string) => void | Promise<void>
   onPrefetch?: (session: ChatSession) => void
 }
 
@@ -305,7 +290,6 @@ export default function ChatHistorySidebar({
   onSelectSession,
   onDeleteSession,
   onRenameSession,
-  onAutoTitleSession,
   onPrefetch,
 }: Props) {
   const [starred, setStarred] = useState<Set<string>>(loadStarred)
@@ -365,7 +349,6 @@ export default function ChatHistorySidebar({
                       onSelect={() => onSelectSession(s)}
                       onDelete={() => onDeleteSession(s.id)}
                       onRename={onRenameSession ? (newTitle) => onRenameSession(s.id, newTitle) : undefined}
-                      onAutoTitle={onAutoTitleSession ? () => onAutoTitleSession(s.id) : undefined}
                       onStar={() => toggleStar(s.id)}
                       onPrefetch={onPrefetch ? () => onPrefetch(s) : undefined}
                     />
@@ -390,7 +373,6 @@ export default function ChatHistorySidebar({
                       onSelect={() => onSelectSession(s)}
                       onDelete={() => onDeleteSession(s.id)}
                       onRename={onRenameSession ? (newTitle) => onRenameSession(s.id, newTitle) : undefined}
-                      onAutoTitle={onAutoTitleSession ? () => onAutoTitleSession(s.id) : undefined}
                       onStar={() => toggleStar(s.id)}
                       onPrefetch={onPrefetch ? () => onPrefetch(s) : undefined}
                     />

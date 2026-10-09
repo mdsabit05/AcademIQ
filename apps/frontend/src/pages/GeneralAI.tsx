@@ -115,20 +115,10 @@ export default function GeneralAI() {
     }
   }, [getToken])
 
-  const handleAutoTitle = useCallback(async (id: string) => {
-    const token = await getToken()
-    if (!token) return
-    try {
-      const res = await makeApi(token).sessions.autotitle(id)
-      setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, title: res.session.title } : s)))
-    } catch (err) {
-      console.error('Failed to autogenerate title:', err)
-    }
-  }, [getToken])
-
   const handleSend = useCallback(async () => {
     const content = input.trim()
     if (!content || streaming) return
+    const isFirstMessage = !sessionId
     setInput('')
     localStorage.removeItem(DRAFT_KEY)
     setMessages((prev) => [...prev, { role: 'user', content }])
@@ -173,6 +163,11 @@ export default function GeneralAI() {
       }
       setMessages((prev) => [...prev, { role: 'assistant', content: full }])
       setStreamBuffer('')
+      if (isFirstMessage) {
+        api.sessions.autotitle(sid).then((res) => {
+          setSessions((prev) => prev.map((s) => (s.id === sid ? { ...s, title: res.session.title } : s)))
+        }).catch(console.error)
+      }
     } catch (err) {
       setMessages((prev) => [...prev, { role: 'assistant', content: `Error: ${(err as Error).message}` }])
     } finally {
@@ -189,7 +184,6 @@ export default function GeneralAI() {
       onSelectSession={loadSession}
       onDeleteSession={deleteSession}
       onRenameSession={renameSession}
-      onAutoTitleSession={handleAutoTitle}
       onPrefetch={handlePrefetch}
     />
   )

@@ -452,6 +452,7 @@ export default function AskAI() {
   const handleSend = useCallback(async (text?: string) => {
     const content = (text ?? input).trim()
     if (!content || streaming || selectedBookIds.length === 0) return
+    const isFirstMessage = !sessionId
     setInput('')
     localStorage.removeItem(DRAFT_KEY)
     setMessages((prev) => [...prev, { role: 'user', content }])
@@ -484,13 +485,18 @@ export default function AskAI() {
       }
       setMessages((prev) => [...prev, { role: 'assistant', content: full }])
       setStreamBuffer('')
+      if (isFirstMessage) {
+        makeApi(token).sessions.autotitle(sid).then((res) => {
+          setSessions((prev) => prev.map((s) => (s.id === sid ? { ...s, title: res.session.title } : s)))
+        }).catch(console.error)
+      }
     } catch (err) {
       setMessages((prev) => [...prev, { role: 'assistant', content: `Error: ${(err as Error).message}` }])
     } finally {
       setStreaming(false)
       refreshHistory()
     }
-  }, [input, streaming, selectedBookIds, ensureSession, getToken, refreshHistory, deepReason, setNavCollapsed])
+  }, [input, streaming, selectedBookIds, sessionId, ensureSession, getToken, refreshHistory, deepReason, setNavCollapsed])
 
   async function deleteSession(id: string) {
     const token = await getToken()
@@ -511,17 +517,6 @@ export default function AskAI() {
     }
   }
 
-  async function handleAutoTitle(id: string) {
-    const token = await getToken()
-    if (!token) return
-    try {
-      const res = await makeApi(token).sessions.autotitle(id)
-      setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, title: res.session.title } : s)))
-    } catch (err) {
-      console.error('Failed to autogenerate title:', err)
-    }
-  }
-
   const sidebar = (
     <ChatHistorySidebar
       sessions={sessions}
@@ -530,7 +525,6 @@ export default function AskAI() {
       onSelectSession={loadSession}
       onDeleteSession={deleteSession}
       onRenameSession={renameSession}
-      onAutoTitleSession={handleAutoTitle}
       onPrefetch={handlePrefetch}
     />
   )
