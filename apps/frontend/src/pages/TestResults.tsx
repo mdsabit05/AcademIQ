@@ -132,7 +132,7 @@ export default function TestResults() {
         setMessages(visible.map((m) => ({ role: m.role, content: m.content })))
       } else {
         // Create new session — use 'ask' with books if available, else 'general'
-        const reviewTitle = t?.title ? `Test Review: ${t.title}` : 'Test Review'
+        const reviewTitle = t?.topic ? `Test Review: ${t.topic}` : 'Test Review'
         const { session } = await api.sessions.create({
           mode: bookIds.length > 0 ? 'ask' : 'general',
           bookIds,

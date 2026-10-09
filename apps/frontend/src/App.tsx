@@ -1,6 +1,5 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { SignIn, SignUp } from '@clerk/clerk-react'
 import { useAuth } from './lib/auth.ts'
 import AppLayout from './components/layout/AppLayout.tsx'
 import { useCurrentUser } from './lib/useCurrentUser.ts'

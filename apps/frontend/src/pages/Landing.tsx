@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useAuth, useClerk } from '../lib/auth.ts'
+import { useAuth } from '../lib/auth.ts'
 import heroBgUrl from '../assets/hero-bg.png'
 import lightLandingUrl from '../assets/lightLanding.png'
 import academiqLogoUrl from '../assets/academiq-logo-transparent.svg'
@@ -366,7 +366,6 @@ function Reveal({ children, style }: { children: React.ReactNode; style?: React.
 // ── Main ───────────────────────────────────────────────────────────────────────
 export default function Landing() {
   const { isSignedIn } = useAuth()
-  const { openSignIn, openSignUp } = useClerk()
   const navigate = useNavigate()
   const [isLight, setIsLight] = useState(() => localStorage.getItem('lp-theme') === 'light')
 
