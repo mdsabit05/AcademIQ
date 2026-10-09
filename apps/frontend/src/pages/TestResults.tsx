@@ -492,12 +492,12 @@ export default function TestResults() {
       )}
 
       {/* ── Desktop: Results (left) ── */}
-      <div className="hidden md:block flex-1 overflow-y-auto">
+      <div className="hidden md:block flex-1 min-w-0 overflow-y-auto">
         {ResultsPanel}
       </div>
 
       {/* ── Desktop: AI Chat (right) ── */}
-      <div className="hidden md:flex w-[360px] shrink-0 flex-col border-l border-border">
+      <div className="hidden md:flex w-80 xl:w-[360px] shrink-0 flex-col border-l border-border">
         <div className="flex items-center gap-2.5 border-b border-border px-4 py-3.5 shrink-0">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
             <Bot size={15} className="text-primary" />
