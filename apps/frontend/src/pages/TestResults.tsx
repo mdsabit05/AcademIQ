@@ -432,7 +432,7 @@ export default function TestResults() {
   }
 
   return (
-    <div className="flex h-full overflow-hidden flex-col md:flex-row">
+    <div className="flex flex-col md:flex-row md:items-start">
 
       {/* ── Mobile tab bar ── */}
       <div className="md:hidden shrink-0 flex border-b border-border">
@@ -491,13 +491,13 @@ export default function TestResults() {
         </div>
       )}
 
-      {/* ── Desktop: Results (left) ── */}
-      <div className="hidden md:block flex-1 min-w-0 overflow-y-auto">
+      {/* ── Desktop: Results (left) — scrolls with page ── */}
+      <div className="hidden md:block flex-1 min-w-0">
         {ResultsPanel}
       </div>
 
-      {/* ── Desktop: AI Chat (right) ── */}
-      <div className="hidden md:flex w-80 xl:w-[360px] shrink-0 flex-col border-l border-border">
+      {/* ── Desktop: AI Chat (right) — sticky sidebar ── */}
+      <div className="hidden md:flex w-80 xl:w-[360px] shrink-0 flex-col border-l border-border sticky top-0 h-screen overflow-hidden">
         <div className="flex items-center gap-2.5 border-b border-border px-4 py-3.5 shrink-0">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
             <Bot size={15} className="text-primary" />
