@@ -25,17 +25,17 @@ The project explores how AI can make learning more personalized, interactive, an
 - 🎯 Personalized learning experiences
 - 📈 Student progress and learning insights
 
-*Feature availability may vary as the project evolves.*
+
 
 ## 🛠️ Technology Stack
 
-Update this section to match the technologies actually used in the current codebase.
+- **Frontend:** React, TypeScript, HTML, CSS
+- **Backend:** Nodejs , hono , drizzleORM 
+- **Database:** PostgreSQL, pgvector
+- **AI Integration:** AI models and embeddings
+- **Deployment:** Cloudflare Pages
 
-- **Frontend:** React, TypeScript
-- **Backend:** Node.js / API services
-- **Database:** PostgreSQL with pgvector
-- **AI Integration:** Language models and embeddings
-- **Deployment:** Cloud hosting
+
 
 ## 🌐 Live Demo
 
