@@ -432,16 +432,16 @@ export default function TestResults() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col md:flex-row md:items-start">
 
-      {/* ── Tab bar (all screen sizes) ── */}
-      <div className="shrink-0 flex border-b border-border">
+      {/* ── Mobile tab bar ── */}
+      <div className="md:hidden shrink-0 flex border-b border-border">
         <button
           onClick={() => setMobileTab('results')}
           className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors border-b-2 ${
             mobileTab === 'results'
               ? 'border-primary text-white'
-              : 'border-transparent text-muted hover:text-white'
+              : 'border-transparent text-muted'
           }`}
         >
           <CheckCircle size={15} /> Results
@@ -451,7 +451,7 @@ export default function TestResults() {
           className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors border-b-2 ${
             mobileTab === 'chat'
               ? 'border-primary text-white'
-              : 'border-transparent text-muted hover:text-white'
+              : 'border-transparent text-muted'
           }`}
         >
           <Bot size={15} /> AI Tutor
@@ -460,30 +460,56 @@ export default function TestResults() {
         </button>
       </div>
 
-      {/* ── Results tab ── */}
+      {/* ── Mobile: Results tab ── */}
       {mobileTab === 'results' && (
-        <div className="flex-1 overflow-y-auto">
+        <div className="md:hidden flex-1 overflow-y-auto">
           {ResultsPanel}
         </div>
       )}
 
-      {/* ── AI Tutor tab ── */}
+      {/* ── Mobile: Chat tab — fullscreen fixed overlay ── */}
       {mobileTab === 'chat' && (
-        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-          {/* Chat header */}
-          <div className="shrink-0 flex items-center gap-2.5 border-b border-border px-4 py-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
-              <Bot size={15} className="text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-white">AI Tutor</p>
-              <p className="text-[11px] text-muted">Ask about any question or topic</p>
-            </div>
-            <div className={`ml-auto h-2 w-2 rounded-full ${chatReady ? 'bg-emerald-400' : 'bg-yellow-400 animate-pulse'}`} />
+        <div className="md:hidden fixed inset-x-0 top-0 bottom-16 z-50 flex flex-col bg-bg">
+          {/* Tab bar — top */}
+          <div className="shrink-0 flex border-b border-border">
+            <button
+              onClick={() => setMobileTab('results')}
+              className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold text-muted transition-colors border-b-2 border-transparent"
+            >
+              <CheckCircle size={15} /> Results
+            </button>
+            <button
+              className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold border-b-2 border-primary text-white"
+            >
+              <Bot size={15} /> AI Tutor
+            </button>
           </div>
-          {ChatPanel}
+          {/* Chat content fills remaining space */}
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+            {ChatPanel}
+          </div>
         </div>
       )}
+
+      {/* ── Desktop: Results (left) — scrolls with page ── */}
+      <div className="hidden md:block flex-1 min-w-0">
+        {ResultsPanel}
+      </div>
+
+      {/* ── Desktop: AI Chat (right) — sticky sidebar ── */}
+      <div className="hidden md:flex w-80 xl:w-[360px] shrink-0 flex-col border-l border-border sticky top-0 h-screen overflow-hidden">
+        <div className="flex items-center gap-2.5 border-b border-border px-4 py-3.5 shrink-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+            <Bot size={15} className="text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white">AI Tutor</p>
+            <p className="text-[11px] text-muted">Ask about any question or topic</p>
+          </div>
+          <div className={`ml-auto h-2 w-2 rounded-full ${chatReady ? 'bg-emerald-400' : 'bg-yellow-400 animate-pulse'}`} />
+        </div>
+        {ChatPanel}
+      </div>
 
     </div>
   )
