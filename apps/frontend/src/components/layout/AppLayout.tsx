@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { Sun, Moon, LogOut, Settings } from 'lucide-react'
 import { useUser, useClerk } from '../../lib/auth.ts'
 import Sidebar from './Sidebar.tsx'
@@ -107,6 +107,9 @@ function MobileTopBar() {
 // ── App Layout ─────────────────────────────────────────────────────────────────
 function FloatingThemeToggle() {
   const { theme, toggle } = useTheme()
+  const { pathname } = useLocation()
+  // Hide on test results page — theme toggle is embedded in the AI Tutor header there
+  if (pathname.includes('/results')) return null
 
   return (
     <button

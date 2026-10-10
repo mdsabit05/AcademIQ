@@ -17,10 +17,13 @@ import {
   Sparkles,
   MessageSquare,
   Bot,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import { marked } from 'marked'
 import { makeApi } from '../lib/api.ts'
 import { useHideMobileTopBar } from '../lib/topBarContext.tsx'
+import { useTheme } from '../lib/theme.tsx'
 import type { Test } from 'shared'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -227,6 +230,7 @@ export default function TestResults() {
 
   const [mobileTab, setMobileTab] = useState<'results' | 'chat'>('results')
   useHideMobileTopBar(mobileTab === 'chat')
+  const { theme, toggle: toggleTheme } = useTheme()
 
   // ── Shared sub-components ───────────────────────────────────────────────────
 
@@ -506,7 +510,16 @@ export default function TestResults() {
             <p className="text-sm font-bold text-white">AI Tutor</p>
             <p className="text-[11px] text-muted">Ask about any question or topic</p>
           </div>
-          <div className={`ml-auto h-2 w-2 rounded-full ${chatReady ? 'bg-emerald-400' : 'bg-yellow-400 animate-pulse'}`} />
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-muted hover:text-white hover:bg-white/10 transition-colors"
+              title="Toggle theme"
+            >
+              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+            <div className={`h-2 w-2 rounded-full ${chatReady ? 'bg-emerald-400' : 'bg-yellow-400 animate-pulse'}`} />
+          </div>
         </div>
         {ChatPanel}
       </div>
