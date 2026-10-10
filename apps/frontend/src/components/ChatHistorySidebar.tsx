@@ -339,7 +339,7 @@ export default function ChatHistorySidebar({
                 <p className="px-2.5 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.15em] text-yellow-400/70 flex items-center gap-1">
                   <Star size={9} className="fill-yellow-400/70 text-yellow-400/70" /> Pinned
                 </p>
-                <div className="space-y-0.5">
+                <div className="divide-y divide-border/40">
                   {starredSessions.map((s) => (
                     <SessionRow
                       key={s.id}
@@ -363,7 +363,7 @@ export default function ChatHistorySidebar({
                 <p className="px-2.5 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.15em] text-muted/60">
                   {group.label}
                 </p>
-                <div className="space-y-0.5">
+                <div className="divide-y divide-border/40">
                   {group.items.map((s) => (
                     <SessionRow
                       key={s.id}
